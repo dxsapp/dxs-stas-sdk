@@ -1,0 +1,38 @@
+{
+  "name": "dxs-stas-sdk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dxs.stas.sdk.ts",
+  "scripts": {
+    "test": "jest",
+    "start": "tsnd ./src/index.ts",
+    "publish": "rollup -c rollup.config.ts -w --configPlugin typescript"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "author": "",
+  "license": "SEE LICENSE IN license.txt",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^24.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "@types/jest": "^29.2.5",
+    "@types/typedarray-to-buffer": "^4.0.0",
+    "jest": "^29.3.1",
+    "rollup": "^3.10.0",
+    "ts-jest": "^29.0.5",
+    "ts-node-dev": "^2.0.0",
+    "tslib": "^2.4.1",
+    "tslint-config-prettier": "^1.18.0"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.2.0",
+    "@noble/secp256k1": "^1.7.1",
+    "@scure/base": "^1.1.1",
+    "@scure/bip32": "^1.1.5",
+    "@scure/bip39": "^1.1.1",
+    "buffer": "^6.0.3",
+    "typedarray-to-buffer": "^4.0.0"
+  }
+}
