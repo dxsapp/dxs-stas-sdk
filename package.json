@@ -1,18 +1,24 @@
 {
   "name": "dxs-stas-sdk",
-  "version": "1.0.0",
-  "description": "",
-  "main": "dxs.stas.sdk.ts",
+  "version": "1.0.3",
+  "description": "BSV Stas",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dxsapp/dxs-stas-sdk"
+  },
   "scripts": {
+    "prepublish": "tsc",
     "test": "jest",
     "start": "tsnd ./src/index.ts",
-    "publish": "rollup -c rollup.config.ts -w --configPlugin typescript"
+    "rollup": "rollup -c rollup.config.ts -w --configPlugin typescript"
   },
   "directories": {
     "test": "tests"
   },
-  "author": "",
-  "license": "SEE LICENSE IN license.txt",
+  "author": "oleg@dxs.app",
+  "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^24.0.0",
     "@rollup/plugin-node-resolve": "^15.0.1",

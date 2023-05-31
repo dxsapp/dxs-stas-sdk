@@ -14,6 +14,12 @@ import { InputBilder } from "./input-builder";
 import { OutputBuilder } from "./output-builder";
 import { Wallet } from "../../bitcoin";
 
+export class TransactionBuilderError extends Error {
+  constructor(message: string, public devMessage: string) {
+    super(message);
+  }
+}
+
 export class TransactionBuilder {
   static DefaultSequence = 0xffffffff;
   static DefaultSighashType =
@@ -84,7 +90,11 @@ export class TransactionBuilder {
 
     let fee = this.getFee(satoshisPerByte);
 
-    if (fee >= change) throw new Error("Insufficient satoshis to pay fee");
+    if (fee >= change)
+      throw new TransactionBuilderError(
+        `Insufficient satoshis to pay fee`,
+        `Insufficient satoshis to pay fee. Change: ${change}; Fee: ${fee}`
+      );
 
     output.Satoshis = change - fee;
 

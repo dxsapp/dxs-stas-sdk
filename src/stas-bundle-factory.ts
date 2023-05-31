@@ -26,6 +26,7 @@ export type TStasPayoutBundle = {
   transactions?: string[];
   feeSatoshis: number;
   message?: string;
+  devMessage?: string;
 };
 
 export class StasBundleFactory {
@@ -86,6 +87,7 @@ export class StasBundleFactory {
     if (estimatedFee > feeSatoshis) {
       return {
         message: "Insufficient balance to pay fee",
+        devMessage: `Insufficient balance to pay fee. Estimated: ${estimatedFee}; balance: ${feeSatoshis}`,
         feeSatoshis: 0,
       };
     }
