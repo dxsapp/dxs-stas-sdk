@@ -8,6 +8,7 @@ import {
   Wallet,
 } from "./bitcoin";
 import { TransactionBuilder } from "./transaction/build/transaction-builder";
+import { Bytes } from "./bytes";
 
 export const FeeRate = 0.05;
 
@@ -16,7 +17,7 @@ export type TBuildTransferTxRequest = {
   stasPayment: TPayment;
   feePayment: TPayment;
   to: Address;
-  note?: Buffer[];
+  note?: Bytes[];
 };
 
 export const BuildTransferTx = ({
@@ -51,7 +52,7 @@ export type TBuildSplitTxRequest = {
   stasPayment: TPayment;
   feePayment: TPayment;
   destinations: TDestination[];
-  note?: Buffer[];
+  note?: Bytes[];
 };
 
 export const BuildSplitTx = ({
@@ -105,7 +106,7 @@ export type TBuildMergeTxRequest = {
   feePayment: TPayment;
   destination: TDestination;
   splitDestination?: TDestination;
-  note?: Buffer[];
+  note?: Bytes[];
 };
 
 export const BuildMergeTx = ({
@@ -164,7 +165,7 @@ export type TBuildRedeemTxRequest = {
   stasPayment: TPayment;
   feePayment: TPayment;
   splitDestinations?: TDestination[];
-  note?: Buffer[];
+  note?: Bytes[];
 };
 
 export const BuildRedeemTx = ({

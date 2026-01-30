@@ -1,6 +1,7 @@
 import { ScriptType } from "../src/bitcoin/script-type";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
+import { bytesToUtf8 } from "../src/bytes";
 
 describe("testing transaction reader", () => {
   test("read open position transaction", () => {
@@ -33,12 +34,12 @@ describe("testing transaction reader", () => {
     expect(transaction.Outputs[1].ScriptType).toBe(ScriptType.nullData);
     expect(transaction.Outputs[1].Satoshis).toBe(0);
     expect(transaction.Outputs[1].data.length).toBe(4);
-    expect(transaction.Outputs[1].data[0].toString("utf8")).toBe("bsvtest");
-    expect(transaction.Outputs[1].data[1].toString("utf8")).toBe(
+    expect(bytesToUtf8(transaction.Outputs[1].data[0])).toBe("bsvtest");
+    expect(bytesToUtf8(transaction.Outputs[1].data[1])).toBe(
       "ulWY+84HZb02vz3iS2690DQ==,m107,tb,a0.01"
     );
-    expect(transaction.Outputs[1].data[2].toString("utf8")).toBe("text");
-    expect(transaction.Outputs[1].data[3].toString("utf8")).toBe("B");
+    expect(bytesToUtf8(transaction.Outputs[1].data[2])).toBe("text");
+    expect(bytesToUtf8(transaction.Outputs[1].data[3])).toBe("B");
 
     expect(transaction.Outputs[2].ScriptType).toBe(ScriptType.p2pkh);
     expect(transaction.Outputs[2].Satoshis).toBe(17925);

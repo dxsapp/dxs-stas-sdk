@@ -1,4 +1,5 @@
-import { reverseBuffer } from "../buffer/buffer-utils";
+import { reverseBytes } from "../buffer/buffer-utils";
+import { Bytes, toHex } from "../bytes";
 import { hash256 } from "../hashes";
 import { TransactionInput } from "./transaction-input";
 import { TransactionOutput } from "./transaction-output";
@@ -8,12 +9,12 @@ export class Transaction {
   Outputs: TransactionOutput[];
   Version: number;
   LockTime: number;
-  Raw: Buffer;
+  Raw: Bytes;
   Hex: string;
   Id: string;
 
   constructor(
-    raw: Buffer,
+    raw: Bytes,
     inputs: TransactionInput[],
     outputs: TransactionOutput[],
     version: number,
@@ -25,7 +26,7 @@ export class Transaction {
     this.LockTime = lockTime;
 
     this.Raw = raw;
-    this.Hex = raw.toString("hex");
-    this.Id = reverseBuffer(hash256(raw)).toString("hex");
+    this.Hex = toHex(raw);
+    this.Id = toHex(reverseBytes(hash256(raw)));
   }
 }

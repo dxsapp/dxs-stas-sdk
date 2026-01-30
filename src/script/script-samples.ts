@@ -1,4 +1,5 @@
 import { OpCode } from "../bitcoin/op-codes";
+import { fromHex } from "../bytes";
 import { ScriptReader } from "./read/script-reader";
 import { ScriptToken } from "./script-token";
 
@@ -19,7 +20,7 @@ let stasTokens: ScriptToken[] | null = null;
 
 export const getP2stasTokens = () => {
   if (stasTokens === null) {
-    stasTokens = ScriptReader.read(Buffer.from(p2stasSampleHex, "hex"));
+    stasTokens = ScriptReader.read(fromHex(p2stasSampleHex));
     stasTokens[2].IsReceiverId = true;
   }
 

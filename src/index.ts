@@ -1,5 +1,7 @@
 export * from "./bitcoin";
 export * from "./buffer";
+export * from "./bytes";
+export * from "./binary";
 export * from "./script";
 export * from "./stas-bundle-factory";
 export * from "./transaction";

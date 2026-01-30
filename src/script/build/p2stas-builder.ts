@@ -4,13 +4,14 @@ import { ScriptType } from "../../bitcoin/script-type";
 import { getP2stasTokens } from "../script-samples";
 import { ScriptToken } from "../script-token";
 import { ScriptBuilder } from "./script-builder";
+import { Bytes, fromHex, utf8ToBytes } from "../../bytes";
 
 export class P2stasBuilder extends ScriptBuilder {
   constructor(
     address: Address,
     tokenId: string,
     symbol: string,
-    data: Buffer[] = []
+    data: Bytes[] = []
   ) {
     super(ScriptType.p2stas, address);
 
@@ -18,7 +19,7 @@ export class P2stasBuilder extends ScriptBuilder {
 
     for (var token of stasTokens) {
       if (token.IsReceiverId) {
-        const receiver = ScriptToken.fromBuffer(address.Hash160);
+        const receiver = ScriptToken.fromBytes(address.Hash160);
         receiver.IsReceiverId = true;
 
         this._tokens.push(receiver);
@@ -28,8 +29,8 @@ export class P2stasBuilder extends ScriptBuilder {
     }
 
     this.addOpCode(OpCode.OP_RETURN);
-    this.addData(Buffer.from(tokenId, "hex"));
-    this.addData(Buffer.from(symbol, "utf8"));
+    this.addData(fromHex(tokenId));
+    this.addData(utf8ToBytes(symbol));
 
     for (const d of data) {
       this.addData(d);

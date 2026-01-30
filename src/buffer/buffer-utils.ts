@@ -1,9 +1,9 @@
-import toBufferExternal from "typedarray-to-buffer";
 import { OpCode } from "../bitcoin/op-codes";
+import { Bytes } from "../bytes";
 
 export const OP_INT_BASE = OpCode.OP_RESERVED;
 
-export const asMinimalOP = (buffer: Buffer) => {
+export const asMinimalOP = (buffer: Bytes) => {
   if (buffer.length === 0) return OpCode.OP_0;
   if (buffer.length !== 1) return;
   if (buffer[0] >= 1 && buffer[0] <= 16) return OP_INT_BASE + buffer[0];
@@ -20,15 +20,10 @@ export const ensureUInt = (value: number, max: number) => {
     throw new Error(`value has a fractional component: ${value}`);
 };
 
-export const toBuffer = toBufferExternal;
+export const slice = (buffer: Bytes, offset: number, length: number) =>
+  buffer.slice(offset, length);
 
-export const toUtf8Buffer = (value: string) => Buffer.from(value, "utf8");
-export const toHexBuffer = (value: string) => Buffer.from(value, "hex");
-
-export const slice = (buffer: Buffer, offset: number, length: number) =>
-  toBuffer(Uint8Array.prototype.slice.call(buffer, offset, length));
-
-export const reverseBuffer = (buffer: Buffer) => {
+export const reverseBytes = (buffer: Bytes) => {
   let j = buffer.length - 1;
   let tmp = 0;
 
@@ -42,27 +37,42 @@ export const reverseBuffer = (buffer: Buffer) => {
   return buffer;
 };
 
-export const cloneBuffer = (
-  source: Buffer,
+export const cloneBytes = (
+  source: Bytes,
   targetStart: number = 0,
   sourceStart?: number | undefined,
-  sourceEnd?: number | undefined
+  sourceEnd?: number | undefined,
 ) => {
   sourceStart = sourceStart ?? 0;
   sourceEnd = sourceEnd ?? source.length;
 
-  const clone = Buffer.allocUnsafe(sourceEnd - sourceStart);
-  source.copy(clone, targetStart, sourceStart, sourceEnd);
+  const clone = new Uint8Array(sourceEnd - sourceStart);
+  clone.set(source.subarray(sourceStart, sourceEnd), targetStart);
 
   return clone;
 };
 
-export const splitBuffer = (source: Buffer, splitBy: Buffer): Buffer[] => {
+const indexOfSubarray = (source: Bytes, needle: Bytes, fromIndex = 0) => {
+  if (needle.length === 0) return fromIndex;
+  for (let i = fromIndex; i <= source.length - needle.length; i++) {
+    let match = true;
+    for (let j = 0; j < needle.length; j++) {
+      if (source[i + j] !== needle[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return i;
+  }
+  return -1;
+};
+
+export const splitBytes = (source: Bytes, splitBy: Bytes): Bytes[] => {
   let search = -1;
   let move = 0;
-  const segments: Buffer[] = [];
+  const segments: Bytes[] = [];
 
-  while ((search = source.indexOf(splitBy)) > -1) {
+  while ((search = indexOfSubarray(source, splitBy)) > -1) {
     const segment = slice(source, 0, search + move);
     if (segment.length > 0) segments.push(segment);
 
@@ -87,24 +97,33 @@ export const getMinimumRequiredByte = (value: number): number =>
   value >= -128 && value <= 127
     ? 1
     : value >= -32768 && value <= 32767
-    ? 2
-    : value >= -8388608 && value <= 8388607
-    ? 3
-    : value >= -2147483648 && value <= 2147483647
-    ? 4
-    : value >= -549755813888 && value <= 549755813887
-    ? 5
-    : value >= -140737488355328 && value <= 140737488355327
-    ? 6
-    : value >= -36028797018963968 && value <= 36028797018963967 // TODO it's a bug  MAX_SAFE_INTEGER = 9007199254740991
-    ? 7
-    : 8;
+      ? 2
+      : value >= -8388608 && value <= 8388607
+        ? 3
+        : value >= -2147483648 && value <= 2147483647
+          ? 4
+          : value >= -549755813888 && value <= 549755813887
+            ? 5
+            : value >= -140737488355328 && value <= 140737488355327
+              ? 6
+              : value >= -36028797018963968 && value <= 36028797018963967 // TODO it's a bug  MAX_SAFE_INTEGER = 9007199254740991
+                ? 7
+                : 8;
 
-export const getNumberBuffer = (value: number): Buffer => {
+export const getNumberBytes = (value: number): Bytes => {
   const size = getMinimumRequiredByte(value);
-  const buffer = Buffer.alloc(size);
+  const buffer = new Uint8Array(size);
+  const sizeBits = BigInt(size * 8);
+  let big = BigInt(value);
 
-  buffer.writeIntLE(value, 0, size);
+  if (value < 0) {
+    big = (BigInt(1) << sizeBits) + big;
+  }
+
+  for (let i = 0; i < size; i++) {
+    buffer[i] = Number(big & BigInt(0xff));
+    big >>= BigInt(8);
+  }
 
   return buffer;
 };
@@ -112,5 +131,4 @@ export const getNumberBuffer = (value: number): Buffer => {
 export const estimateChunkSize = (bufferSize: number) =>
   getVarIntLength(bufferSize) + bufferSize;
 
-export const getChunkSize = (buffer: Buffer) =>
-  estimateChunkSize(buffer.length);
+export const getChunkSize = (buffer: Bytes) => estimateChunkSize(buffer.length);

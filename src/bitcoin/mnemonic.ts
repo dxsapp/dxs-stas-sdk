@@ -1,7 +1,7 @@
 import { generateMnemonic, validateMnemonic } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english";
+import { wordlist } from "@scure/bip39/wordlists/english.js";
 
-export { wordlist } from "@scure/bip39/wordlists/english";
+export { wordlist } from "@scure/bip39/wordlists/english.js";
 
 export type TWords = { [idxs: string]: string };
 

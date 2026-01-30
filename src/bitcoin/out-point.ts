@@ -2,11 +2,12 @@ import { TransactionReader } from "../transaction";
 import { Address } from "./address";
 import { ScriptType } from "./script-type";
 import { Transaction } from "./transaction";
+import { Bytes } from "../bytes";
 
 export class OutPoint {
   TxId: string;
   Vout: number;
-  LockignScript: Buffer;
+  LockignScript: Bytes;
   Satoshis: number;
   Address: Address;
   ScriptType: ScriptType;
@@ -15,7 +16,7 @@ export class OutPoint {
   constructor(
     txId: string,
     vout: number,
-    lockignScript: Buffer,
+    lockignScript: Bytes,
     satoshis: number,
     address: Address,
     scriptType: ScriptType

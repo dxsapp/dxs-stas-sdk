@@ -1,6 +1,6 @@
 {
   "name": "dxs-stas-sdk",
-  "version": "1.0.3",
+  "version": "1.0.15",
   "description": "BSV Stas",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,36 +9,35 @@
     "url": "https://github.com/dxsapp/dxs-stas-sdk"
   },
   "scripts": {
-    "prepublish": "tsc",
-    "test": "jest",
+    "build": "tsc",
+    "check": "npm run check:nobuffer",
+    "check:nobuffer": "node scripts/check-no-buffer.mjs",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "start": "tsnd ./src/index.ts",
     "rollup": "rollup -c rollup.config.ts -w --configPlugin typescript"
   },
   "directories": {
     "test": "tests"
   },
-  "author": "oleg@dxs.app",
+  "author": "oleg@dxs.app (https://github.com/panagushin)",
   "license": "MIT",
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^24.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.1",
-    "@rollup/plugin-typescript": "^11.0.0",
-    "@types/jest": "^29.2.5",
-    "@types/typedarray-to-buffer": "^4.0.0",
-    "jest": "^29.3.1",
-    "rollup": "^3.10.0",
-    "ts-jest": "^29.0.5",
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "rollup": "^4.57.1",
+    "ts-jest": "^29.4.6",
     "ts-node-dev": "^2.0.0",
-    "tslib": "^2.4.1",
+    "tslib": "^2.8.1",
     "tslint-config-prettier": "^1.18.0"
   },
   "dependencies": {
-    "@noble/hashes": "^1.2.0",
-    "@noble/secp256k1": "^1.7.1",
-    "@scure/base": "^1.1.1",
-    "@scure/bip32": "^1.1.5",
-    "@scure/bip39": "^1.1.1",
-    "buffer": "^6.0.3",
-    "typedarray-to-buffer": "^4.0.0"
+    "@noble/hashes": "^2.0.1",
+    "@noble/secp256k1": "^3.0.0",
+    "@scure/base": "^2.0.0",
+    "@scure/bip32": "^2.0.1",
+    "@scure/bip39": "^2.0.1"
   }
 }

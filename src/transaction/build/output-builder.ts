@@ -1,5 +1,5 @@
 import { estimateChunkSize } from "../../buffer/buffer-utils";
-import { BufferWriter } from "../../buffer/buffer-writer";
+import { ByteWriter } from "../../binary";
 import { ScriptBuilder } from "../../script/build/script-builder";
 
 export class OutputBuilder {
@@ -18,8 +18,8 @@ export class OutputBuilder {
     );
   }
 
-  writeTo(bufferWriter: BufferWriter) {
-    bufferWriter.writeUInt64(this.Satoshis);
-    bufferWriter.writeVarChunk(this.LockingScript.toBuffer());
+  writeTo(writer: ByteWriter) {
+    writer.writeUInt64(this.Satoshis);
+    writer.writeVarChunk(this.LockingScript.toBytes());
   }
 }

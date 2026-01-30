@@ -1,12 +1,12 @@
 import {
-  cloneBuffer,
+  cloneBytes,
   estimateChunkSize,
   getChunkSize,
   getNumberSize,
-  reverseBuffer,
-  splitBuffer,
+  reverseBytes,
+  splitBytes,
 } from "../../buffer/buffer-utils";
-import { BufferWriter } from "../../buffer/buffer-writer";
+import { ByteWriter } from "../../binary";
 import { OpCode } from "../../bitcoin/op-codes";
 import { OutPoint } from "../../bitcoin/out-point";
 import { PrivateKey } from "../../bitcoin/private-key";
@@ -16,6 +16,7 @@ import { hash256 } from "../../hashes";
 import { ScriptBuilder } from "../../script/build/script-builder";
 import { TransactionBuilder } from "./transaction-builder";
 import { Wallet } from "../../bitcoin";
+import { Bytes, fromHex } from "../../bytes";
 
 export class InputBilder {
   protected TxBuilder: TransactionBuilder;
@@ -24,17 +25,17 @@ export class InputBilder {
 
   OutPoint: OutPoint;
   Merge: Boolean;
-  UnlockingScript?: Buffer;
+  UnlockingScript?: Bytes;
   Sequence = TransactionBuilder.DefaultSequence;
 
   private _mergeVout: number = 0;
-  private _mergeSegments: Buffer[] = [];
+  private _mergeSegments: Bytes[] = [];
 
   constructor(
     txBuilder: TransactionBuilder,
     outPoint: OutPoint,
     signer: PrivateKey | Wallet,
-    merge: boolean
+    merge: boolean,
   ) {
     this.TxBuilder = txBuilder;
     this.Idx = txBuilder.Inputs.length;
@@ -47,19 +48,15 @@ export class InputBilder {
     const preimage = this.preimage(TransactionBuilder.DefaultSighashType);
     const hashedPreimage = hash256(preimage);
     const der = this.Owner.sign(hashedPreimage);
-    const derWithSigHashType = Buffer.alloc(der.length + 1);
-
-    der.copy(derWithSigHashType);
-    derWithSigHashType.writeInt8(
-      TransactionBuilder.DefaultSighashType,
-      der.length
-    );
+    const derWithSigHashType = new Uint8Array(der.length + 1);
+    derWithSigHashType.set(der);
+    derWithSigHashType[der.length] = TransactionBuilder.DefaultSighashType;
 
     if (this.OutPoint.ScriptType === ScriptType.p2pkh) {
       const size =
         getChunkSize(derWithSigHashType) + getChunkSize(this.Owner.PublicKey);
-      const buffer = Buffer.alloc(size);
-      const bufferWriter = new BufferWriter(buffer);
+      const buffer = new Uint8Array(size);
+      const bufferWriter = new ByteWriter(buffer);
 
       bufferWriter.writeVarChunk(derWithSigHashType);
       bufferWriter.writeVarChunk(this.Owner.PublicKey);
@@ -73,10 +70,8 @@ export class InputBilder {
 
       for (const output of this.TxBuilder.Outputs) {
         if (output.LockingScript.ScriptType === ScriptType.nullData) {
-          const nulldata = output.LockingScript.toBuffer();
-          const payload = Buffer.alloc(nulldata.length - 2);
-
-          nulldata.copy(payload, 0, 2);
+          const nulldata = output.LockingScript.toBytes();
+          const payload = nulldata.subarray(2);
           script.addData(payload);
 
           hasNote = true;
@@ -94,7 +89,7 @@ export class InputBilder {
 
       script
         .addNumber(fundingInput.OutPoint.Vout)
-        .addData(reverseBuffer(Buffer.from(fundingInput.OutPoint.TxId, "hex")));
+        .addData(reverseBytes(fromHex(fundingInput.OutPoint.TxId)));
 
       if (this.Merge) {
         script
@@ -110,17 +105,15 @@ export class InputBilder {
         .addData(derWithSigHashType)
         .addData(this.Owner.PublicKey);
 
-      this.UnlockingScript = script.toBuffer();
+      this.UnlockingScript = script.toBytes();
     }
   };
 
-  writeTo(bufferWriter: BufferWriter) {
-    bufferWriter.writeChunk(
-      reverseBuffer(Buffer.from(this.OutPoint.TxId, "hex"))
-    );
-    bufferWriter.writeUInt32(this.OutPoint.Vout);
-    bufferWriter.writeVarChunk(this.UnlockingScript!);
-    bufferWriter.writeUInt32(this.Sequence);
+  writeTo(writer: ByteWriter) {
+    writer.writeChunk(reverseBytes(fromHex(this.OutPoint.TxId)));
+    writer.writeUInt32(this.OutPoint.Vout);
+    writer.writeVarChunk(this.UnlockingScript!);
+    writer.writeUInt32(this.Sequence);
   }
 
   size = () =>
@@ -144,7 +137,7 @@ export class InputBilder {
 
   stasNullDataLength = () => {
     const nullDataOutput = this.TxBuilder.Outputs.find(
-      (x) => x.LockingScript.ScriptType === ScriptType.nullData
+      (x) => x.LockingScript.ScriptType === ScriptType.nullData,
     );
 
     if (!nullDataOutput) return 1;
@@ -199,13 +192,13 @@ export class InputBilder {
   /// </summary>
   preimage = (signatureHashType: SignatureHashType) => {
     const size = this.preimageLength();
-    const buffer = Buffer.alloc(size);
-    var writer = new BufferWriter(buffer);
+    const buffer = new Uint8Array(size);
+    var writer = new ByteWriter(buffer);
 
     writer.writeUInt32(this.TxBuilder.Version); // 4
     this.writePrevoutHash(writer); // 32
     this.writeSequenceHash(writer); // 32
-    writer.writeChunk(reverseBuffer(Buffer.from(this.OutPoint.TxId, "hex"))); // 32
+    writer.writeChunk(reverseBytes(fromHex(this.OutPoint.TxId))); // 32
     writer.writeUInt32(this.OutPoint.Vout); // 4
     writer.writeVarChunk(this.OutPoint.LockignScript);
     writer.writeUInt64(this.OutPoint.Satoshis); // 8
@@ -217,54 +210,54 @@ export class InputBilder {
     return buffer;
   };
 
-  private writePrevoutHash = (bufferWriter: BufferWriter) => {
+  private writePrevoutHash = (writer: ByteWriter) => {
     const size = this.prevoutHashLength();
-    const buffer = Buffer.alloc(size);
-    const writer = new BufferWriter(buffer);
+    const buffer = new Uint8Array(size);
+    const bufferWriter = new ByteWriter(buffer);
 
     for (const input of this.TxBuilder.Inputs) {
-      writer.writeChunk(reverseBuffer(Buffer.from(input.OutPoint.TxId, "hex")));
-      writer.writeUInt32(input.OutPoint.Vout);
+      bufferWriter.writeChunk(reverseBytes(fromHex(input.OutPoint.TxId)));
+      bufferWriter.writeUInt32(input.OutPoint.Vout);
     }
 
-    bufferWriter.writeChunk(hash256(buffer));
+    writer.writeChunk(hash256(buffer));
   };
 
-  private writeSequenceHash = (bufferWriter: BufferWriter) => {
-    const buffer = Buffer.alloc(4 * this.TxBuilder.Inputs.length);
-    const writer = new BufferWriter(buffer);
+  private writeSequenceHash = (writer: ByteWriter) => {
+    const buffer = new Uint8Array(4 * this.TxBuilder.Inputs.length);
+    const bufferWriter = new ByteWriter(buffer);
 
     for (const input of this.TxBuilder.Inputs)
-      writer.writeUInt32(input.Sequence);
+      bufferWriter.writeUInt32(input.Sequence);
 
-    bufferWriter.writeChunk(hash256(buffer));
+    writer.writeChunk(hash256(buffer));
   };
 
-  private writeOutputsHash = (bufferWriter: BufferWriter) => {
+  private writeOutputsHash = (writer: ByteWriter) => {
     var size = this.TxBuilder.Outputs.reduce((a, x) => a + x.size(), 0);
 
-    const buffer = Buffer.alloc(size);
-    const writer = new BufferWriter(buffer);
+    const buffer = new Uint8Array(size);
+    const bufferWriter = new ByteWriter(buffer);
 
     for (const output of this.TxBuilder.Outputs) {
-      writer.writeUInt64(output.Satoshis);
-      writer.writeVarChunk(output.LockingScript.toBuffer());
+      bufferWriter.writeUInt64(output.Satoshis);
+      bufferWriter.writeVarChunk(output.LockingScript.toBytes());
     }
 
-    bufferWriter.writeChunk(hash256(buffer));
+    writer.writeChunk(hash256(buffer));
   };
 
   private prepareMergeInfo = () => {
     if (!this.Merge || this._mergeSegments.length > 0) return;
 
     const lockingScript = this.TxBuilder.Inputs[0].OutPoint.LockignScript;
-    const scriptToCut = cloneBuffer(lockingScript, 0, 23);
+    const scriptToCut = cloneBytes(lockingScript, 0, 23);
     const mergeUtxo = this.TxBuilder.Inputs[this.Idx === 0 ? 1 : 0];
 
     this._mergeVout = mergeUtxo.OutPoint.Vout;
-    this._mergeSegments = splitBuffer(
+    this._mergeSegments = splitBytes(
       mergeUtxo.OutPoint.Transaction!.Raw,
-      scriptToCut
+      scriptToCut,
     ).reverse();
   };
 }

@@ -1,15 +1,16 @@
-import { BufferReader } from "../../buffer/buffer-reader";
-import { reverseBuffer } from "../../buffer/buffer-utils";
+import { ByteReader } from "../../binary";
+import { reverseBytes } from "../../buffer/buffer-utils";
+import { Bytes, fromHex, toHex } from "../../bytes";
 import { Transaction } from "../../bitcoin/transaction";
 import { TransactionInput } from "../../bitcoin/transaction-input";
 import { TransactionOutput } from "../../bitcoin/transaction-output";
 
 export class TransactionReader {
   static readHex = (raw: string) =>
-    TransactionReader.readBuffer(Buffer.from(raw, "hex"));
+    TransactionReader.readBytes(fromHex(raw));
 
-  static readBuffer = (buffer: Buffer) => {
-    const reader = new BufferReader(buffer);
+  static readBytes = (buffer: Bytes) => {
+    const reader = new ByteReader(buffer);
 
     const version = reader.readUInt32();
     const inputCount = reader.readVarInt();
@@ -31,21 +32,21 @@ export class TransactionReader {
     return new Transaction(buffer, inputs, outputs, version, lockTime);
   };
 
-  static readInput = (reader: BufferReader): TransactionInput => {
-    const txId = reverseBuffer(reader.readChunk(32));
+  static readInput = (reader: ByteReader): TransactionInput => {
+    const txId = reverseBytes(reader.readChunk(32));
     const vout = reader.readUInt32();
     const unlockingScript = reader.readVarChunk();
     const sequence = reader.readUInt32();
 
     return new TransactionInput(
-      txId.toString("hex"),
+      toHex(txId),
       vout,
       unlockingScript,
       sequence
     );
   };
 
-  static readOutput = (reader: BufferReader): TransactionOutput => {
+  static readOutput = (reader: ByteReader): TransactionOutput => {
     const satoshis = reader.readUInt64();
     const lockignScript = reader.readVarChunk();
 

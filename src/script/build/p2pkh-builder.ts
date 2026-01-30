@@ -4,6 +4,7 @@ import { ScriptType } from "../../bitcoin/script-type";
 import { p2phkTokens } from "../script-samples";
 import { ScriptToken } from "../script-token";
 import { ScriptBuilder } from "./script-builder";
+import { Bytes } from "../../bytes";
 
 export class P2pkhBuilder extends ScriptBuilder {
   private _isOpReturnAdded: boolean = false;
@@ -13,7 +14,7 @@ export class P2pkhBuilder extends ScriptBuilder {
 
     for (var token of p2phkTokens) {
       if (token.IsReceiverId) {
-        const receiver = ScriptToken.fromBuffer(address.Hash160);
+        const receiver = ScriptToken.fromBytes(address.Hash160);
         receiver.IsReceiverId = true;
 
         this._tokens.push(receiver);
@@ -23,7 +24,7 @@ export class P2pkhBuilder extends ScriptBuilder {
     }
   }
 
-  addReturnData(data: Buffer) {
+  addReturnData(data: Bytes) {
     if (!this._isOpReturnAdded) {
       this.addOpCode(OpCode.OP_RETURN);
       this._isOpReturnAdded = true;

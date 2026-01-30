@@ -1,4 +1,4 @@
-import { sha256 } from "@noble/hashes/sha256";
-import { base58check } from "@scure/base";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { createBase58check } from "@scure/base";
 
-export const bs58check = base58check(sha256);
+export const bs58check = createBase58check(sha256);

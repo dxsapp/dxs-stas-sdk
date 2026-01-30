@@ -1,16 +1,17 @@
 import { ScriptReader } from "../script/read/script-reader";
 import { Address } from "./address";
+import { Bytes } from "../bytes";
 
 export class TransactionInput {
   TxId: string;
   Vout: number;
-  UnlockingScript: Buffer;
+  UnlockingScript: Bytes;
   Sequence: number;
 
   constructor(
     txId: string,
     vout: number,
-    unlockingScript: Buffer,
+    unlockingScript: Bytes,
     sequence: number
   ) {
     this.TxId = txId;

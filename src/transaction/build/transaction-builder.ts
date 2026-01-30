@@ -1,5 +1,5 @@
 import { getVarIntLength } from "../../buffer/buffer-utils";
-import { BufferWriter } from "../../buffer/buffer-writer";
+import { ByteWriter } from "../../binary";
 import { Address } from "../../bitcoin/address";
 import { OpCode } from "../../bitcoin/op-codes";
 import { OutPoint } from "../../bitcoin/out-point";
@@ -13,6 +13,7 @@ import { ScriptReader } from "../../script/read/script-reader";
 import { InputBilder } from "./input-builder";
 import { OutputBuilder } from "./output-builder";
 import { Wallet } from "../../bitcoin";
+import { Bytes, bytesToUtf8, toHex } from "../../bytes";
 
 export class TransactionBuilderError extends Error {
   constructor(message: string, public devMessage: string) {
@@ -56,7 +57,7 @@ export class TransactionBuilder {
     return this;
   };
 
-  addP2PkhOutput = (value: number, to: Address, data: Buffer[] = []) => {
+  addP2PkhOutput = (value: number, to: Address, data: Bytes[] = []) => {
     const script = new P2pkhBuilder(to);
 
     for (const d of data) {
@@ -68,7 +69,7 @@ export class TransactionBuilder {
     return this;
   };
 
-  addNullDataOutput(data: Buffer[]) {
+  addNullDataOutput(data: Bytes[]) {
     const script = new NullDataBuilder(data);
 
     this.Outputs.push(new OutputBuilder(script, 0));
@@ -105,7 +106,7 @@ export class TransactionBuilder {
     schema: TokenScheme,
     satoshis: number,
     to: Address,
-    data: Buffer[] = []
+    data: Bytes[] = []
   ) => {
     const script = new P2stasBuilder(to, schema.TokenId, schema.Symbol);
 
@@ -121,16 +122,16 @@ export class TransactionBuilder {
   addStasOutputByPrevLockingScript = (
     satoshis: number,
     to: Address,
-    prevStasLockingScript: Buffer
+    prevStasLockingScript: Bytes
   ) => {
     const prevScriptTokens = ScriptReader.read(prevStasLockingScript);
     const opReturnIdx = prevScriptTokens.findIndex(
       (x) => x.OpCodeNum === OpCode.OP_RETURN
     );
 
-    const toknenId = prevScriptTokens[opReturnIdx + 1].Data!.toString("hex");
-    const symbol = prevScriptTokens[opReturnIdx + 2].Data!.toString("utf8");
-    const data: Buffer[] = [];
+    const toknenId = toHex(prevScriptTokens[opReturnIdx + 1].Data!);
+    const symbol = bytesToUtf8(prevScriptTokens[opReturnIdx + 2].Data!);
+    const data: Bytes[] = [];
 
     for (let i = opReturnIdx + 3; i < prevScriptTokens.length; i++) {
       data.push(prevScriptTokens[i].Data!);
@@ -151,10 +152,10 @@ export class TransactionBuilder {
     return this;
   };
 
-  toBuffer = () => {
+  toBytes = () => {
     const size = this.size();
-    const buffer = Buffer.alloc(size);
-    const bufferWriter = new BufferWriter(buffer);
+    const buffer = new Uint8Array(size);
+    const bufferWriter = new ByteWriter(buffer);
 
     bufferWriter.writeUInt32(this.Version);
 
@@ -169,5 +170,5 @@ export class TransactionBuilder {
     return buffer;
   };
 
-  toHex = () => this.toBuffer().toString("hex");
+  toHex = () => toHex(this.toBytes());
 }

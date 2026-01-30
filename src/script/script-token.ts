@@ -1,10 +1,11 @@
 import { OpCode } from "../bitcoin/op-codes";
 import { isOpCode } from "./script-utils";
+import { Bytes } from "../bytes";
 
 export class ScriptToken {
   OpCodeNum: number;
   OpCode?: OpCode;
-  Data?: Buffer;
+  Data?: Bytes;
   DataLength: number = 0;
   IsReceiverId: boolean = false;
 
@@ -13,7 +14,7 @@ export class ScriptToken {
     this.OpCodeNum = opCodeNum;
   }
 
-  static fromBuffer(buffer: Buffer) {
+  static fromBytes(buffer: Bytes) {
     const opCodeNum =
       buffer.length === 0
         ? -1
@@ -39,7 +40,7 @@ export class ScriptToken {
 
   static fromScriptToken(from: ScriptToken) {
     const token = from.Data
-      ? ScriptToken.fromBuffer(from.Data)
+      ? ScriptToken.fromBytes(from.Data)
       : new ScriptToken(from.OpCodeNum, from.OpCode);
 
     token.IsReceiverId = from.IsReceiverId;

@@ -1,20 +1,21 @@
 import { ScriptReader } from "../script/read/script-reader";
 import { p2phkTokens, getP2stasTokens } from "../script/script-samples";
 import { ScriptToken } from "../script/script-token";
+import { Bytes, bytesToUtf8, toHex } from "../bytes";
 import { Address } from "./address";
 import { OpCode } from "./op-codes";
 import { ScriptType } from "./script-type";
 
 export class TransactionOutput {
   Satoshis: number;
-  LockignScript: Buffer;
+  LockignScript: Bytes;
   ScriptType: ScriptType = ScriptType.unknown;
   Address?: Address;
   TokenId?: string;
   Symbol?: string;
-  data: Buffer[] = [];
+  data: Bytes[] = [];
 
-  constructor(satoshis: number, lockignScript: Buffer) {
+  constructor(satoshis: number, lockignScript: Bytes) {
     this.Satoshis = satoshis;
     this.LockignScript = lockignScript;
 
@@ -91,9 +92,9 @@ export class TransactionOutput {
             this.Address = new Address(token.Data!);
         }
       } else {
-        if (i === opReturnIdx + 1) this.TokenId = token.Data!.toString("hex");
+        if (i === opReturnIdx + 1) this.TokenId = toHex(token.Data!);
         else if (i === opReturnIdx + 2)
-          this.Symbol = token.Data!.toString("utf8");
+          this.Symbol = bytesToUtf8(token.Data!);
         else this.data.push(token.Data!);
       }
     }

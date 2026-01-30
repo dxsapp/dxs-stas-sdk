@@ -1,8 +1,9 @@
-import { getNumberBuffer } from "../../buffer/buffer-utils";
-import { BufferWriter } from "../../buffer/buffer-writer";
+import { getNumberBytes } from "../../buffer/buffer-utils";
+import { ByteWriter } from "../../binary";
 import { Address } from "../../bitcoin/address";
 import { OpCode } from "../../bitcoin/op-codes";
 import { ScriptType } from "../../bitcoin/script-type";
+import { Bytes, toHex } from "../../bytes";
 import { ScriptToken } from "../script-token";
 
 export class ScriptBuilder {
@@ -52,9 +53,9 @@ export class ScriptBuilder {
     return size + add;
   };
 
-  toBuffer = () => {
-    const buffer = Buffer.alloc(this.size());
-    const bufferWriter = new BufferWriter(buffer);
+  toBytes = () => {
+    const buffer = new Uint8Array(this.size());
+    const bufferWriter = new ByteWriter(buffer);
 
     for (var token of this._tokens) {
       bufferWriter.writeUInt8(token.OpCodeNum);
@@ -76,7 +77,7 @@ export class ScriptBuilder {
     return buffer;
   };
 
-  toHex = () => this.toBuffer().toString("hex");
+  toHex = () => toHex(this.toBytes());
 
   addToken = (token: ScriptToken) => {
     this._tokens.push(token);
@@ -90,14 +91,14 @@ export class ScriptBuilder {
     return this;
   };
 
-  addData = (data: Buffer) => {
-    this._tokens.push(ScriptToken.fromBuffer(data));
+  addData = (data: Bytes) => {
+    this._tokens.push(ScriptToken.fromBytes(data));
 
     return this;
   };
 
-  addDatas = (data: Buffer[]) => {
-    for (const chunk of data) this._tokens.push(ScriptToken.fromBuffer(chunk));
+  addDatas = (data: Bytes[]) => {
+    for (const chunk of data) this._tokens.push(ScriptToken.fromBytes(chunk));
 
     return this;
   };
@@ -105,7 +106,7 @@ export class ScriptBuilder {
   addNumber = (data: number) => {
     if (data === 0) this.addOpCode(OpCode.OP_0);
     else if (data <= 16) this.addOpCode(0x50 + data);
-    else this.addData(getNumberBuffer(data));
+    else this.addData(getNumberBytes(data));
 
     return this;
   };
@@ -119,7 +120,7 @@ export class ScriptBuilder {
     for (const token of this._tokens) {
       if (result.length > 0) result += " ";
 
-      if (token.Data) result += token.Data!.toString("hex");
+      if (token.Data) result += toHex(token.Data!);
       else result += opCodeKeys[opCodeValues.indexOf(token.OpCodeNum)];
     }
 

@@ -10,6 +10,7 @@ import {
   BuildTransferTx,
 } from "../src/transaction-factory";
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
+import { fromHex, utf8ToBytes } from "../src/bytes";
 import {
   SourceTxRaw,
   IssueTxRaw,
@@ -28,16 +29,14 @@ import {
 } from "./stas-transactios";
 
 const issuerPrivateKey = new PrivateKey(
-  Buffer.from(
-    "b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368",
-    "hex"
+  fromHex(
+    "b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"
   )
 );
 const issuerAddress = Address.fromBase58("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
 const alicePrivateKey = new PrivateKey(
-  Buffer.from(
-    "77b1b7d5bfe1288d94f829baba86d503e1a06b571aaa5d36820be19ef2fe520e",
-    "hex"
+  fromHex(
+    "77b1b7d5bfe1288d94f829baba86d503e1a06b571aaa5d36820be19ef2fe520e"
   )
 );
 const aliceAddress = Address.fromBase58("1C2dVLqv1kjNn7pztpQ51bpXVEJfoWUNxe");
@@ -50,18 +49,17 @@ const tokenScheme = new TokenScheme(
 
 describe("testing transaction builder", () => {
   test("build open position transaction", () => {
-    const message1 = Buffer.from("bsvtest", "utf8");
-    const message2 = Buffer.from(
+    const message1 = utf8ToBytes("bsvtest");
+    const message2 = utf8ToBytes(
       "ulWY+84HZb02vz3iS2690DQ==,m107,tb,a0.01",
-      "utf8"
     );
-    const message3 = Buffer.from("text", "utf8");
-    const message4 = Buffer.from("B", "utf8");
+    const message3 = utf8ToBytes("text");
+    const message4 = utf8ToBytes("B");
     const from = Address.fromBase58("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
     const outPoint = new OutPoint(
       "bedacaaeed9eef91aa359f4e7be2c674e6f0ff150f358b7439469adbc0ccc442",
       2,
-      Buffer.from("76a914e3b111de8fec527b41f4189e313638075d96ccd688ac", "hex"),
+      fromHex("76a914e3b111de8fec527b41f4189e313638075d96ccd688ac"),
       20340,
       from,
       ScriptType.p2pkh
@@ -126,7 +124,7 @@ describe("testing transaction builder", () => {
       stasPayment: { OutPoint: stasOutPoint, Owner: alicePrivateKey },
       feePayment: { OutPoint: fundingOutPoint, Owner: issuerPrivateKey },
       to: aliceAddress,
-      note: [Buffer.from("DXS"), Buffer.from("Transfer test")],
+      note: [utf8ToBytes("DXS"), utf8ToBytes("Transfer test")],
     });
 
     expect(tx).toBe(TransferWithNoteRaw);
@@ -181,7 +179,7 @@ describe("testing transaction builder", () => {
         { Satoshis: 25, Address: aliceAddress },
         { Satoshis: 25, Address: aliceAddress },
       ],
-      note: [Buffer.from("DXS"), Buffer.from("Split test")],
+      note: [utf8ToBytes("DXS"), utf8ToBytes("Split test")],
     });
 
     expect(tx).toBe(SplitWithNoteRaw);
@@ -202,7 +200,7 @@ describe("testing transaction builder", () => {
         Owner: issuerPrivateKey,
       },
       destination: { Satoshis: 50, Address: aliceAddress },
-      note: [Buffer.from("DXS"), Buffer.from("Merge test")],
+      note: [utf8ToBytes("DXS"), utf8ToBytes("Merge test")],
     });
 
     expect(tx).toBe(MergeWithNoteRaw);
@@ -241,7 +239,7 @@ describe("testing transaction builder", () => {
       },
       destination: { Satoshis: 25, Address: aliceAddress },
       splitDestination: { Satoshis: 25, Address: aliceAddress },
-      note: [Buffer.from("DXS"), Buffer.from("Merge split test")],
+      note: [utf8ToBytes("DXS"), utf8ToBytes("Merge split test")],
     });
 
     expect(tx).toBe(MergeSplitWithNoteRaw);
@@ -262,7 +260,7 @@ describe("testing transaction builder", () => {
         Owner: issuerPrivateKey,
       },
       destination: { Satoshis: 50, Address: aliceAddress },
-      note: [Buffer.from("DXS"), Buffer.from("Merge test 2")],
+      note: [utf8ToBytes("DXS"), utf8ToBytes("Merge test 2")],
     });
 
     expect(tx).toBe(MergeWithNote2Raw);
@@ -280,7 +278,7 @@ describe("testing transaction builder", () => {
         Owner: issuerPrivateKey,
       },
       to: issuerAddress,
-      note: [Buffer.from("DXS"), Buffer.from("Transfer to issuer test")],
+      note: [utf8ToBytes("DXS"), utf8ToBytes("Transfer to issuer test")],
     });
 
     expect(tx).toBe(TransferToIssuerRaw);
@@ -297,8 +295,8 @@ describe("testing transaction builder", () => {
       .addP2PkhOutput(25, issuerAddress)
       .addStasOutputByScheme(tokenScheme, 25, issuerAddress)
       .addNullDataOutput([
-        Buffer.from("DXS"),
-        Buffer.from("Redeem Split test"),
+        utf8ToBytes("DXS"),
+        utf8ToBytes("Redeem Split test"),
       ]);
 
     txBuilder.addChangeOutputWithFee(
@@ -324,7 +322,7 @@ describe("testing transaction builder", () => {
       .addInput(stasOutPoint1, issuerPrivateKey)
       .addInput(fundingOutPoint, issuerPrivateKey)
       .addP2PkhOutput(25, issuerAddress)
-      .addNullDataOutput([Buffer.from("DXS"), Buffer.from("Redeem test")]);
+      .addNullDataOutput([utf8ToBytes("DXS"), utf8ToBytes("Redeem test")]);
 
     txBuilder.addChangeOutputWithFee(
       fundingOutPoint.Address,
@@ -349,13 +347,13 @@ describe("testing transaction builder", () => {
   //   var feeOutput = OutPoint.fromTransaction(sourceTx, 2);
 
   //   var stasPk = new PrivateKey(
-  //     Buffer.from(
+  //     fromHex(
   //       "df56deb3636aad10432c8de4bd58863a93db0e868fae2c4ba1d7abdf9e10d94a",
   //       "hex"
   //     )
   //   );
   //   var feePk = new PrivateKey(
-  //     Buffer.from(
+  //     fromHex(
   //       "cba27b635b098d790f5289460f28dd99174cd85283d7e9b4ea0c5ecc6bfa8c13",
   //       "hex"
   //     )

@@ -1,5 +1,4 @@
 import { mnemonicToSeedSync } from "@scure/bip39";
-import { toBuffer } from "../buffer/buffer-utils";
 import { HDKey, Versions } from "@scure/bip32";
 import { PrivateKey } from "./private-key";
 
@@ -9,7 +8,7 @@ interface WalletOpt {
   index?: number;
   parentFingerprint?: number;
   chainCode: Uint8Array;
-  privateKey?: Uint8Array | bigint;
+  privateKey?: Uint8Array;
 }
 
 export class Wallet extends HDKey {
@@ -40,7 +39,7 @@ export class Wallet extends HDKey {
   constructor(opt: WalletOpt) {
     super(opt);
 
-    this._pk = new PrivateKey(toBuffer(this.privateKey!));
+    this._pk = new PrivateKey(this.privateKey!);
   }
 
   get Address() {
@@ -51,9 +50,10 @@ export class Wallet extends HDKey {
     return this._pk.PublicKey;
   }
 
-  derive(path: string): Wallet {
+  deriveWallet = (path: string): Wallet => {
     return Wallet.fromHdKey(super.derive(path));
-  }
+  };
 
   sign = (message: Uint8Array) => this._pk.sign(message);
+  signMessage = (message: Uint8Array) => this._pk.sign(message);
 }

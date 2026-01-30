@@ -24,5 +24,5 @@ export class TokenScheme {
       satoshisPerToken: this.SatoshisPerToken,
     });
 
-  toBuffer = () => Buffer.from(this.toJson(), "utf8");
+  toBytes = () => new TextEncoder().encode(this.toJson());
 }

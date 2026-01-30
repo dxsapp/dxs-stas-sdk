@@ -1,6 +1,7 @@
 import { ScriptType } from "../src/bitcoin/script-type";
 import { ScriptReader } from "../src/script/read/script-reader";
 import { ScriptBuilder } from "../src/script/build/script-builder";
+import { fromHex } from "../src/bytes";
 
 const nullDataHex = "006a034458530d5472616e736665722074657374";
 const p2pkhHex = "76a914e3b111de8fec527b41f4189e313638075d96ccd688ac";
@@ -9,7 +10,7 @@ const stasHex =
 
 describe("testing script reader", () => {
   test("read null data script", () => {
-    const tokens = ScriptReader.read(Buffer.from(nullDataHex, "hex"));
+    const tokens = ScriptReader.read(fromHex(nullDataHex));
     const builder = ScriptBuilder.fromTokens(tokens, ScriptType.p2stas);
     const result = builder.toHex();
 
@@ -17,7 +18,7 @@ describe("testing script reader", () => {
   });
 
   test("read p2pkh script", () => {
-    const tokens = ScriptReader.read(Buffer.from(p2pkhHex, "hex"));
+    const tokens = ScriptReader.read(fromHex(p2pkhHex));
     const builder = ScriptBuilder.fromTokens(tokens, ScriptType.p2stas);
     const result = builder.toHex();
 
@@ -25,7 +26,7 @@ describe("testing script reader", () => {
   });
 
   test("read p2stas script", () => {
-    const tokens = ScriptReader.read(Buffer.from(stasHex, "hex"));
+    const tokens = ScriptReader.read(fromHex(stasHex));
     const builder = ScriptBuilder.fromTokens(tokens, ScriptType.p2stas);
     const result = builder.toHex();
 
