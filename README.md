@@ -160,3 +160,7 @@ const txHex = TransactionBuilder.init()
 | Script builders/readers | Build and parse scripts | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader` |
 | Transaction building | Assemble raw txs | `TransactionBuilder`, `TransactionReader` |
 | STAS factories | STAS workflows | `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, `BuildRedeemTx` |
+
+## Author
+
+- Oleg Panagushin (author) — https://github.com/panagushin
