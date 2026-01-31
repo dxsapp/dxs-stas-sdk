@@ -6,19 +6,22 @@ export { wordlist } from "@scure/bip39/wordlists/english.js";
 export type TWords = { [idxs: string]: string };
 
 export class Mnemonic {
-  constructor(public phrase: string, public words: TWords) {}
+  constructor(
+    public phrase: string,
+    public words: TWords,
+  ) {}
 
   public static generate = (): Mnemonic =>
     Mnemonic.fromPhrase(generateMnemonic(wordlist, 128));
 
   public static fromWords = (words: TWords): Mnemonic => {
-    var phrase = Object.values(words).join(" ");
+    const phrase = Object.values(words).join(" ");
 
     return new Mnemonic(phrase, words);
   };
 
   public static fromPhrase = (phrase: string): Mnemonic => {
-    var words = phrase.split(" ").reduce<TWords>((a, v, i) => {
+    const words = phrase.split(" ").reduce<TWords>((a, v, i) => {
       a[`${i}`] = v;
 
       return a;

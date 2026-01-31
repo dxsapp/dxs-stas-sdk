@@ -1,6 +1,6 @@
 import { bs58check } from "../base";
 import { Bytes, fromHex } from "../bytes";
-import { hash160 } from "../hashes";
+import { hash160 as hash160Function } from "../hashes";
 import { Network, Networks } from "./network";
 
 export class Address {
@@ -33,8 +33,8 @@ export class Address {
     return new Address(hash160);
   };
 
-  static fromPublicKey = (publicKey: Bytes) => new Address(hash160(publicKey));
+  static fromPublicKey = (publicKey: Bytes) =>
+    new Address(hash160Function(publicKey));
 
-  static fromHash160Hex = (hash160: string) =>
-    new Address(fromHex(hash160));
+  static fromHash160Hex = (hash160: string) => new Address(fromHex(hash160));
 }

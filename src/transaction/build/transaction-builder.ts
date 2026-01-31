@@ -16,7 +16,10 @@ import { Wallet } from "../../bitcoin";
 import { Bytes, bytesToUtf8, toHex } from "../../bytes";
 
 export class TransactionBuilderError extends Error {
-  constructor(message: string, public devMessage: string) {
+  constructor(
+    message: string,
+    public devMessage: string,
+  ) {
     super(message);
   }
 }
@@ -81,7 +84,7 @@ export class TransactionBuilder {
     to: Address,
     change: number,
     satoshisPerByte: number,
-    idx: number | null = null
+    idx: number | null = null,
   ) {
     const script = new P2pkhBuilder(to);
     const output = new OutputBuilder(script, change);
@@ -89,12 +92,12 @@ export class TransactionBuilder {
     if (idx !== null) this.Outputs.splice(idx, 0, output);
     else this.Outputs.push(output);
 
-    let fee = this.getFee(satoshisPerByte);
+    const fee = this.getFee(satoshisPerByte);
 
     if (fee >= change)
       throw new TransactionBuilderError(
         `Insufficient satoshis to pay fee`,
-        `Insufficient satoshis to pay fee. Change: ${change}; Fee: ${fee}`
+        `Insufficient satoshis to pay fee. Change: ${change}; Fee: ${fee}`,
       );
 
     output.Satoshis = change - fee;
@@ -106,7 +109,7 @@ export class TransactionBuilder {
     schema: TokenScheme,
     satoshis: number,
     to: Address,
-    data: Bytes[] = []
+    data: Bytes[] = [],
   ) => {
     const script = new P2stasBuilder(to, schema.TokenId, schema.Symbol);
 
@@ -122,11 +125,11 @@ export class TransactionBuilder {
   addStasOutputByPrevLockingScript = (
     satoshis: number,
     to: Address,
-    prevStasLockingScript: Bytes
+    prevStasLockingScript: Bytes,
   ) => {
     const prevScriptTokens = ScriptReader.read(prevStasLockingScript);
     const opReturnIdx = prevScriptTokens.findIndex(
-      (x) => x.OpCodeNum === OpCode.OP_RETURN
+      (x) => x.OpCodeNum === OpCode.OP_RETURN,
     );
 
     const toknenId = toHex(prevScriptTokens[opReturnIdx + 1].Data!);

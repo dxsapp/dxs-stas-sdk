@@ -93,8 +93,7 @@ export class TransactionOutput {
         }
       } else {
         if (i === opReturnIdx + 1) this.TokenId = toHex(token.Data!);
-        else if (i === opReturnIdx + 2)
-          this.Symbol = bytesToUtf8(token.Data!);
+        else if (i === opReturnIdx + 2) this.Symbol = bytesToUtf8(token.Data!);
         else this.data.push(token.Data!);
       }
     }

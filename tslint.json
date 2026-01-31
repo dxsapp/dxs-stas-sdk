@@ -1,3 +1,9 @@
 {
-  "extends": ["tslint:latest", "tslint-config-prettier"]
+  "extends": ["tslint:latest", "tslint-config-prettier"],
+  "rules": {
+    "no-submodule-imports": false,
+    "max-classes-per-file": false,
+    "no-bitwise": false,
+    "no-conditional-assignment": false
+  }
 }

@@ -41,7 +41,7 @@ export const BuildTransferTx = ({
       feePayment.OutPoint.Address,
       feePayment.OutPoint.Satoshis,
       FeeRate,
-      feeOutputIdx
+      feeOutputIdx,
     )
     .sign()
     .toHex();
@@ -64,7 +64,7 @@ export const BuildSplitTx = ({
 }: TBuildSplitTxRequest) => {
   if (destinations.length === 0 || destinations.length > 4)
     throw new Error(
-      "Destinations count must be no less than one and no more than four"
+      "Destinations count must be no less than one and no more than four",
     );
 
   const outputSatoshis = destinations.reduce((a, x) => a + x.Satoshis, 0);
@@ -80,7 +80,7 @@ export const BuildSplitTx = ({
     txBuilder.addStasOutputByScheme(
       tokenScheme,
       destination.Satoshis,
-      destination.Address
+      destination.Address,
     );
 
   const feeOutputIdx = txBuilder.Outputs.length;
@@ -92,7 +92,7 @@ export const BuildSplitTx = ({
       feePayment.OutPoint.Address,
       feePayment.OutPoint.Satoshis,
       FeeRate,
-      feeOutputIdx
+      feeOutputIdx,
     )
     .sign()
     .toHex();
@@ -135,14 +135,14 @@ export const BuildMergeTx = ({
     .addStasOutputByScheme(
       tokenScheme,
       destination.Satoshis,
-      destination.Address
+      destination.Address,
     );
 
   if (splitDestination)
     txBuilder.addStasOutputByScheme(
       tokenScheme,
       splitDestination.Satoshis,
-      splitDestination.Address
+      splitDestination.Address,
     );
 
   const feeOutputIdx = txBuilder.Outputs.length;
@@ -154,7 +154,7 @@ export const BuildMergeTx = ({
       feePayment.OutPoint.Address,
       feePayment.OutPoint.Satoshis,
       FeeRate,
-      feeOutputIdx
+      feeOutputIdx,
     )
     .sign()
     .toHex();
@@ -203,7 +203,7 @@ export const BuildRedeemTx = ({
       txBuilder.addStasOutputByScheme(
         tokenScheme,
         splitDestination.Satoshis,
-        splitDestination.Address
+        splitDestination.Address,
       );
 
   const feeOutputIdx = txBuilder.Outputs.length;
@@ -215,7 +215,7 @@ export const BuildRedeemTx = ({
       feePayment.OutPoint.Address,
       feePayment.OutPoint.Satoshis,
       FeeRate,
-      feeOutputIdx
+      feeOutputIdx,
     )
     .sign()
     .toHex();

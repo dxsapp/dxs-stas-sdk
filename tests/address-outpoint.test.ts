@@ -10,14 +10,14 @@ describe("address and outpoint", () => {
   test("address construction from public key and hash160", () => {
     const pk = new PrivateKey(
       fromHex(
-        "b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"
-      )
+        "b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368",
+      ),
     );
 
     expect(pk.Address.Value).toBe("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
 
     const addrFromHash = Address.fromHash160Hex(
-      "e3b111de8fec527b41f4189e313638075d96ccd6"
+      "e3b111de8fec527b41f4189e313638075d96ccd6",
     );
 
     expect(addrFromHash.Value).toBe("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");

@@ -12,7 +12,7 @@ export class P2pkhBuilder extends ScriptBuilder {
   constructor(address: Address) {
     super(ScriptType.p2pkh, address);
 
-    for (var token of p2phkTokens) {
+    for (const token of p2phkTokens) {
       if (token.IsReceiverId) {
         const receiver = ScriptToken.fromBytes(address.Hash160);
         receiver.IsReceiverId = true;

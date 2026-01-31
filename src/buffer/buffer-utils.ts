@@ -69,7 +69,7 @@ const indexOfSubarray = (source: Bytes, needle: Bytes, fromIndex = 0) => {
 
 export const splitBytes = (source: Bytes, splitBy: Bytes): Bytes[] => {
   let search = -1;
-  let move = 0;
+  const move = 0;
   const segments: Bytes[] = [];
 
   while ((search = indexOfSubarray(source, splitBy)) > -1) {

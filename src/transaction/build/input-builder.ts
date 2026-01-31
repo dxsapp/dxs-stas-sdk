@@ -24,7 +24,7 @@ export class InputBilder {
   protected Idx: number;
 
   OutPoint: OutPoint;
-  Merge: Boolean;
+  Merge: boolean;
   UnlockingScript?: Bytes;
   Sequence = TransactionBuilder.DefaultSequence;
 
@@ -84,7 +84,7 @@ export class InputBilder {
 
       if (!hasNote) script.addOpCode(OpCode.OP_0);
 
-      var fundingInput =
+      const fundingInput =
         this.TxBuilder.Inputs[this.TxBuilder.Inputs.length - 1];
 
       script
@@ -131,7 +131,7 @@ export class InputBilder {
     getChunkSize(this.OutPoint.LockignScript) +
     8 + // Satoshis
     4 + // Sequence
-    32 + //Outputs hash
+    32 + // Outputs hash
     4 + // Lock time
     4; // Signature type
 
@@ -193,7 +193,7 @@ export class InputBilder {
   preimage = (signatureHashType: SignatureHashType) => {
     const size = this.preimageLength();
     const buffer = new Uint8Array(size);
-    var writer = new ByteWriter(buffer);
+    const writer = new ByteWriter(buffer);
 
     writer.writeUInt32(this.TxBuilder.Version); // 4
     this.writePrevoutHash(writer); // 32
@@ -234,7 +234,7 @@ export class InputBilder {
   };
 
   private writeOutputsHash = (writer: ByteWriter) => {
-    var size = this.TxBuilder.Outputs.reduce((a, x) => a + x.size(), 0);
+    const size = this.TxBuilder.Outputs.reduce((a, x) => a + x.size(), 0);
 
     const buffer = new Uint8Array(size);
     const bufferWriter = new ByteWriter(buffer);

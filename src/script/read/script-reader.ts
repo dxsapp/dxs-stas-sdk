@@ -62,8 +62,7 @@ export class ScriptReader {
       // 16 bit
     } else if (opcode === OpCode.OP_PUSHDATA2) {
       if (offset + 3 > buffer.length) return null;
-      num =
-        buffer[offset + 1] | (buffer[offset + 2] << 8);
+      num = buffer[offset + 1] | (buffer[offset + 2] << 8);
       size = 3;
       // 32 bit
     } else {
@@ -73,7 +72,8 @@ export class ScriptReader {
         (buffer[offset + 1] |
           (buffer[offset + 2] << 8) |
           (buffer[offset + 3] << 16) |
-          (buffer[offset + 4] << 24)) >>> 0;
+          (buffer[offset + 4] << 24)) >>>
+        0;
       size = 5;
     }
     return {

@@ -6,8 +6,7 @@ import { TransactionInput } from "../../bitcoin/transaction-input";
 import { TransactionOutput } from "../../bitcoin/transaction-output";
 
 export class TransactionReader {
-  static readHex = (raw: string) =>
-    TransactionReader.readBytes(fromHex(raw));
+  static readHex = (raw: string) => TransactionReader.readBytes(fromHex(raw));
 
   static readBytes = (buffer: Bytes) => {
     const reader = new ByteReader(buffer);
@@ -38,12 +37,7 @@ export class TransactionReader {
     const unlockingScript = reader.readVarChunk();
     const sequence = reader.readUInt32();
 
-    return new TransactionInput(
-      toHex(txId),
-      vout,
-      unlockingScript,
-      sequence
-    );
+    return new TransactionInput(toHex(txId), vout, unlockingScript, sequence);
   };
 
   static readOutput = (reader: ByteReader): TransactionOutput => {

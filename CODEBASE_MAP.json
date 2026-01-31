@@ -6,175 +6,678 @@
     "src/index.ts"
   ],
   "exports": [
-    {"name":"bs58check","kind":"const","from":"src/base.ts","signature":"const bs58check = base58check(sha256)"},
-    {"name":"sha256","kind":"function","from":"src/hashes.ts","signature":"(message: Buffer) => Buffer"},
-    {"name":"ripemd160","kind":"function","from":"src/hashes.ts","signature":"(message: Buffer) => Buffer"},
-    {"name":"hash160","kind":"function","from":"src/hashes.ts","signature":"(buffer: Buffer) => Buffer"},
-    {"name":"hash256","kind":"function","from":"src/hashes.ts","signature":"(buffer: Buffer) => Buffer"},
+    {
+      "name": "bs58check",
+      "kind": "const",
+      "from": "src/base.ts",
+      "signature": "const bs58check = base58check(sha256)"
+    },
+    {
+      "name": "sha256",
+      "kind": "function",
+      "from": "src/hashes.ts",
+      "signature": "(message: Buffer) => Buffer"
+    },
+    {
+      "name": "ripemd160",
+      "kind": "function",
+      "from": "src/hashes.ts",
+      "signature": "(message: Buffer) => Buffer"
+    },
+    {
+      "name": "hash160",
+      "kind": "function",
+      "from": "src/hashes.ts",
+      "signature": "(buffer: Buffer) => Buffer"
+    },
+    {
+      "name": "hash256",
+      "kind": "function",
+      "from": "src/hashes.ts",
+      "signature": "(buffer: Buffer) => Buffer"
+    },
 
-    {"name":"BufferReader","kind":"class","from":"src/buffer/buffer-reader.ts","signature":"class BufferReader { constructor(buffer: Buffer, offset?: number); readUInt8(); readUInt16(); readInt32(); readUInt32(); readUInt64(); readVarInt(); readChunk(n: number); readVarChunk(); }"},
-    {"name":"BufferWriter","kind":"class","from":"src/buffer/buffer-writer.ts","signature":"class BufferWriter { constructor(buffer: Buffer, offset?: number); static fromSize(size: number): BufferWriter; writeUInt8(value: number); writeUInt16(value: number); writeUInt32(value: number); writeUInt64(value: number); writeVarInt(value: number); writeChunk(chunk: Buffer); writeVarChunk(chunk: Buffer); }"},
-    {"name":"OP_INT_BASE","kind":"const","from":"src/buffer/buffer-utils.ts","signature":"const OP_INT_BASE: number"},
-    {"name":"asMinimalOP","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(buffer: Buffer) => number | undefined"},
-    {"name":"ensureUInt","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(value: number, max: number) => void"},
-    {"name":"toBuffer","kind":"const","from":"src/buffer/buffer-utils.ts","signature":"const toBuffer = toBufferExternal"},
-    {"name":"toUtf8Buffer","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(value: string) => Buffer"},
-    {"name":"toHexBuffer","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(value: string) => Buffer"},
-    {"name":"slice","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(buffer: Buffer, offset: number, length: number) => Buffer"},
-    {"name":"reverseBuffer","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(buffer: Buffer) => Buffer"},
-    {"name":"cloneBuffer","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(source: Buffer, targetStart?: number, sourceStart?: number, sourceEnd?: number) => Buffer"},
-    {"name":"splitBuffer","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(source: Buffer, splitBy: Buffer) => Buffer[]"},
-    {"name":"getVarIntLength","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(value: number) => number"},
-    {"name":"getNumberSize","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(data: number) => number"},
-    {"name":"getMinimumRequiredByte","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(value: number) => number"},
-    {"name":"getNumberBuffer","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(value: number) => Buffer"},
-    {"name":"estimateChunkSize","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(bufferSize: number) => number"},
-    {"name":"getChunkSize","kind":"function","from":"src/buffer/buffer-utils.ts","signature":"(buffer: Buffer) => number"},
+    {
+      "name": "BufferReader",
+      "kind": "class",
+      "from": "src/buffer/buffer-reader.ts",
+      "signature": "class BufferReader { constructor(buffer: Buffer, offset?: number); readUInt8(); readUInt16(); readInt32(); readUInt32(); readUInt64(); readVarInt(); readChunk(n: number); readVarChunk(); }"
+    },
+    {
+      "name": "BufferWriter",
+      "kind": "class",
+      "from": "src/buffer/buffer-writer.ts",
+      "signature": "class BufferWriter { constructor(buffer: Buffer, offset?: number); static fromSize(size: number): BufferWriter; writeUInt8(value: number); writeUInt16(value: number); writeUInt32(value: number); writeUInt64(value: number); writeVarInt(value: number); writeChunk(chunk: Buffer); writeVarChunk(chunk: Buffer); }"
+    },
+    {
+      "name": "OP_INT_BASE",
+      "kind": "const",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "const OP_INT_BASE: number"
+    },
+    {
+      "name": "asMinimalOP",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(buffer: Buffer) => number | undefined"
+    },
+    {
+      "name": "ensureUInt",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(value: number, max: number) => void"
+    },
+    {
+      "name": "toBuffer",
+      "kind": "const",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "const toBuffer = toBufferExternal"
+    },
+    {
+      "name": "toUtf8Buffer",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(value: string) => Buffer"
+    },
+    {
+      "name": "toHexBuffer",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(value: string) => Buffer"
+    },
+    {
+      "name": "slice",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(buffer: Buffer, offset: number, length: number) => Buffer"
+    },
+    {
+      "name": "reverseBuffer",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(buffer: Buffer) => Buffer"
+    },
+    {
+      "name": "cloneBuffer",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(source: Buffer, targetStart?: number, sourceStart?: number, sourceEnd?: number) => Buffer"
+    },
+    {
+      "name": "splitBuffer",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(source: Buffer, splitBy: Buffer) => Buffer[]"
+    },
+    {
+      "name": "getVarIntLength",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(value: number) => number"
+    },
+    {
+      "name": "getNumberSize",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(data: number) => number"
+    },
+    {
+      "name": "getMinimumRequiredByte",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(value: number) => number"
+    },
+    {
+      "name": "getNumberBuffer",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(value: number) => Buffer"
+    },
+    {
+      "name": "estimateChunkSize",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(bufferSize: number) => number"
+    },
+    {
+      "name": "getChunkSize",
+      "kind": "function",
+      "from": "src/buffer/buffer-utils.ts",
+      "signature": "(buffer: Buffer) => number"
+    },
 
-    {"name":"Address","kind":"class","from":"src/bitcoin/address.ts","signature":"class Address { Value: string; Hash160: Buffer; Network: Network; constructor(hash160: Buffer); static fromBase58(address: string): Address; static fromPublicKey(publicKey: Buffer): Address; static fromHash160Hex(hash160: string): Address; }"},
-    {"name":"Network","kind":"type","from":"src/bitcoin/network.ts","signature":"type Network = { pubKeyHash: number; wif: number; }"},
-    {"name":"Networks","kind":"const","from":"src/bitcoin/network.ts","signature":"const Networks: { [name: string]: Network }"},
-    {"name":"OpCode","kind":"enum","from":"src/bitcoin/op-codes.ts","signature":"enum OpCode"},
-    {"name":"ScriptType","kind":"enum","from":"src/bitcoin/script-type.ts","signature":"enum ScriptType"},
-    {"name":"SignatureHashType","kind":"enum","from":"src/bitcoin/sig-hash-type.ts","signature":"enum SignatureHashType"},
-    {"name":"TokenScheme","kind":"class","from":"src/bitcoin/token-scheme.ts","signature":"class TokenScheme { constructor(name: string, tokenId: string, symbol: string, satoshisPerToken: number); toJson(): string; toBuffer(): Buffer; }"},
-    {"name":"TransactionInput","kind":"class","from":"src/bitcoin/transaction-input.ts","signature":"class TransactionInput { constructor(txId: string, vout: number, unlockingScript: Buffer, sequence: number); tryGetAddress(); }"},
-    {"name":"TransactionOutput","kind":"class","from":"src/bitcoin/transaction-output.ts","signature":"class TransactionOutput { constructor(satoshis: number, lockignScript: Buffer); }"},
-    {"name":"Transaction","kind":"class","from":"src/bitcoin/transaction.ts","signature":"class Transaction { constructor(raw: Buffer, inputs: TransactionInput[], outputs: TransactionOutput[], version: number, lockTime: number); }"},
-    {"name":"OutPoint","kind":"class","from":"src/bitcoin/out-point.ts","signature":"class OutPoint { constructor(txId: string, vout: number, lockignScript: Buffer, satoshis: number, address: Address, scriptType: ScriptType); static fromTransaction(transaction: Transaction, vout: number): OutPointFull; static fromHex(hex: string, vout: number): OutPointFull; toString(): string; }"},
-    {"name":"OutPointFull","kind":"class","from":"src/bitcoin/out-point.ts","signature":"class OutPointFull extends OutPoint { constructor(transaction: Transaction, vout: number); }"},
-    {"name":"PrivateKey","kind":"class","from":"src/bitcoin/private-key.ts","signature":"class PrivateKey { constructor(pk: Buffer); sign(message: Uint8Array): Buffer; verify(signature: Buffer, message: Buffer): boolean; }"},
-    {"name":"verify","kind":"function","from":"src/bitcoin/private-key.ts","signature":"verify(...)"},
-    {"name":"verifyBitcoinSignedMessage","kind":"function","from":"src/bitcoin/private-key.ts","signature":"(message: Buffer, publicKey: Buffer, signature: Buffer) => boolean"},
-    {"name":"Wallet","kind":"class","from":"src/bitcoin/wallet.ts","signature":"class Wallet extends HDKey { static fromMnemonic(mnemonic: string): Wallet; static fromHdKey(hdKey: HDKey): Wallet; derive(path: string): Wallet; sign(message: Uint8Array): Buffer; get Address(): Address; get PublicKey(): Buffer; }"},
-    {"name":"Mnemonic","kind":"class","from":"src/bitcoin/mnemonic.ts","signature":"class Mnemonic { constructor(phrase: string, words: TWords); static generate(): Mnemonic; static fromWords(words: TWords): Mnemonic; static fromPhrase(phrase: string): Mnemonic; static fromRandomText(text: string): Mnemonic | undefined; }"},
-    {"name":"wordlist","kind":"const","from":"src/bitcoin/mnemonic.ts","signature":"wordlist"},
-    {"name":"TWords","kind":"type","from":"src/bitcoin/mnemonic.ts","signature":"type TWords = { [idxs: string]: string }"},
-    {"name":"TPayment","kind":"type","from":"src/bitcoin/payment.ts","signature":"type TPayment = { OutPoint: OutPoint; Owner: PrivateKey | Wallet; }"},
-    {"name":"TDestination","kind":"type","from":"src/bitcoin/destination.ts","signature":"type TDestination = { Address: Address; Satoshis: number; Data?: Buffer[] }"},
+    {
+      "name": "Address",
+      "kind": "class",
+      "from": "src/bitcoin/address.ts",
+      "signature": "class Address { Value: string; Hash160: Buffer; Network: Network; constructor(hash160: Buffer); static fromBase58(address: string): Address; static fromPublicKey(publicKey: Buffer): Address; static fromHash160Hex(hash160: string): Address; }"
+    },
+    {
+      "name": "Network",
+      "kind": "type",
+      "from": "src/bitcoin/network.ts",
+      "signature": "type Network = { pubKeyHash: number; wif: number; }"
+    },
+    {
+      "name": "Networks",
+      "kind": "const",
+      "from": "src/bitcoin/network.ts",
+      "signature": "const Networks: { [name: string]: Network }"
+    },
+    {
+      "name": "OpCode",
+      "kind": "enum",
+      "from": "src/bitcoin/op-codes.ts",
+      "signature": "enum OpCode"
+    },
+    {
+      "name": "ScriptType",
+      "kind": "enum",
+      "from": "src/bitcoin/script-type.ts",
+      "signature": "enum ScriptType"
+    },
+    {
+      "name": "SignatureHashType",
+      "kind": "enum",
+      "from": "src/bitcoin/sig-hash-type.ts",
+      "signature": "enum SignatureHashType"
+    },
+    {
+      "name": "TokenScheme",
+      "kind": "class",
+      "from": "src/bitcoin/token-scheme.ts",
+      "signature": "class TokenScheme { constructor(name: string, tokenId: string, symbol: string, satoshisPerToken: number); toJson(): string; toBuffer(): Buffer; }"
+    },
+    {
+      "name": "TransactionInput",
+      "kind": "class",
+      "from": "src/bitcoin/transaction-input.ts",
+      "signature": "class TransactionInput { constructor(txId: string, vout: number, unlockingScript: Buffer, sequence: number); tryGetAddress(); }"
+    },
+    {
+      "name": "TransactionOutput",
+      "kind": "class",
+      "from": "src/bitcoin/transaction-output.ts",
+      "signature": "class TransactionOutput { constructor(satoshis: number, lockignScript: Buffer); }"
+    },
+    {
+      "name": "Transaction",
+      "kind": "class",
+      "from": "src/bitcoin/transaction.ts",
+      "signature": "class Transaction { constructor(raw: Buffer, inputs: TransactionInput[], outputs: TransactionOutput[], version: number, lockTime: number); }"
+    },
+    {
+      "name": "OutPoint",
+      "kind": "class",
+      "from": "src/bitcoin/out-point.ts",
+      "signature": "class OutPoint { constructor(txId: string, vout: number, lockignScript: Buffer, satoshis: number, address: Address, scriptType: ScriptType); static fromTransaction(transaction: Transaction, vout: number): OutPointFull; static fromHex(hex: string, vout: number): OutPointFull; toString(): string; }"
+    },
+    {
+      "name": "OutPointFull",
+      "kind": "class",
+      "from": "src/bitcoin/out-point.ts",
+      "signature": "class OutPointFull extends OutPoint { constructor(transaction: Transaction, vout: number); }"
+    },
+    {
+      "name": "PrivateKey",
+      "kind": "class",
+      "from": "src/bitcoin/private-key.ts",
+      "signature": "class PrivateKey { constructor(pk: Buffer); sign(message: Uint8Array): Buffer; verify(signature: Buffer, message: Buffer): boolean; }"
+    },
+    {
+      "name": "verify",
+      "kind": "function",
+      "from": "src/bitcoin/private-key.ts",
+      "signature": "verify(...)"
+    },
+    {
+      "name": "verifyBitcoinSignedMessage",
+      "kind": "function",
+      "from": "src/bitcoin/private-key.ts",
+      "signature": "(message: Buffer, publicKey: Buffer, signature: Buffer) => boolean"
+    },
+    {
+      "name": "Wallet",
+      "kind": "class",
+      "from": "src/bitcoin/wallet.ts",
+      "signature": "class Wallet extends HDKey { static fromMnemonic(mnemonic: string): Wallet; static fromHdKey(hdKey: HDKey): Wallet; derive(path: string): Wallet; sign(message: Uint8Array): Buffer; get Address(): Address; get PublicKey(): Buffer; }"
+    },
+    {
+      "name": "Mnemonic",
+      "kind": "class",
+      "from": "src/bitcoin/mnemonic.ts",
+      "signature": "class Mnemonic { constructor(phrase: string, words: TWords); static generate(): Mnemonic; static fromWords(words: TWords): Mnemonic; static fromPhrase(phrase: string): Mnemonic; static fromRandomText(text: string): Mnemonic | undefined; }"
+    },
+    {
+      "name": "wordlist",
+      "kind": "const",
+      "from": "src/bitcoin/mnemonic.ts",
+      "signature": "wordlist"
+    },
+    {
+      "name": "TWords",
+      "kind": "type",
+      "from": "src/bitcoin/mnemonic.ts",
+      "signature": "type TWords = { [idxs: string]: string }"
+    },
+    {
+      "name": "TPayment",
+      "kind": "type",
+      "from": "src/bitcoin/payment.ts",
+      "signature": "type TPayment = { OutPoint: OutPoint; Owner: PrivateKey | Wallet; }"
+    },
+    {
+      "name": "TDestination",
+      "kind": "type",
+      "from": "src/bitcoin/destination.ts",
+      "signature": "type TDestination = { Address: Address; Satoshis: number; Data?: Buffer[] }"
+    },
 
-    {"name":"ScriptBuilder","kind":"class","from":"src/script/build/script-builder.ts","signature":"class ScriptBuilder { constructor(scriptType: ScriptType, toAddress?: Address); static fromTokens(tokens: ScriptToken[], scriptType: ScriptType): ScriptBuilder; size(): number; toBuffer(): Buffer; toHex(): string; addToken(token: ScriptToken): ScriptBuilder; addOpCode(opCode: OpCode): ScriptBuilder; addData(data: Buffer): ScriptBuilder; addDatas(data: Buffer[]): ScriptBuilder; addNumber(data: number): ScriptBuilder; toAsm(): string; }"},
-    {"name":"P2pkhBuilder","kind":"class","from":"src/script/build/p2pkh-builder.ts","signature":"class P2pkhBuilder extends ScriptBuilder { constructor(address: Address); addReturnData(data: Buffer); }"},
-    {"name":"P2stasBuilder","kind":"class","from":"src/script/build/p2stas-builder.ts","signature":"class P2stasBuilder extends ScriptBuilder { constructor(address: Address, tokenId: string, symbol: string, data?: Buffer[]); }"},
-    {"name":"NullDataBuilder","kind":"class","from":"src/script/build/null-data-builder.ts","signature":"class NullDataBuilder extends ScriptBuilder { constructor(data: Buffer[]); }"},
-    {"name":"ScriptReader","kind":"class","from":"src/script/read/script-reader.ts","signature":"class ScriptReader { static read(source: Buffer): ScriptToken[]; static decode(buffer: Buffer, offset: number); }"},
-    {"name":"ScriptToken","kind":"class","from":"src/script/script-token.ts","signature":"class ScriptToken { constructor(opCodeNum: number, opCode?: OpCode); static fromBuffer(buffer: Buffer): ScriptToken; static fromScriptToken(from: ScriptToken): ScriptToken; static forSample(opCodeNum: number, dataLength?: number, isReceiverId?: boolean): ScriptToken; }"},
-    {"name":"isOpCode","kind":"function","from":"src/script/script-utils.ts","signature":"(opCodeNum: number) => { valid: boolean; opCode: number }"},
-    {"name":"nullDataTokens","kind":"const","from":"src/script/script-samples.ts","signature":"const nullDataTokens: ScriptToken[]"},
-    {"name":"p2phkTokens","kind":"const","from":"src/script/script-samples.ts","signature":"const p2phkTokens: ScriptToken[]"},
-    {"name":"p2stasSampleHex","kind":"const","from":"src/script/script-samples.ts","signature":"const p2stasSampleHex: string"},
-    {"name":"getP2stasTokens","kind":"function","from":"src/script/script-samples.ts","signature":"() => ScriptToken[]"},
+    {
+      "name": "ScriptBuilder",
+      "kind": "class",
+      "from": "src/script/build/script-builder.ts",
+      "signature": "class ScriptBuilder { constructor(scriptType: ScriptType, toAddress?: Address); static fromTokens(tokens: ScriptToken[], scriptType: ScriptType): ScriptBuilder; size(): number; toBuffer(): Buffer; toHex(): string; addToken(token: ScriptToken): ScriptBuilder; addOpCode(opCode: OpCode): ScriptBuilder; addData(data: Buffer): ScriptBuilder; addDatas(data: Buffer[]): ScriptBuilder; addNumber(data: number): ScriptBuilder; toAsm(): string; }"
+    },
+    {
+      "name": "P2pkhBuilder",
+      "kind": "class",
+      "from": "src/script/build/p2pkh-builder.ts",
+      "signature": "class P2pkhBuilder extends ScriptBuilder { constructor(address: Address); addReturnData(data: Buffer); }"
+    },
+    {
+      "name": "P2stasBuilder",
+      "kind": "class",
+      "from": "src/script/build/p2stas-builder.ts",
+      "signature": "class P2stasBuilder extends ScriptBuilder { constructor(address: Address, tokenId: string, symbol: string, data?: Buffer[]); }"
+    },
+    {
+      "name": "NullDataBuilder",
+      "kind": "class",
+      "from": "src/script/build/null-data-builder.ts",
+      "signature": "class NullDataBuilder extends ScriptBuilder { constructor(data: Buffer[]); }"
+    },
+    {
+      "name": "ScriptReader",
+      "kind": "class",
+      "from": "src/script/read/script-reader.ts",
+      "signature": "class ScriptReader { static read(source: Buffer): ScriptToken[]; static decode(buffer: Buffer, offset: number); }"
+    },
+    {
+      "name": "ScriptToken",
+      "kind": "class",
+      "from": "src/script/script-token.ts",
+      "signature": "class ScriptToken { constructor(opCodeNum: number, opCode?: OpCode); static fromBuffer(buffer: Buffer): ScriptToken; static fromScriptToken(from: ScriptToken): ScriptToken; static forSample(opCodeNum: number, dataLength?: number, isReceiverId?: boolean): ScriptToken; }"
+    },
+    {
+      "name": "isOpCode",
+      "kind": "function",
+      "from": "src/script/script-utils.ts",
+      "signature": "(opCodeNum: number) => { valid: boolean; opCode: number }"
+    },
+    {
+      "name": "nullDataTokens",
+      "kind": "const",
+      "from": "src/script/script-samples.ts",
+      "signature": "const nullDataTokens: ScriptToken[]"
+    },
+    {
+      "name": "p2phkTokens",
+      "kind": "const",
+      "from": "src/script/script-samples.ts",
+      "signature": "const p2phkTokens: ScriptToken[]"
+    },
+    {
+      "name": "p2stasSampleHex",
+      "kind": "const",
+      "from": "src/script/script-samples.ts",
+      "signature": "const p2stasSampleHex: string"
+    },
+    {
+      "name": "getP2stasTokens",
+      "kind": "function",
+      "from": "src/script/script-samples.ts",
+      "signature": "() => ScriptToken[]"
+    },
 
-    {"name":"TransactionBuilderError","kind":"class","from":"src/transaction/build/transaction-builder.ts","signature":"class TransactionBuilderError extends Error { constructor(message: string, devMessage: string); }"},
-    {"name":"TransactionBuilder","kind":"class","from":"src/transaction/build/transaction-builder.ts","signature":"class TransactionBuilder { static DefaultSequence: number; static DefaultSighashType: number; static init(): TransactionBuilder; size(): number; getFee(satoshisPerByte: number): number; addInput(outPoint: OutPoint, signer: PrivateKey | Wallet): this; addStasMergeInput(outPoint: OutPoint, signer: PrivateKey | Wallet): this; addP2PkhOutput(value: number, to: Address, data?: Buffer[]): this; addNullDataOutput(data: Buffer[]): this; addChangeOutputWithFee(to: Address, change: number, satoshisPerByte: number, idx?: number | null): this; addStasOutputByScheme(schema: TokenScheme, satoshis: number, to: Address, data?: Buffer[]): this; addStasOutputByPrevLockingScript(satoshis: number, to: Address, prevStasLockingScript: Buffer): this; sign(): this; toBuffer(): Buffer; toHex(): string; }"},
-    {"name":"InputBilder","kind":"class","from":"src/transaction/build/input-builder.ts","signature":"class InputBilder { constructor(txBuilder: TransactionBuilder, outPoint: OutPoint, signer: PrivateKey | Wallet, merge: boolean); sign(): void; writeTo(bufferWriter: BufferWriter): void; size(): number; preimageLength(): number; stasNullDataLength(): number; prevoutHashLength(): number; unlockingScriptSize(): number; preimage(signatureHashType: SignatureHashType): Buffer; }"},
-    {"name":"OutputBuilder","kind":"class","from":"src/transaction/build/output-builder.ts","signature":"class OutputBuilder { constructor(lockingScript: ScriptBuilder, satoshis: number); size(): number; writeTo(bufferWriter: BufferWriter): void; }"},
-    {"name":"TransactionReader","kind":"class","from":"src/transaction/read/transaction-reader.ts","signature":"class TransactionReader { static readHex(raw: string): Transaction; static readBuffer(buffer: Buffer): Transaction; static readInput(reader: BufferReader): TransactionInput; static readOutput(reader: BufferReader): TransactionOutput; }"},
+    {
+      "name": "TransactionBuilderError",
+      "kind": "class",
+      "from": "src/transaction/build/transaction-builder.ts",
+      "signature": "class TransactionBuilderError extends Error { constructor(message: string, devMessage: string); }"
+    },
+    {
+      "name": "TransactionBuilder",
+      "kind": "class",
+      "from": "src/transaction/build/transaction-builder.ts",
+      "signature": "class TransactionBuilder { static DefaultSequence: number; static DefaultSighashType: number; static init(): TransactionBuilder; size(): number; getFee(satoshisPerByte: number): number; addInput(outPoint: OutPoint, signer: PrivateKey | Wallet): this; addStasMergeInput(outPoint: OutPoint, signer: PrivateKey | Wallet): this; addP2PkhOutput(value: number, to: Address, data?: Buffer[]): this; addNullDataOutput(data: Buffer[]): this; addChangeOutputWithFee(to: Address, change: number, satoshisPerByte: number, idx?: number | null): this; addStasOutputByScheme(schema: TokenScheme, satoshis: number, to: Address, data?: Buffer[]): this; addStasOutputByPrevLockingScript(satoshis: number, to: Address, prevStasLockingScript: Buffer): this; sign(): this; toBuffer(): Buffer; toHex(): string; }"
+    },
+    {
+      "name": "InputBilder",
+      "kind": "class",
+      "from": "src/transaction/build/input-builder.ts",
+      "signature": "class InputBilder { constructor(txBuilder: TransactionBuilder, outPoint: OutPoint, signer: PrivateKey | Wallet, merge: boolean); sign(): void; writeTo(bufferWriter: BufferWriter): void; size(): number; preimageLength(): number; stasNullDataLength(): number; prevoutHashLength(): number; unlockingScriptSize(): number; preimage(signatureHashType: SignatureHashType): Buffer; }"
+    },
+    {
+      "name": "OutputBuilder",
+      "kind": "class",
+      "from": "src/transaction/build/output-builder.ts",
+      "signature": "class OutputBuilder { constructor(lockingScript: ScriptBuilder, satoshis: number); size(): number; writeTo(bufferWriter: BufferWriter): void; }"
+    },
+    {
+      "name": "TransactionReader",
+      "kind": "class",
+      "from": "src/transaction/read/transaction-reader.ts",
+      "signature": "class TransactionReader { static readHex(raw: string): Transaction; static readBuffer(buffer: Buffer): Transaction; static readInput(reader: BufferReader): TransactionInput; static readOutput(reader: BufferReader): TransactionOutput; }"
+    },
 
-    {"name":"FeeRate","kind":"const","from":"src/transaction-factory.ts","signature":"const FeeRate = 0.05"},
-    {"name":"TBuildTransferTxRequest","kind":"type","from":"src/transaction-factory.ts","signature":"type TBuildTransferTxRequest = { tokenScheme: TokenScheme; stasPayment: TPayment; feePayment: TPayment; to: Address; note?: Buffer[] }"},
-    {"name":"BuildTransferTx","kind":"function","from":"src/transaction-factory.ts","signature":"(req: TBuildTransferTxRequest) => string"},
-    {"name":"TBuildSplitTxRequest","kind":"type","from":"src/transaction-factory.ts","signature":"type TBuildSplitTxRequest = { tokenScheme: TokenScheme; stasPayment: TPayment; feePayment: TPayment; destinations: TDestination[]; note?: Buffer[] }"},
-    {"name":"BuildSplitTx","kind":"function","from":"src/transaction-factory.ts","signature":"(req: TBuildSplitTxRequest) => string"},
-    {"name":"TBuildMergeTxRequest","kind":"type","from":"src/transaction-factory.ts","signature":"type TBuildMergeTxRequest = { tokenScheme: TokenScheme; outPoint1: OutPointFull; outPoint2: OutPointFull; owner: PrivateKey | Wallet; feePayment: TPayment; destination: TDestination; splitDestination?: TDestination; note?: Buffer[] }"},
-    {"name":"BuildMergeTx","kind":"function","from":"src/transaction-factory.ts","signature":"(req: TBuildMergeTxRequest) => string"},
-    {"name":"TBuildRedeemTxRequest","kind":"type","from":"src/transaction-factory.ts","signature":"type TBuildRedeemTxRequest = { tokenScheme: TokenScheme; stasPayment: TPayment; feePayment: TPayment; splitDestinations?: TDestination[]; note?: Buffer[] }"},
-    {"name":"BuildRedeemTx","kind":"function","from":"src/transaction-factory.ts","signature":"(req: TBuildRedeemTxRequest) => string"},
+    {
+      "name": "FeeRate",
+      "kind": "const",
+      "from": "src/transaction-factory.ts",
+      "signature": "const FeeRate = 0.05"
+    },
+    {
+      "name": "TBuildTransferTxRequest",
+      "kind": "type",
+      "from": "src/transaction-factory.ts",
+      "signature": "type TBuildTransferTxRequest = { tokenScheme: TokenScheme; stasPayment: TPayment; feePayment: TPayment; to: Address; note?: Buffer[] }"
+    },
+    {
+      "name": "BuildTransferTx",
+      "kind": "function",
+      "from": "src/transaction-factory.ts",
+      "signature": "(req: TBuildTransferTxRequest) => string"
+    },
+    {
+      "name": "TBuildSplitTxRequest",
+      "kind": "type",
+      "from": "src/transaction-factory.ts",
+      "signature": "type TBuildSplitTxRequest = { tokenScheme: TokenScheme; stasPayment: TPayment; feePayment: TPayment; destinations: TDestination[]; note?: Buffer[] }"
+    },
+    {
+      "name": "BuildSplitTx",
+      "kind": "function",
+      "from": "src/transaction-factory.ts",
+      "signature": "(req: TBuildSplitTxRequest) => string"
+    },
+    {
+      "name": "TBuildMergeTxRequest",
+      "kind": "type",
+      "from": "src/transaction-factory.ts",
+      "signature": "type TBuildMergeTxRequest = { tokenScheme: TokenScheme; outPoint1: OutPointFull; outPoint2: OutPointFull; owner: PrivateKey | Wallet; feePayment: TPayment; destination: TDestination; splitDestination?: TDestination; note?: Buffer[] }"
+    },
+    {
+      "name": "BuildMergeTx",
+      "kind": "function",
+      "from": "src/transaction-factory.ts",
+      "signature": "(req: TBuildMergeTxRequest) => string"
+    },
+    {
+      "name": "TBuildRedeemTxRequest",
+      "kind": "type",
+      "from": "src/transaction-factory.ts",
+      "signature": "type TBuildRedeemTxRequest = { tokenScheme: TokenScheme; stasPayment: TPayment; feePayment: TPayment; splitDestinations?: TDestination[]; note?: Buffer[] }"
+    },
+    {
+      "name": "BuildRedeemTx",
+      "kind": "function",
+      "from": "src/transaction-factory.ts",
+      "signature": "(req: TBuildRedeemTxRequest) => string"
+    },
 
-    {"name":"AvgFeeForMerge","kind":"const","from":"src/stas-bundle-factory.ts","signature":"const AvgFeeForMerge = 500"},
-    {"name":"TFundingUtxoRequest","kind":"type","from":"src/stas-bundle-factory.ts","signature":"type TFundingUtxoRequest = { utxoIdsToSpend: string[]; estimatedFeeSatoshis: number; transactionsCount: number }"},
-    {"name":"TGetUtxoFunction","kind":"type","from":"src/stas-bundle-factory.ts","signature":"type TGetUtxoFunction = (satoshis?: number) => Promise<OutPoint[]>"},
-    {"name":"TGetFundingUtxoFunction","kind":"type","from":"src/stas-bundle-factory.ts","signature":"type TGetFundingUtxoFunction = (request: TFundingUtxoRequest) => Promise<OutPoint>"},
-    {"name":"TGetTransactionsFunction","kind":"type","from":"src/stas-bundle-factory.ts","signature":"type TGetTransactionsFunction = (ids: string[]) => Promise<Record<string, Transaction>>"},
-    {"name":"TStasPayoutBundle","kind":"type","from":"src/stas-bundle-factory.ts","signature":"type TStasPayoutBundle = { transactions?: string[]; feeSatoshis: number; message?: string; devMessage?: string }"},
-    {"name":"StasBundleFactory","kind":"class","from":"src/stas-bundle-factory.ts","signature":"class StasBundleFactory { constructor(tokenScheme: TokenScheme, stasWallet: Wallet, feeWallet: Wallet, getFundingUtxo: TGetFundingUtxoFunction, getStasUtxoSet: TGetUtxoFunction, getTransactions: TGetTransactionsFunction); createBundle(amountSatoshis: number, to: Address, note?: Buffer[]): Promise<TStasPayoutBundle>; }"}
+    {
+      "name": "AvgFeeForMerge",
+      "kind": "const",
+      "from": "src/stas-bundle-factory.ts",
+      "signature": "const AvgFeeForMerge = 500"
+    },
+    {
+      "name": "TFundingUtxoRequest",
+      "kind": "type",
+      "from": "src/stas-bundle-factory.ts",
+      "signature": "type TFundingUtxoRequest = { utxoIdsToSpend: string[]; estimatedFeeSatoshis: number; transactionsCount: number }"
+    },
+    {
+      "name": "TGetUtxoFunction",
+      "kind": "type",
+      "from": "src/stas-bundle-factory.ts",
+      "signature": "type TGetUtxoFunction = (satoshis?: number) => Promise<OutPoint[]>"
+    },
+    {
+      "name": "TGetFundingUtxoFunction",
+      "kind": "type",
+      "from": "src/stas-bundle-factory.ts",
+      "signature": "type TGetFundingUtxoFunction = (request: TFundingUtxoRequest) => Promise<OutPoint>"
+    },
+    {
+      "name": "TGetTransactionsFunction",
+      "kind": "type",
+      "from": "src/stas-bundle-factory.ts",
+      "signature": "type TGetTransactionsFunction = (ids: string[]) => Promise<Record<string, Transaction>>"
+    },
+    {
+      "name": "TStasPayoutBundle",
+      "kind": "type",
+      "from": "src/stas-bundle-factory.ts",
+      "signature": "type TStasPayoutBundle = { transactions?: string[]; feeSatoshis: number; message?: string; devMessage?: string }"
+    },
+    {
+      "name": "StasBundleFactory",
+      "kind": "class",
+      "from": "src/stas-bundle-factory.ts",
+      "signature": "class StasBundleFactory { constructor(tokenScheme: TokenScheme, stasWallet: Wallet, feeWallet: Wallet, getFundingUtxo: TGetFundingUtxoFunction, getStasUtxoSet: TGetUtxoFunction, getTransactions: TGetTransactionsFunction); createBundle(amountSatoshis: number, to: Address, note?: Buffer[]): Promise<TStasPayoutBundle>; }"
+    }
   ],
   "modules": [
-    {"name":"bitcoin","paths":["src/bitcoin"],"responsibility":"Keys, addresses, transactions, scripts, and token metadata primitives."},
-    {"name":"buffer","paths":["src/buffer"],"responsibility":"Binary read/write helpers and Bitcoin varint utilities."},
-    {"name":"script","paths":["src/script"],"responsibility":"Script tokenization, parsing, and builders for P2PKH/STAS/OP_RETURN."},
-    {"name":"transaction","paths":["src/transaction"],"responsibility":"Transaction building, signing, and parsing."},
-    {"name":"transaction-factory","paths":["src/transaction-factory.ts"],"responsibility":"High-level STAS transaction helper flows (transfer/split/merge/redeem)."},
-    {"name":"stas-bundle-factory","paths":["src/stas-bundle-factory.ts"],"responsibility":"Multi-transaction payout bundling and merge orchestration."},
-    {"name":"hashes/base","paths":["src/hashes.ts","src/base.ts"],"responsibility":"Hashing and Base58Check helpers."}
+    {
+      "name": "bitcoin",
+      "paths": ["src/bitcoin"],
+      "responsibility": "Keys, addresses, transactions, scripts, and token metadata primitives."
+    },
+    {
+      "name": "buffer",
+      "paths": ["src/buffer"],
+      "responsibility": "Binary read/write helpers and Bitcoin varint utilities."
+    },
+    {
+      "name": "script",
+      "paths": ["src/script"],
+      "responsibility": "Script tokenization, parsing, and builders for P2PKH/STAS/OP_RETURN."
+    },
+    {
+      "name": "transaction",
+      "paths": ["src/transaction"],
+      "responsibility": "Transaction building, signing, and parsing."
+    },
+    {
+      "name": "transaction-factory",
+      "paths": ["src/transaction-factory.ts"],
+      "responsibility": "High-level STAS transaction helper flows (transfer/split/merge/redeem)."
+    },
+    {
+      "name": "stas-bundle-factory",
+      "paths": ["src/stas-bundle-factory.ts"],
+      "responsibility": "Multi-transaction payout bundling and merge orchestration."
+    },
+    {
+      "name": "hashes/base",
+      "paths": ["src/hashes.ts", "src/base.ts"],
+      "responsibility": "Hashing and Base58Check helpers."
+    }
   ],
   "flows": [
     {
-      "name":"BuildTransferTx",
-      "steps":[
-        {"fn":"TransactionBuilder.init","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.addInput","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.addStasOutputByScheme","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.addNullDataOutput","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.addChangeOutputWithFee","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.sign","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.toHex","path":"src/transaction/build/transaction-builder.ts"}
+      "name": "BuildTransferTx",
+      "steps": [
+        {
+          "fn": "TransactionBuilder.init",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.addInput",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.addStasOutputByScheme",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.addNullDataOutput",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.addChangeOutputWithFee",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.sign",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.toHex",
+          "path": "src/transaction/build/transaction-builder.ts"
+        }
       ],
-      "tests":["tests/transaction-build.test.ts"]
+      "tests": ["tests/transaction-build.test.ts"]
     },
     {
-      "name":"BuildSplitTx",
-      "steps":[
-        {"fn":"BuildSplitTx","path":"src/transaction-factory.ts"},
-        {"fn":"TransactionBuilder.addStasOutputByScheme","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.addChangeOutputWithFee","path":"src/transaction/build/transaction-builder.ts"}
+      "name": "BuildSplitTx",
+      "steps": [
+        { "fn": "BuildSplitTx", "path": "src/transaction-factory.ts" },
+        {
+          "fn": "TransactionBuilder.addStasOutputByScheme",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.addChangeOutputWithFee",
+          "path": "src/transaction/build/transaction-builder.ts"
+        }
       ],
-      "tests":["tests/transaction-build.test.ts"]
+      "tests": ["tests/transaction-build.test.ts"]
     },
     {
-      "name":"BuildMergeTx",
-      "steps":[
-        {"fn":"BuildMergeTx","path":"src/transaction-factory.ts"},
-        {"fn":"TransactionBuilder.addStasMergeInput","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.addStasOutputByScheme","path":"src/transaction/build/transaction-builder.ts"}
+      "name": "BuildMergeTx",
+      "steps": [
+        { "fn": "BuildMergeTx", "path": "src/transaction-factory.ts" },
+        {
+          "fn": "TransactionBuilder.addStasMergeInput",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.addStasOutputByScheme",
+          "path": "src/transaction/build/transaction-builder.ts"
+        }
       ],
-      "tests":["tests/transaction-build.test.ts"]
+      "tests": ["tests/transaction-build.test.ts"]
     },
     {
-      "name":"BuildRedeemTx",
-      "steps":[
-        {"fn":"BuildRedeemTx","path":"src/transaction-factory.ts"},
-        {"fn":"TransactionBuilder.addP2PkhOutput","path":"src/transaction/build/transaction-builder.ts"},
-        {"fn":"TransactionBuilder.addChangeOutputWithFee","path":"src/transaction/build/transaction-builder.ts"}
+      "name": "BuildRedeemTx",
+      "steps": [
+        { "fn": "BuildRedeemTx", "path": "src/transaction-factory.ts" },
+        {
+          "fn": "TransactionBuilder.addP2PkhOutput",
+          "path": "src/transaction/build/transaction-builder.ts"
+        },
+        {
+          "fn": "TransactionBuilder.addChangeOutputWithFee",
+          "path": "src/transaction/build/transaction-builder.ts"
+        }
       ],
-      "tests":["tests/transaction-build.test.ts"]
+      "tests": ["tests/transaction-build.test.ts"]
     },
     {
-      "name":"TransactionSign",
-      "steps":[
-        {"fn":"InputBilder.sign","path":"src/transaction/build/input-builder.ts"},
-        {"fn":"InputBilder.preimage","path":"src/transaction/build/input-builder.ts"}
+      "name": "TransactionSign",
+      "steps": [
+        {
+          "fn": "InputBilder.sign",
+          "path": "src/transaction/build/input-builder.ts"
+        },
+        {
+          "fn": "InputBilder.preimage",
+          "path": "src/transaction/build/input-builder.ts"
+        }
       ],
-      "tests":["tests/transaction-build.test.ts"]
+      "tests": ["tests/transaction-build.test.ts"]
     },
     {
-      "name":"TransactionRead",
-      "steps":[
-        {"fn":"TransactionReader.readHex","path":"src/transaction/read/transaction-reader.ts"},
-        {"fn":"TransactionReader.readInput","path":"src/transaction/read/transaction-reader.ts"},
-        {"fn":"TransactionReader.readOutput","path":"src/transaction/read/transaction-reader.ts"}
+      "name": "TransactionRead",
+      "steps": [
+        {
+          "fn": "TransactionReader.readHex",
+          "path": "src/transaction/read/transaction-reader.ts"
+        },
+        {
+          "fn": "TransactionReader.readInput",
+          "path": "src/transaction/read/transaction-reader.ts"
+        },
+        {
+          "fn": "TransactionReader.readOutput",
+          "path": "src/transaction/read/transaction-reader.ts"
+        }
       ],
-      "tests":["tests/transaction-reader.test.ts"]
+      "tests": ["tests/transaction-reader.test.ts"]
     },
     {
-      "name":"BundleCreate",
-      "steps":[
-        {"fn":"StasBundleFactory.createBundle","path":"src/stas-bundle-factory.ts"},
-        {"fn":"StasBundleFactory._createBundle","path":"src/stas-bundle-factory.ts"},
-        {"fn":"StasBundleFactory.mergeStasTransactions","path":"src/stas-bundle-factory.ts"}
+      "name": "BundleCreate",
+      "steps": [
+        {
+          "fn": "StasBundleFactory.createBundle",
+          "path": "src/stas-bundle-factory.ts"
+        },
+        {
+          "fn": "StasBundleFactory._createBundle",
+          "path": "src/stas-bundle-factory.ts"
+        },
+        {
+          "fn": "StasBundleFactory.mergeStasTransactions",
+          "path": "src/stas-bundle-factory.ts"
+        }
       ],
-      "tests":[]
+      "tests": []
     }
   ],
   "commands": [
-    {"cmd":"node -v","status":"ok","log_section":"COMMAND_LOG.md#node--v"},
-    {"cmd":"npm -v","status":"ok","log_section":"COMMAND_LOG.md#npm--v"},
-    {"cmd":"npm install","status":"ok","log_section":"COMMAND_LOG.md#npm-install"},
-    {"cmd":"npm run build","status":"ok","log_section":"COMMAND_LOG.md#npm-run-build"},
-    {"cmd":"npm run test","status":"ok","log_section":"COMMAND_LOG.md#npm-run-test"},
-    {"cmd":"npm run lint","status":"skipped","log_section":"COMMAND_LOG.md#npm-run-lint"},
-    {"cmd":"npm run typecheck","status":"skipped","log_section":"COMMAND_LOG.md#npm-run-typecheck"},
-    {"cmd":"npm pack","status":"fail","log_section":"COMMAND_LOG.md#npm-pack-failed"},
-    {"cmd":"npm pack --cache /tmp/npm-cache","status":"ok","log_section":"COMMAND_LOG.md#npm-pack-with-temp-cache"}
+    {
+      "cmd": "node -v",
+      "status": "ok",
+      "log_section": "COMMAND_LOG.md#node--v"
+    },
+    { "cmd": "npm -v", "status": "ok", "log_section": "COMMAND_LOG.md#npm--v" },
+    {
+      "cmd": "npm install",
+      "status": "ok",
+      "log_section": "COMMAND_LOG.md#npm-install"
+    },
+    {
+      "cmd": "npm run build",
+      "status": "ok",
+      "log_section": "COMMAND_LOG.md#npm-run-build"
+    },
+    {
+      "cmd": "npm run test",
+      "status": "ok",
+      "log_section": "COMMAND_LOG.md#npm-run-test"
+    },
+    {
+      "cmd": "npm run lint",
+      "status": "skipped",
+      "log_section": "COMMAND_LOG.md#npm-run-lint"
+    },
+    {
+      "cmd": "npm run typecheck",
+      "status": "skipped",
+      "log_section": "COMMAND_LOG.md#npm-run-typecheck"
+    },
+    {
+      "cmd": "npm pack",
+      "status": "fail",
+      "log_section": "COMMAND_LOG.md#npm-pack-failed"
+    },
+    {
+      "cmd": "npm pack --cache /tmp/npm-cache",
+      "status": "ok",
+      "log_section": "COMMAND_LOG.md#npm-pack-with-temp-cache"
+    }
   ]
 }

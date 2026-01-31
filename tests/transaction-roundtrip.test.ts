@@ -11,12 +11,10 @@ describe("transaction build/read round-trip", () => {
   test("builds, signs, and parses a simple p2pkh tx", () => {
     const pk = new PrivateKey(
       fromHex(
-        "b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"
-      )
+        "b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368",
+      ),
     );
-    const address = Address.fromBase58(
-      "1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp"
-    );
+    const address = Address.fromBase58("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
     const lockingScript = new P2pkhBuilder(address).toBytes();
 
     const outPoint = new OutPoint(
@@ -25,7 +23,7 @@ describe("transaction build/read round-trip", () => {
       lockingScript,
       10_000,
       address,
-      ScriptType.p2pkh
+      ScriptType.p2pkh,
     );
 
     const tx = TransactionBuilder.init()

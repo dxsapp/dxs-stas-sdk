@@ -35,20 +35,19 @@ export class ScriptBuilder {
   };
 
   tokenSize = (token: ScriptToken) => {
-    let size = 1;
-
+    const size = 1;
     const opcodeNum = token.OpCodeNum;
     const dataLength = token.DataLength;
     const add =
       opcodeNum > 0 && opcodeNum < OpCode.OP_PUSHDATA1
         ? dataLength
         : opcodeNum === OpCode.OP_PUSHDATA1
-        ? dataLength + 1
-        : opcodeNum === OpCode.OP_PUSHDATA2
-        ? dataLength + 2
-        : opcodeNum === OpCode.OP_PUSHDATA4
-        ? dataLength + 4
-        : 0;
+          ? dataLength + 1
+          : opcodeNum === OpCode.OP_PUSHDATA2
+            ? dataLength + 2
+            : opcodeNum === OpCode.OP_PUSHDATA4
+              ? dataLength + 4
+              : 0;
 
     return size + add;
   };
@@ -57,7 +56,7 @@ export class ScriptBuilder {
     const buffer = new Uint8Array(this.size());
     const bufferWriter = new ByteWriter(buffer);
 
-    for (var token of this._tokens) {
+    for (const token of this._tokens) {
       bufferWriter.writeUInt8(token.OpCodeNum);
 
       if (token.OpCodeNum > 0 && token.OpCodeNum < OpCode.OP_PUSHDATA1) {

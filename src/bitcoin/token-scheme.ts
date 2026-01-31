@@ -8,7 +8,7 @@ export class TokenScheme {
     name: string,
     tokenId: string,
     symbol: string,
-    satoshisPerToken: number
+    satoshisPerToken: number,
   ) {
     this.Name = name;
     this.TokenId = tokenId;

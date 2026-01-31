@@ -10,16 +10,16 @@ describe("testing transaction reader", () => {
     const transaction = TransactionReader.readHex(hex);
 
     expect(transaction.Id).toBe(
-      "20cb9b2944f19c9c2e7424fa2d710b7c3adbb2701f1a4c9505f5db94d6af331b"
+      "20cb9b2944f19c9c2e7424fa2d710b7c3adbb2701f1a4c9505f5db94d6af331b",
     );
 
     expect(transaction.Inputs.length).toBe(1);
     expect(transaction.Inputs[0].TxId).toBe(
-      "bedacaaeed9eef91aa359f4e7be2c674e6f0ff150f358b7439469adbc0ccc442"
+      "bedacaaeed9eef91aa359f4e7be2c674e6f0ff150f358b7439469adbc0ccc442",
     );
     expect(transaction.Inputs[0].Vout).toBe(2);
     expect(transaction.Inputs[0].Sequence).toBe(
-      TransactionBuilder.DefaultSequence
+      TransactionBuilder.DefaultSequence,
     );
 
     expect(transaction.Outputs.length).toBe(3);
@@ -27,7 +27,7 @@ describe("testing transaction reader", () => {
     expect(transaction.Outputs[0].ScriptType).toBe(ScriptType.p2pkh);
     expect(transaction.Outputs[0].Satoshis).toBe(2400);
     expect(transaction.Outputs[0].Address?.Value).toBe(
-      "17FCMLqkwyQ4aJGmAD9T2aGKq1UhPmyPmt"
+      "17FCMLqkwyQ4aJGmAD9T2aGKq1UhPmyPmt",
     );
     expect(transaction.Outputs[0].data.length).toBe(0);
 
@@ -36,7 +36,7 @@ describe("testing transaction reader", () => {
     expect(transaction.Outputs[1].data.length).toBe(4);
     expect(bytesToUtf8(transaction.Outputs[1].data[0])).toBe("bsvtest");
     expect(bytesToUtf8(transaction.Outputs[1].data[1])).toBe(
-      "ulWY+84HZb02vz3iS2690DQ==,m107,tb,a0.01"
+      "ulWY+84HZb02vz3iS2690DQ==,m107,tb,a0.01",
     );
     expect(bytesToUtf8(transaction.Outputs[1].data[2])).toBe("text");
     expect(bytesToUtf8(transaction.Outputs[1].data[3])).toBe("B");
@@ -44,7 +44,7 @@ describe("testing transaction reader", () => {
     expect(transaction.Outputs[2].ScriptType).toBe(ScriptType.p2pkh);
     expect(transaction.Outputs[2].Satoshis).toBe(17925);
     expect(transaction.Outputs[2].Address?.Value).toBe(
-      "1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp"
+      "1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp",
     );
     expect(transaction.Outputs[2].data.length).toBe(0);
   });

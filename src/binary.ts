@@ -8,7 +8,11 @@ export class ByteReader {
 
   constructor(buffer: Bytes, offset = 0) {
     this.buffer = buffer;
-    this.view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    this.view = new DataView(
+      buffer.buffer,
+      buffer.byteOffset,
+      buffer.byteLength,
+    );
     this.offset = offset;
   }
 
@@ -75,7 +79,11 @@ export class ByteWriter {
 
   constructor(buffer: Bytes, offset = 0) {
     this.buffer = buffer;
-    this.view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    this.view = new DataView(
+      buffer.buffer,
+      buffer.byteOffset,
+      buffer.byteLength,
+    );
     this.offset = offset;
   }
 
@@ -129,7 +137,7 @@ export class ByteWriter {
           this.buffer.length
         }; position: ${this.offset}; excess: ${
           this.offset + chunk.length - this.buffer.length
-        }`
+        }`,
       );
 
     this.buffer.set(chunk, this.offset);

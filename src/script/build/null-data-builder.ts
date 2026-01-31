@@ -9,13 +9,13 @@ export class NullDataBuilder extends ScriptBuilder {
   constructor(data: Bytes[]) {
     super(ScriptType.nullData);
 
-    for (var token of nullDataTokens) {
+    for (const token of nullDataTokens) {
       this._tokens.push(ScriptToken.fromScriptToken(token));
     }
 
     this.addOpCode(OpCode.OP_RETURN);
 
-    for (var segment of data) {
+    for (const segment of data) {
       this.addData(segment);
     }
   }

@@ -1,4 +1,10 @@
-import { getPublicKey, Signature, hashes, sign, verify } from "@noble/secp256k1";
+import {
+  getPublicKey,
+  Signature,
+  hashes,
+  sign,
+  verify,
+} from "@noble/secp256k1";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { getChunkSize } from "../buffer/buffer-utils";

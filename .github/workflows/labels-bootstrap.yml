@@ -1,0 +1,46 @@
+name: Bootstrap labels
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: cli/gh-action@v2
+      - name: Create/update labels
+        run: |
+          set -euo pipefail
+
+          OWNER="${GITHUB_REPOSITORY%/*}"
+          REPO="${GITHUB_REPOSITORY#*/}"
+
+          labels=(
+            "breaking|d73a4a|Breaking change"
+            "feature|a2eeef|New feature"
+            "enhancement|84b6eb|Improvement to existing feature"
+            "bug|d73a4a|Something is not working"
+            "fix|d73a4a|Bug fix"
+            "docs|0075ca|Documentation"
+            "documentation|0075ca|Documentation"
+            "chore|cfd3d7|Maintenance or chores"
+            "maintenance|cfd3d7|Maintenance or chores"
+            "skip-changelog|ffffff|Exclude from release notes"
+          )
+
+          for item in "${labels[@]}"; do
+            IFS="|" read -r name color description <<< "$item"
+            if gh api "repos/$OWNER/$REPO/labels/$name" >/dev/null 2>&1; then
+              gh api --method PATCH "repos/$OWNER/$REPO/labels/$name" \
+                -f name="$name" -f color="$color" -f description="$description"
+            else
+              gh api --method POST "repos/$OWNER/$REPO/labels" \
+                -f name="$name" -f color="$color" -f description="$description"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}

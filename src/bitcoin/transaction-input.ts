@@ -12,7 +12,7 @@ export class TransactionInput {
     txId: string,
     vout: number,
     unlockingScript: Bytes,
-    sequence: number
+    sequence: number,
   ) {
     this.TxId = txId;
     this.Vout = vout;

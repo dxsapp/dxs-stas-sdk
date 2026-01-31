@@ -19,7 +19,7 @@ export class OutPoint {
     lockignScript: Bytes,
     satoshis: number,
     address: Address,
-    scriptType: ScriptType
+    scriptType: ScriptType,
   ) {
     this.TxId = txId;
     this.Vout = vout;
@@ -54,7 +54,7 @@ export class OutPointFull extends OutPoint {
       output.LockignScript,
       output.Satoshis,
       output.Address!,
-      output.ScriptType
+      output.ScriptType,
     );
 
     this.Transaction = transaction;

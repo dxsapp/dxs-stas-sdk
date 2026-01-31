@@ -18,7 +18,7 @@ export class Transaction {
     inputs: TransactionInput[],
     outputs: TransactionOutput[],
     version: number,
-    lockTime: number
+    lockTime: number,
   ) {
     this.Inputs = inputs;
     this.Outputs = outputs;

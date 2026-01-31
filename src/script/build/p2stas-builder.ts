@@ -11,13 +11,13 @@ export class P2stasBuilder extends ScriptBuilder {
     address: Address,
     tokenId: string,
     symbol: string,
-    data: Bytes[] = []
+    data: Bytes[] = [],
   ) {
     super(ScriptType.p2stas, address);
 
     const stasTokens = getP2stasTokens();
 
-    for (var token of stasTokens) {
+    for (const token of stasTokens) {
       if (token.IsReceiverId) {
         const receiver = ScriptToken.fromBytes(address.Hash160);
         receiver.IsReceiverId = true;

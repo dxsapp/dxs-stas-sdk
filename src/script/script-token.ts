@@ -19,14 +19,14 @@ export class ScriptToken {
       buffer.length === 0
         ? -1
         : buffer.length < 76
-        ? buffer.length
-        : buffer.length <= 255
-        ? OpCode.OP_PUSHDATA1
-        : buffer.length <= 65535
-        ? OpCode.OP_PUSHDATA2
-        : buffer.length <= 4294967295
-        ? OpCode.OP_PUSHDATA4
-        : -1;
+          ? buffer.length
+          : buffer.length <= 255
+            ? OpCode.OP_PUSHDATA1
+            : buffer.length <= 65535
+              ? OpCode.OP_PUSHDATA2
+              : buffer.length <= 4294967295
+                ? OpCode.OP_PUSHDATA4
+                : -1;
 
     if (opCodeNum === -1) throw new Error(`No data provided: ${buffer.length}`);
 
@@ -51,7 +51,7 @@ export class ScriptToken {
   static forSample(
     opCodeNum: number,
     dataLength: number = 0,
-    isReceiverId: boolean = false
+    isReceiverId: boolean = false,
   ) {
     const token = new ScriptToken(opCodeNum);
 

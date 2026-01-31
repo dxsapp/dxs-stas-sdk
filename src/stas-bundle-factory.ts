@@ -26,10 +26,10 @@ export type TFundingUtxoRequest = {
 };
 export type TGetUtxoFunction = (satoshis?: number) => Promise<OutPoint[]>;
 export type TGetFundingUtxoFunction = (
-  request: TFundingUtxoRequest
+  request: TFundingUtxoRequest,
 ) => Promise<OutPoint>;
 export type TGetTransactionsFunction = (
-  ids: string[]
+  ids: string[],
 ) => Promise<Record<string, Transaction>>;
 export type TStasPayoutBundle = {
   transactions?: string[];
@@ -45,16 +45,16 @@ export class StasBundleFactory {
     private readonly feeWallet: Wallet,
     private readonly getFundingUtxo: TGetFundingUtxoFunction,
     private readonly getStasUtxoSet: TGetUtxoFunction,
-    private readonly getTransactions: TGetTransactionsFunction
+    private readonly getTransactions: TGetTransactionsFunction,
   ) {}
 
   public createBundle = async (
     amountSatoshis: number,
     to: Address,
-    note?: Bytes[]
+    note?: Bytes[],
   ): Promise<TStasPayoutBundle> => {
     const stasUtxoSet = (await this.getStasUtxoSet(amountSatoshis)).sort(
-      (a, b) => a.Satoshis - b.Satoshis
+      (a, b) => a.Satoshis - b.Satoshis,
     );
     const availableSatoshis = stasUtxoSet.reduce((a, x) => a + x.Satoshis, 0);
 
@@ -65,8 +65,7 @@ export class StasBundleFactory {
       };
 
     const stasUtxos = this.getStasUtxo(stasUtxoSet, amountSatoshis);
-
-    let {
+    const {
       feeSatoshis: estimatedFee,
       transactions: { length: transactionsCount },
     } = await this._createBundle(
@@ -76,22 +75,20 @@ export class StasBundleFactory {
       new OutPoint(
         "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
         0,
-        fromHex(
-          "76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac"
-        ),
+        fromHex("76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac"),
         5000000000,
         this.feeWallet.Address,
-        ScriptType.p2pkh
+        ScriptType.p2pkh,
       ),
       to,
-      note
+      note,
     );
 
-    estimatedFee =
+    const adjustedEstimatedFee =
       estimatedFee + stasUtxos.length * 9 + 1; /* Fee for fee transactio */
     const fudingUtxo = await this.getFundingUtxo({
       utxoIdsToSpend: stasUtxos.map((x) => `${x.TxId}:${x.Vout}`),
-      estimatedFeeSatoshis: estimatedFee + 1,
+      estimatedFeeSatoshis: adjustedEstimatedFee + 1,
       transactionsCount,
     });
 
@@ -105,13 +102,13 @@ export class StasBundleFactory {
 
     const transactions: string[] = [];
 
-    return await this._createBundle(
+    return this._createBundle(
       transactions,
       stasUtxos,
       amountSatoshis,
       fudingUtxo,
       to,
-      note
+      note,
     );
   };
 
@@ -121,7 +118,7 @@ export class StasBundleFactory {
     satoshisToSend: number,
     feeUtxo: OutPoint,
     to: Address,
-    note?: Bytes[]
+    note?: Bytes[],
   ) => {
     const { mergeTransactions, mergeFeeUtxo, stasUtxo } =
       await this.mergeStasTransactions(stasUtxos, satoshisToSend, feeUtxo);
@@ -134,7 +131,7 @@ export class StasBundleFactory {
 
     if (stasUtxo.Satoshis === satoshisToSend) {
       transactions.push(
-        this.buildTransferTransaction(stasUtxo, mergeFeeUtxo, to, note)
+        this.buildTransferTransaction(stasUtxo, mergeFeeUtxo, to, note),
       );
     } else {
       transactions.push(
@@ -143,13 +140,13 @@ export class StasBundleFactory {
           satoshisToSend,
           to,
           mergeFeeUtxo,
-          note
-        )
+          note,
+        ),
       );
     }
 
     const transferTx = TransactionReader.readHex(
-      transactions[transactions.length - 1]
+      transactions[transactions.length - 1],
     );
     const feeUtxoIdx = note
       ? transferTx.Outputs.length - 2
@@ -180,7 +177,7 @@ export class StasBundleFactory {
 
   private buildFeeTransaction = (
     utxos: OutPoint[],
-    satoshis: number
+    satoshis: number,
   ): {
     feeTransaction?: string;
     feeUtxo: OutPoint;
@@ -192,7 +189,7 @@ export class StasBundleFactory {
 
     const txBuilder = TransactionBuilder.init().addP2PkhOutput(
       0,
-      this.feeWallet.Address
+      this.feeWallet.Address,
     );
     let accumulated = 0;
 
@@ -219,7 +216,7 @@ export class StasBundleFactory {
   private mergeStasTransactions = async (
     stasUtxos: OutPoint[],
     satoshis: number,
-    mergeFeeUtxo: OutPoint
+    mergeFeeUtxo: OutPoint,
   ): Promise<{
     mergeTransactions?: string[];
     stasUtxo: OutPoint;
@@ -241,7 +238,7 @@ export class StasBundleFactory {
       mergeLevels[0].push(OutPoint.fromTransaction(tx, Vout));
     }
 
-    let feePayment: TPayment = {
+    const feePayment: TPayment = {
       OutPoint: mergeFeeUtxo,
       Owner: this.feeWallet,
     };
@@ -256,7 +253,7 @@ export class StasBundleFactory {
       if (levelsBeforeTransfer === 3) {
         levelsBeforeTransfer = 0;
 
-        for (let outPoint of currentLevel) {
+        for (const outPoint of currentLevel) {
           const stasPayment: TPayment = {
             OutPoint: outPoint,
             Owner: this.stasWallet,
@@ -286,7 +283,7 @@ export class StasBundleFactory {
 
         let currentIdx = 0;
 
-        for (var i = 0; i < mergeCounts; i++) {
+        for (let i = 0; i < mergeCounts; i++) {
           const outPoint1 = currentLevel[currentIdx++];
           const outPoint2 = currentLevel[currentIdx++];
           const lastMerge = mergeCounts === 1 && remainder === 0;
@@ -296,7 +293,7 @@ export class StasBundleFactory {
             Address: this.stasWallet.Address,
             Satoshis: inputSatoshis,
           };
-          let splitDestination: TDestination | undefined = undefined;
+          let splitDestination: TDestination | undefined;
 
           if (lastMerge && inputSatoshis !== satoshis) {
             destination = {
@@ -326,7 +323,7 @@ export class StasBundleFactory {
           stasUtxo = OutPoint.fromTransaction(tx, 0);
           feePayment.OutPoint = OutPoint.fromTransaction(
             tx,
-            tx.Outputs.length - 1
+            tx.Outputs.length - 1,
           );
         }
       }
@@ -341,7 +338,7 @@ export class StasBundleFactory {
     stasUtxo: OutPoint,
     feeUtxo: OutPoint,
     to: Address,
-    note?: Bytes[]
+    note?: Bytes[],
   ): string =>
     BuildTransferTx({
       tokenScheme: this.tokenScheme,
@@ -356,7 +353,7 @@ export class StasBundleFactory {
     satoshis: number,
     to: Address,
     feeUtxo: OutPoint,
-    note?: Bytes[]
+    note?: Bytes[],
   ): string =>
     BuildSplitTx({
       tokenScheme: this.tokenScheme,

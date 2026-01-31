@@ -1,13 +1,16 @@
 # Command Log
 
 ## Environment Notes
+
 - Repo path: /Users/imighty/Code/dxs-stas-sdk
 - Package manager selection rule: package-lock.json present, so npm selected
 
 ## Repo Tree (top-level + 2 depth)
+
 Command: `find . -maxdepth 2 -type d`
 Exit status: 0
 Output:
+
 ```
 .
 ./dist
@@ -277,33 +280,41 @@ Output:
 ```
 
 ## pwd
+
 Command: `pwd`
 Exit status: 0
 Output:
+
 ```
 /Users/imighty/Code/dxs-stas-sdk
 ```
 
 ## node -v
+
 Command: `node -v`
 Exit status: 0
 Output:
+
 ```
 v22.19.0
 ```
 
 ## npm -v
+
 Command: `npm -v`
 Exit status: 0
 Output:
+
 ```
 10.9.3
 ```
 
 ## npm install
+
 Command: `npm install`
 Exit status: 0
 Output:
+
 ```
 
 up to date in 454ms
@@ -313,9 +324,11 @@ up to date in 454ms
 ```
 
 ## npm run build
+
 Command: `npm run build`
 Exit status: 0
 Output:
+
 ```
 
 > dxs-stas-sdk@1.0.15 build
@@ -323,9 +336,11 @@ Output:
 ```
 
 ## npm run test
+
 Command: `npm run test`
 Exit status: 0
 Output:
+
 ```
 
 > dxs-stas-sdk@1.0.15 test
@@ -344,25 +359,31 @@ Ran all test suites.
 ```
 
 ## npm run lint
+
 Command: `npm run lint`
 Exit status: skipped
 Output:
+
 ```
 Skipped: "lint" script not present in package.json
 ```
 
 ## npm run typecheck
+
 Command: `npm run typecheck`
 Exit status: skipped
 Output:
+
 ```
 Skipped: "typecheck" script not present in package.json
 ```
 
 ## npm pack (failed)
+
 Command: `npm pack`
 Exit status: 255
 Output:
+
 ```
 npm error code EPERM
 npm error syscall open
@@ -379,9 +400,11 @@ npm error You can rerun the command with `--loglevel=verbose` to see the logs in
 ```
 
 ## npm pack (with temp cache)
+
 Command: `npm pack --cache /tmp/npm-cache`
 Exit status: 0
 Output:
+
 ```
 dxs-stas-sdk-1.0.15.tgz
 npm notice
@@ -605,42 +628,52 @@ npm notice total files: 206
 npm notice
 ```
 
-## rg --files -g "*eslint*"
+## rg --files -g "_eslint_"
+
 Command: `rg --files -g "*eslint*"`
 Exit status: 1
 Output:
+
 ```
 <no matches>
 ```
 
-## rg --files -g "*prettier*"
+## rg --files -g "_prettier_"
+
 Command: `rg --files -g "*prettier*"`
 Exit status: 1
 Output:
+
 ```
 <no matches>
 ```
 
-## rg --files -g "*vitest*"
+## rg --files -g "_vitest_"
+
 Command: `rg --files -g "*vitest*"`
 Exit status: 1
 Output:
+
 ```
 <no matches>
 ```
 
-## rg --files -g "*mocha*"
+## rg --files -g "_mocha_"
+
 Command: `rg --files -g "*mocha*"`
 Exit status: 1
 Output:
+
 ```
 <no matches>
 ```
 
 ## ls
+
 Command: `ls`
 Exit status: 0
 Output:
+
 ```
 COMMAND_LOG.md
 dist
@@ -658,25 +691,31 @@ tslint.json
 ```
 
 ## node -v (baseline for Uint8Array migration)
+
 Command: `node -v`
 Exit status: 0
 Output:
+
 ```
 v22.19.0
 ```
 
 ## npm -v (baseline for Uint8Array migration)
+
 Command: `npm -v`
 Exit status: 0
 Output:
+
 ```
 10.9.3
 ```
 
 ## npm install (baseline for Uint8Array migration)
+
 Command: `npm install`
 Exit status: 0
 Output:
+
 ```
 
 added 1 package in 742ms
@@ -686,9 +725,11 @@ added 1 package in 742ms
 ```
 
 ## npm run build (baseline, expected to fail before migration)
+
 Command: `npm run build`
 Exit status: 2
 Output:
+
 ```
 
 > dxs-stas-sdk@1.0.15 build
@@ -723,9 +764,11 @@ src/transaction/read/transaction-reader.ts(52,44): error TS2345: Argument of typ
 ```
 
 ## npm test (baseline, expected to fail before migration)
+
 Command: `npm test`
 Exit status: 1
 Output:
+
 ```
 
 > dxs-stas-sdk@1.0.15 test
@@ -763,17 +806,21 @@ Ran all test suites.
 ```
 
 ## rg Buffer inventory (before migration)
+
 Command: `rg -n "Buffer\b|buffer\b" src test tests __tests__ examples`
 Exit status: 2
 Output:
+
 ```
 <see tool output in run log>
 ```
 
 ## npm run build (post-migration)
+
 Command: `npm run build`
 Exit status: 0
 Output:
+
 ```
 
 > dxs-stas-sdk@1.0.15 build
@@ -781,9 +828,11 @@ Output:
 ```
 
 ## npm test (post-migration)
+
 Command: `npm test`
 Exit status: 0
 Output:
+
 ```
 
 > dxs-stas-sdk@1.0.15 test
@@ -802,9 +851,11 @@ Ran all test suites.
 ```
 
 ## npm run check:nobuffer
+
 Command: `npm run check:nobuffer`
 Exit status: 0
 Output:
+
 ```
 
 > dxs-stas-sdk@1.0.15 check:nobuffer
@@ -814,17 +865,21 @@ No Buffer usage detected in src/ or tests/
 ```
 
 ## rg no-Buffer check (post-migration)
+
 Command: `rg -n "Buffer\\b|from\\(\\\"buffer\\\"\\)|import\\s+\\{\\s*Buffer\\s*\\}" src`
 Exit status: 1
 Output:
+
 ```
 <no matches>
 ```
 
 ## npm test (after additional tests)
+
 Command: `npm test`
 Exit status: 0
 Output:
+
 ```
 
 > dxs-stas-sdk@1.0.15 test
@@ -850,9 +905,11 @@ Ran all test suites.
 ```
 
 ## ls (after moving docs)
+
 Command: `ls`
 Exit status: 0
 Output:
+
 ```
 CODEBASE_MAP.json
 dist
