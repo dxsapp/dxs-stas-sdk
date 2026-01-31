@@ -165,4 +165,4 @@ const txHex = TransactionBuilder.init()
 ## Author
 
 - Author: [Oleg Panagushin](https://github.com/panagushin)  
-CTO / System Architect — Crypto & FinTech
+  CTO / System Architect — Crypto & FinTech
