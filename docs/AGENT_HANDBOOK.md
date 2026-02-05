@@ -182,7 +182,31 @@ const factory = new StasBundleFactory(
   getStasUtxoSet,
   getTransactions,
 );
-const bundle = await factory.createBundle(1000, toAddress);
+const bundle = await factory.createBundle(1000, {
+  m: 1,
+  addresses: [toAddress],
+});
+```
+
+- STAS 3.0 bundle factory uses a recipient object (M-of-N) and custom locking/unlocking builders. (see: src/stas30-bundle-factory.ts:1-365)
+
+```ts
+import { Stas30BundleFactory } from "dxs-stas-sdk";
+
+const stas30Factory = new Stas30BundleFactory(
+  stasWallet,
+  feeWallet,
+  getFundingUtxo,
+  getStasUtxoSet,
+  getTransactions,
+  buildLockingParams,
+  buildUnlockingScript,
+);
+
+const bundle30 = await stas30Factory.createBundle(1000, {
+  m: 2,
+  addresses: [addr1, addr2, addr3],
+}, "transfer");
 ```
 
 ## 5. Module Map (What lives where)
