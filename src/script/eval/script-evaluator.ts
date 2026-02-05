@@ -174,12 +174,14 @@ const derDecodeSignature = (der: Bytes) => {
   }
 
   let offset = 2;
-  if (der[offset++] !== 0x02) throw new ScriptEvalError("Invalid DER signature");
+  if (der[offset++] !== 0x02)
+    throw new ScriptEvalError("Invalid DER signature");
   const rLen = der[offset++];
   const r = der.subarray(offset, offset + rLen);
   offset += rLen;
 
-  if (der[offset++] !== 0x02) throw new ScriptEvalError("Invalid DER signature");
+  if (der[offset++] !== 0x02)
+    throw new ScriptEvalError("Invalid DER signature");
   const sLen = der[offset++];
   const s = der.subarray(offset, offset + sLen);
 
@@ -207,9 +209,7 @@ const parseSignature = (sigWithHashType: Bytes) => {
   }
 
   const sigBytes =
-    signature[0] === 0x30
-      ? derDecodeSignature(signature).toBytes()
-      : signature;
+    signature[0] === 0x30 ? derDecodeSignature(signature).toBytes() : signature;
 
   return { signature: sigBytes, sighashType };
 };
@@ -258,13 +258,14 @@ const buildSighashPreimage = (
       ? new Uint8Array(32)
       : hash256(
           concat(
-            tx.Inputs.map((input) =>
-              new Uint8Array([
-                input.Sequence & 0xff,
-                (input.Sequence >> 8) & 0xff,
-                (input.Sequence >> 16) & 0xff,
-                (input.Sequence >> 24) & 0xff,
-              ]),
+            tx.Inputs.map(
+              (input) =>
+                new Uint8Array([
+                  input.Sequence & 0xff,
+                  (input.Sequence >> 8) & 0xff,
+                  (input.Sequence >> 16) & 0xff,
+                  (input.Sequence >> 24) & 0xff,
+                ]),
             ),
           ),
         );
@@ -287,22 +288,11 @@ const buildSighashPreimage = (
   }
 
   const prevOutput = ctx.prevOutputs[inputIdx];
-  if (!prevOutput)
-    throw new ScriptEvalError("Missing prev output for input");
+  if (!prevOutput) throw new ScriptEvalError("Missing prev output for input");
 
   const scriptChunk = stripCodeSeparators(scriptCode);
   const size =
-    4 +
-    32 +
-    32 +
-    32 +
-    4 +
-    getChunkSize(scriptChunk) +
-    8 +
-    4 +
-    32 +
-    4 +
-    4;
+    4 + 32 + 32 + 32 + 4 + getChunkSize(scriptChunk) + 8 + 4 + 32 + 4 + 4;
 
   const buffer = new Uint8Array(size);
   const writer = new ByteWriter(buffer);
@@ -342,8 +332,7 @@ class ScriptInterpreter {
   private isExecuting = () => this.execStack.every((v) => v);
 
   private pop = (): Bytes => {
-    if (this.stack.length === 0)
-      throw new ScriptEvalError("Stack underflow");
+    if (this.stack.length === 0) throw new ScriptEvalError("Stack underflow");
     return this.stack.pop()!;
   };
 
@@ -354,8 +343,7 @@ class ScriptInterpreter {
   private push = (value: Bytes) => this.stack.push(value);
 
   private top = (): Bytes => {
-    if (this.stack.length === 0)
-      throw new ScriptEvalError("Stack underflow");
+    if (this.stack.length === 0) throw new ScriptEvalError("Stack underflow");
     return this.stack[this.stack.length - 1];
   };
 
@@ -523,22 +511,19 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_2OVER: {
-        if (this.stack.length < 4)
-          throw new ScriptEvalError("Stack underflow");
+        if (this.stack.length < 4) throw new ScriptEvalError("Stack underflow");
         this.push(cloneBytes(this.stack[this.stack.length - 4]));
         this.push(cloneBytes(this.stack[this.stack.length - 3]));
         return;
       }
       case OpCode.OP_2ROT: {
-        if (this.stack.length < 6)
-          throw new ScriptEvalError("Stack underflow");
+        if (this.stack.length < 6) throw new ScriptEvalError("Stack underflow");
         const a = this.stack.splice(this.stack.length - 6, 2);
         this.stack.push(a[0], a[1]);
         return;
       }
       case OpCode.OP_2SWAP: {
-        if (this.stack.length < 4)
-          throw new ScriptEvalError("Stack underflow");
+        if (this.stack.length < 4) throw new ScriptEvalError("Stack underflow");
         const a = this.stack.splice(this.stack.length - 4, 2);
         this.stack.push(a[0], a[1]);
         return;
@@ -565,8 +550,7 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_OVER: {
-        if (this.stack.length < 2)
-          throw new ScriptEvalError("Stack underflow");
+        if (this.stack.length < 2) throw new ScriptEvalError("Stack underflow");
         this.push(cloneBytes(this.stack[this.stack.length - 2]));
         return;
       }
@@ -587,15 +571,13 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_ROT: {
-        if (this.stack.length < 3)
-          throw new ScriptEvalError("Stack underflow");
+        if (this.stack.length < 3) throw new ScriptEvalError("Stack underflow");
         const a = this.stack.splice(this.stack.length - 3, 1)[0];
         this.stack.push(a);
         return;
       }
       case OpCode.OP_SWAP: {
-        if (this.stack.length < 2)
-          throw new ScriptEvalError("Stack underflow");
+        if (this.stack.length < 2) throw new ScriptEvalError("Stack underflow");
         const a = this.pop();
         const b = this.pop();
         this.push(a);
@@ -603,8 +585,7 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_TUCK: {
-        if (this.stack.length < 2)
-          throw new ScriptEvalError("Stack underflow");
+        if (this.stack.length < 2) throw new ScriptEvalError("Stack underflow");
         const a = this.pop();
         const b = this.pop();
         this.push(cloneBytes(a));
@@ -973,7 +954,8 @@ class ScriptInterpreter {
           (locktime >= 500000000 && txLock < 500000000)
         )
           throw new ScriptEvalError("CLTV locktime type mismatch");
-        if (txLock < locktime) throw new ScriptEvalError("CLTV not yet reached");
+        if (txLock < locktime)
+          throw new ScriptEvalError("CLTV not yet reached");
         return;
       }
       case OpCode.OP_CHECKSEQUENCEVERIFY:
@@ -988,7 +970,9 @@ class ScriptInterpreter {
         throw new ScriptEvalError("Disabled opcode");
 
       default:
-        throw new ScriptEvalError(`Unsupported opcode: 0x${opcode.toString(16)}`);
+        throw new ScriptEvalError(
+          `Unsupported opcode: 0x${opcode.toString(16)}`,
+        );
     }
   };
 }
