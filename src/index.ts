@@ -6,5 +6,6 @@ export * from "./script";
 export * from "./stas-bundle-factory";
 export * from "./transaction";
 export * from "./transaction-factory";
+export * from "./stas30-factory";
 export * from "./base";
 export * from "./hashes";
