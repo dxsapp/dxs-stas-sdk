@@ -188,22 +188,48 @@ export class InputBilder {
   };
 
   /// <summary>
-  /// Only SIGHASH_ALL|FORK_ID implemented
+  /// SIGHASH_ALL/SINGLE/NONE with FORKID and ANYONECANPAY variants
   /// </summary>
   preimage = (signatureHashType: SignatureHashType) => {
     const size = this.preimageLength();
     const buffer = new Uint8Array(size);
     const writer = new ByteWriter(buffer);
+    const baseType = signatureHashType & 0x1f;
+    const anyoneCanPay =
+      (signatureHashType & SignatureHashType.SIGHASH_ANYONECANPAY) !== 0;
 
     writer.writeUInt32(this.TxBuilder.Version); // 4
-    this.writePrevoutHash(writer); // 32
-    this.writeSequenceHash(writer); // 32
+
+    if (anyoneCanPay) {
+      this.writeZeroHash(writer);
+    } else {
+      this.writePrevoutHash(writer); // 32
+    }
+
+    if (
+      anyoneCanPay ||
+      baseType === SignatureHashType.SIGHASH_NONE ||
+      baseType === SignatureHashType.SIGHASH_SINGLE
+    ) {
+      this.writeZeroHash(writer);
+    } else {
+      this.writeSequenceHash(writer); // 32
+    }
+
     writer.writeChunk(reverseBytes(fromHex(this.OutPoint.TxId))); // 32
     writer.writeUInt32(this.OutPoint.Vout); // 4
     writer.writeVarChunk(this.OutPoint.LockignScript);
     writer.writeUInt64(this.OutPoint.Satoshis); // 8
     writer.writeUInt32(this.Sequence); // 4
-    this.writeOutputsHash(writer); // 32
+
+    if (baseType === SignatureHashType.SIGHASH_ALL) {
+      this.writeOutputsHash(writer);
+    } else if (baseType === SignatureHashType.SIGHASH_SINGLE) {
+      this.writeSingleOutputHash(writer);
+    } else {
+      this.writeZeroHash(writer);
+    }
+
     writer.writeUInt32(this.TxBuilder.LockTime); // 4
     writer.writeUInt32(signatureHashType); // 4
 
@@ -245,6 +271,24 @@ export class InputBilder {
     }
 
     writer.writeChunk(hash256(buffer));
+  };
+
+  private writeSingleOutputHash = (writer: ByteWriter) => {
+    if (this.Idx >= this.TxBuilder.Outputs.length) {
+      this.writeZeroHash(writer);
+      return;
+    }
+
+    const output = this.TxBuilder.Outputs[this.Idx];
+    const buffer = new Uint8Array(output.size());
+    const bufferWriter = new ByteWriter(buffer);
+
+    output.writeTo(bufferWriter);
+    writer.writeChunk(hash256(buffer));
+  };
+
+  private writeZeroHash = (writer: ByteWriter) => {
+    writer.writeChunk(new Uint8Array(32));
   };
 
   private prepareMergeInfo = () => {
