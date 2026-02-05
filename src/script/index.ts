@@ -8,3 +8,4 @@ export * from "./read/script-reader";
 export * from "./script-samples";
 export * from "./script-token";
 export * from "./script-utils";
+export * from "./eval/script-evaluator";
