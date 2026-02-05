@@ -2,8 +2,7 @@ import { OpCode } from "../bitcoin/op-codes";
 import { fromHex } from "../bytes";
 import { ScriptReader } from "./read/script-reader";
 import { ScriptToken } from "./script-token";
-import { asmToTokens } from "./build/asm-template-builder";
-import { STAS3_FREEZE_MULTISIG_TEMPLATE_ASM } from "./templates/stas3-freeze-multisig";
+import { buildStas3FreezeMultisigScript } from "./build/stas3-freeze-multisig-builder";
 
 export const nullDataTokens = [ScriptToken.forSample(OpCode.OP_0)];
 
@@ -36,19 +35,16 @@ export const getP2Stas30Tokens = () => {
     const redemptionHex = "2222222222222222222222222222222222222222";
     const flagsHex = "01";
 
-    const asm = STAS3_FREEZE_MULTISIG_TEMPLATE_ASM.trim()
-      .replace("<owner address/MPKH - 20 bytes>", ownerHex)
-      .replace("<2nd variable field>", "OP_0")
-      .replace(
-        '<\"redemption address\"/\"protocol ID\" - 20 bytes>',
-        redemptionHex,
-      )
-      .replace("<flags field>", flagsHex)
-      .replace("<service data per each flag>", "")
-      .replace("<optional data field/s - upto around 4.2GB size>", "")
-      .replace(/\\s+/g, " ");
+    const script = buildStas3FreezeMultisigScript({
+      ownerPkh: fromHex(ownerHex),
+      secondField: null,
+      redemptionPkh: fromHex(redemptionHex),
+      flags: fromHex(flagsHex),
+      serviceFields: [],
+      optionalData: [],
+    });
 
-    stas30Tokens = asmToTokens(asm);
+    stas30Tokens = ScriptReader.read(script);
 
     if (stas30Tokens.length >= 2) {
       stas30Tokens[0].IsReceiverId = true;

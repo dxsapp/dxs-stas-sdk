@@ -1,7 +1,6 @@
 import { TPayment } from "./bitcoin";
 import { ScriptType } from "./bitcoin/script-type";
 import { Bytes } from "./bytes";
-import { asmToBytes } from "./script/build/asm-template-builder";
 import {
   Stas3FreezeMultisigParams,
   buildStas3FreezeMultisigScript,
@@ -14,7 +13,6 @@ import { FeeRate } from "./transaction-factory";
 
 export type TStas3Payment = TPayment & {
   UnlockingScript?: Bytes;
-  UnlockingScriptAsm?: string;
 };
 
 export type TStas3Destination = {
@@ -32,9 +30,8 @@ export type TBuildStas3BaseTxRequest = {
 
 const resolveUnlockingScript = (payment: TStas3Payment): Bytes => {
   if (payment.UnlockingScript) return payment.UnlockingScript;
-  if (payment.UnlockingScriptAsm) return asmToBytes(payment.UnlockingScriptAsm);
 
-  throw new Error("UnlockingScript or UnlockingScriptAsm must be provided");
+  throw new Error("UnlockingScript must be provided");
 };
 
 const buildStas3LockingScriptBuilder = (params: Stas3FreezeMultisigParams) => {
