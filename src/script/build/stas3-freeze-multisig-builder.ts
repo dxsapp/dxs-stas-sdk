@@ -86,19 +86,18 @@ export const buildStas3FreezeMultisigTokens = (
   const serviceTokens = buildDataTokens(params.serviceFields);
   const optionalTokens = buildDataTokens(params.optionalData);
 
-  if (!params.flags && params.serviceFields && params.serviceFields.length > 0) {
+  if (
+    !params.flags &&
+    params.serviceFields &&
+    params.serviceFields.length > 0
+  ) {
     throw new Error("serviceFields require flags to be provided");
   }
 
   const baseTokens = buildStas3BaseTokens();
   const tokens: ScriptToken[] = [ownerToken, secondToken, ...baseTokens];
 
-  tokens.push(
-    redemptionToken,
-    flagsToken,
-    ...serviceTokens,
-    ...optionalTokens,
-  );
+  tokens.push(redemptionToken, flagsToken, ...serviceTokens, ...optionalTokens);
 
   return tokens;
 };
