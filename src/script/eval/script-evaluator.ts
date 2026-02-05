@@ -272,18 +272,21 @@ const buildSighashPreimage = (
 
   let outputsHash = new Uint8Array(32);
   if (baseType === SignatureHashType.SIGHASH_ALL) {
-    const size = tx.Outputs.reduce((sum, out) => sum + outputSize(out), 0);
-    const buffer = new Uint8Array(size);
-    const writer = new ByteWriter(buffer);
-    for (const output of tx.Outputs) writeOutputTo(writer, output);
-    outputsHash = hash256(buffer);
+    const outputsSize = tx.Outputs.reduce(
+      (sum, out) => sum + outputSize(out),
+      0,
+    );
+    const outputsBuffer = new Uint8Array(outputsSize);
+    const outputsWriter = new ByteWriter(outputsBuffer);
+    for (const output of tx.Outputs) writeOutputTo(outputsWriter, output);
+    outputsHash = hash256(outputsBuffer);
   } else if (baseType === SignatureHashType.SIGHASH_SINGLE) {
     if (inputIdx < tx.Outputs.length) {
       const output = tx.Outputs[inputIdx];
-      const buffer = new Uint8Array(outputSize(output));
-      const writer = new ByteWriter(buffer);
-      writeOutputTo(writer, output);
-      outputsHash = hash256(buffer);
+      const singleBuffer = new Uint8Array(outputSize(output));
+      const singleWriter = new ByteWriter(singleBuffer);
+      writeOutputTo(singleWriter, output);
+      outputsHash = hash256(singleBuffer);
     }
   }
 
@@ -291,25 +294,25 @@ const buildSighashPreimage = (
   if (!prevOutput) throw new ScriptEvalError("Missing prev output for input");
 
   const scriptChunk = stripCodeSeparators(scriptCode);
-  const size =
+  const preimageSize =
     4 + 32 + 32 + 32 + 4 + getChunkSize(scriptChunk) + 8 + 4 + 32 + 4 + 4;
 
-  const buffer = new Uint8Array(size);
-  const writer = new ByteWriter(buffer);
+  const preimageBuffer = new Uint8Array(preimageSize);
+  const preimageWriter = new ByteWriter(preimageBuffer);
 
-  writer.writeUInt32(tx.Version);
-  writer.writeChunk(prevoutHash);
-  writer.writeChunk(sequenceHash);
-  writer.writeChunk(reverseBytes(fromHex(tx.Inputs[inputIdx].TxId)));
-  writer.writeUInt32(tx.Inputs[inputIdx].Vout);
-  writer.writeVarChunk(scriptChunk);
-  writer.writeUInt64(prevOutput.satoshis);
-  writer.writeUInt32(tx.Inputs[inputIdx].Sequence);
-  writer.writeChunk(outputsHash);
-  writer.writeUInt32(tx.LockTime);
-  writer.writeUInt32(sighashType >>> 0);
+  preimageWriter.writeUInt32(tx.Version);
+  preimageWriter.writeChunk(prevoutHash);
+  preimageWriter.writeChunk(sequenceHash);
+  preimageWriter.writeChunk(reverseBytes(fromHex(tx.Inputs[inputIdx].TxId)));
+  preimageWriter.writeUInt32(tx.Inputs[inputIdx].Vout);
+  preimageWriter.writeVarChunk(scriptChunk);
+  preimageWriter.writeUInt64(prevOutput.satoshis);
+  preimageWriter.writeUInt32(tx.Inputs[inputIdx].Sequence);
+  preimageWriter.writeChunk(outputsHash);
+  preimageWriter.writeUInt32(tx.LockTime);
+  preimageWriter.writeUInt32(sighashType >>> 0);
 
-  return buffer;
+  return preimageBuffer;
 };
 
 class ScriptInterpreter {
