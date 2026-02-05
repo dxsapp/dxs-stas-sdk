@@ -78,20 +78,24 @@ export const buildStas3FreezeMultisigAsm = (
   const serviceTokens = encodeDataTokens(params.serviceFields);
   const optionalTokens = encodeDataTokens(params.optionalData);
 
-  if (!params.flags && params.serviceFields && params.serviceFields.length > 0) {
+  if (
+    !params.flags &&
+    params.serviceFields &&
+    params.serviceFields.length > 0
+  ) {
     throw new Error("serviceFields require flags to be provided");
   }
 
   let asm = template
     .replace("<owner address/MPKH - 20 bytes>", ownerToken)
     .replace("<2nd variable field>", secondToken)
-    .replace(
-      '<"redemption address"/"protocol ID" - 20 bytes>',
-      redemptionToken,
-    )
+    .replace('<"redemption address"/"protocol ID" - 20 bytes>', redemptionToken)
     .replace("<flags field>", flagsToken)
     .replace("<service data per each flag>", serviceTokens)
-    .replace("<optional data field/s - upto around 4.2GB size>", optionalTokens);
+    .replace(
+      "<optional data field/s - upto around 4.2GB size>",
+      optionalTokens,
+    );
 
   return normalizeAsm(asm);
 };
