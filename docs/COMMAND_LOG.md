@@ -928,3 +928,62 @@ tsconfig.jest.json
 tsconfig.json
 tslint.json
 ```
+
+## rg Buffer scan (docs update)
+
+Command: `rg -n "\\bBuffer\\b" -S src tests docs scripts`
+Exit status: 0
+Output:
+
+```
+docs/PR_SUMMARY.md:4:- Removed all `Buffer` usage and renamed Buffer-oriented APIs (e.g., `toBytes`, `fromBytes`, `readBytes`).
+docs/PR_SUMMARY.md:5:- Updated tests and Jest configuration to run with ESM deps and added a no-Buffer enforcement script.
+docs/PR_SUMMARY.md:27:- `rg -n "Buffer\\b|from\(\"buffer\"\)|import\\s+\\{\\s*Buffer\\s*\\}" src` -- no matches
+scripts/check-no-buffer.mjs:36:  console.error("Buffer usage detected in:");
+scripts/check-no-buffer.mjs:43:console.log("No Buffer usage detected in src/ or tests/");
+docs/COMMAND_LOG.md:739:src/bitcoin/address.ts(38,61): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:740:src/bitcoin/private-key.ts(82,5): error TS2322: Type 'Uint8Array' is not assignable to type 'Buffer'.
+docs/COMMAND_LOG.md:742:src/bitcoin/wallet.ts(42,31): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:745:src/buffer/buffer-utils.ts(97,43): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:746:src/buffer/buffer-utils.ts(102,40): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:747:src/script/build/p2pkh-builder.ts(16,49): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:748:src/script/build/p2stas-builder.ts(21,49): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:749:src/script/build/script-builder.ts(108,23): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:750:src/script/read/script-reader.ts(35,46): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:752:src/transaction/build/input-builder.ts(86,22): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:753:src/transaction/build/input-builder.ts(97,18): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:754:src/transaction/build/input-builder.ts(119,7): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:755:src/transaction/build/input-builder.ts(208,23): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:756:src/transaction/build/input-builder.ts(226,25): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:757:src/transaction/build/input-builder.ts(230,29): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:758:src/transaction/build/input-builder.ts(240,29): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:759:src/transaction/build/input-builder.ts(254,29): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:760:src/transaction/build/input-builder.ts(265,5): error TS2322: Type 'Uint8Array[]' is not assignable to type 'Buffer[]'.
+docs/COMMAND_LOG.md:762:src/transaction/read/transaction-reader.ts(43,7): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:763:src/transaction/read/transaction-reader.ts(52,44): error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:780:    src/script/read/script-reader.ts:35:46 - error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:785:    src/script/read/script-reader.ts:35:46 - error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:791:    src/bitcoin/address.ts:38:61 - error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:798:    src/buffer/buffer-utils.ts:97:43 - error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:799:    src/buffer/buffer-utils.ts:102:40 - error TS2345: Argument of type 'Uint8Array' is not assignable to parameter of type 'Buffer'.
+docs/COMMAND_LOG.md:808:## rg Buffer inventory (before migration)
+docs/COMMAND_LOG.md:810:Command: `rg -n "Buffer\\b|buffer\\b" src test tests __tests__ examples`
+docs/COMMAND_LOG.md:864:No Buffer usage detected in src/ or tests/
+docs/COMMAND_LOG.md:867:## rg no-Buffer check (post-migration)
+docs/COMMAND_LOG.md:869:Command: `rg -n "Buffer\\b|from\\(\\"buffer\\"\\)|import\\s+\\{\\s*Buffer\\s*\\}" src`
+docs/MIGRATION.md:5:All binary inputs and outputs now use `Uint8Array` instead of `Buffer`.
+docs/MIGRATION.md:9:- `Buffer.from(hex, "hex")` -> `fromHex(hex)`
+docs/MIGRATION.md:10:- `Buffer.from(text, "utf8")` -> `utf8ToBytes(text)`
+docs/MIGRATION.md:13:- `Buffer.concat([...])` -> `concat([...])`
+docs/MIGRATION.md:25:- If a dependency returns `Buffer`, treat it as `Uint8Array` and do not call `Buffer` methods on it.
+```
+
+## node scripts/check-no-buffer.mjs (docs update)
+
+Command: `node scripts/check-no-buffer.mjs`
+Exit status: 0
+Output:
+
+```
+No Buffer usage detected in src/ or tests/
+```

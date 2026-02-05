@@ -1,6 +1,6 @@
 # STAS 3.0 Freeze + Multisig (Template Notes)
 
-This document summarizes the freezability rules and how the SDK builds the STAS 3.0 “freeze + multisig” locking script template.
+This document summarizes the freezability rules and how the SDK builds the STAS 3.0 "freeze + multisig" locking script template.
 
 ## Fields in the Template
 
@@ -11,6 +11,8 @@ The template contains placeholders in ASM:
 - `OP_RETURN <"redemption address"/"protocol ID" - 20 bytes> <flags field> <service data per each flag> <optional data field/s - upto around 4.2GB size>`
 
 These are replaced by the builder in `src/script/build/stas3-freeze-multisig-builder.ts`.
+
+Internally, the SDK does **not** assemble this script via ASM; it uses a precompiled token list stored in `src/script/templates/stas3-freeze-multisig-base.ts` and inserts the variable fields at runtime. The ASM template in `src/script/templates/stas3-freeze-multisig.ts` remains available for inspection.
 
 ## Freezing / Unfreezing Rules (2nd Variable Field)
 
@@ -23,18 +25,18 @@ These are replaced by the builder in `src/script/build/stas3-freeze-multisig-bui
 
 Minimal encoding is required for the 2nd field:
 
-- If the original 2nd field was `OP_1` or `OP_3..OP_16` or `OP_1NEGATE`, freezing uses `0x02` + the pushed value (e.g. `OP_16` → `0x0210`).
+- If the original 2nd field was `OP_1` or `OP_3..OP_16` or `OP_1NEGATE`, freezing uses `0x02` + the pushed value (e.g. `OP_16` -> `0x0210`).
 - For an empty string, freezing with `0x02` must NOT work; only `OP_2` is valid.
 
 ## Flags Field
 
 - Flags field is **always present**, unless no data follows it.
-- To denote “no flags”:
+- To denote "no flags":
   - Use empty string (`OP_0`) or
   - Use a push of `00` (i.e. `0x0100`).
-- Flags byte length: recommended **1–75 bytes** for higher-level tooling, but script allows up to 255.
+- Flags byte length: recommended **1-75 bytes** for higher-level tooling, but script allows up to 255.
 - **Do not use OP_1..OP_16** to encode flags. Use pushdata bytes instead.
-- The **lowest bit** of flags marks “freezable”.
+- The **lowest bit** of flags marks "freezable".
 - **Service fields** follow the flags field, ordered **right-to-left** by flag bit positions.
 
 ## Spending-Type Parameter
@@ -59,16 +61,16 @@ To skip signature verification:
 
 The SDK exposes:
 
-- `buildStas3FreezeMultisigAsm(params)`
-- `buildStas3FreezeMultisigScript(params)`
+- `buildStas3FreezeMultisigTokens(params)` -> `ScriptToken[]`
+- `buildStas3FreezeMultisigScript(params)` -> `Uint8Array`
+- `buildStas3FreezeMultisigAsm(params)` -> `string` (inspection only; uses tokens under the hood)
 
 See `src/script/build/stas3-freeze-multisig-builder.ts`.
 
 ### Example
 
 ```ts
-import { buildStas3FreezeMultisigScript } from "../src/script";
-import { fromHex } from "../src/bytes";
+import { buildStas3FreezeMultisigScript, fromHex } from "dxs-stas-sdk";
 
 const ownerPkh = fromHex("2f2ec98dfa6429a028536a6c9451f702daa3a333");
 const redemptionPkh = fromHex("b4ab0fffa02223a8a40d9e7f7823e61b38625382");
