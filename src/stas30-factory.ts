@@ -37,9 +37,7 @@ const resolveUnlockingScript = (payment: TStas3Payment): Bytes => {
   throw new Error("UnlockingScript or UnlockingScriptAsm must be provided");
 };
 
-const buildStas3LockingScriptBuilder = (
-  params: Stas3FreezeMultisigParams,
-) => {
+const buildStas3LockingScriptBuilder = (params: Stas3FreezeMultisigParams) => {
   const scriptBytes = buildStas3FreezeMultisigScript(params);
   const tokens = ScriptReader.read(scriptBytes);
   return ScriptBuilder.fromTokens(tokens, ScriptType.unknown);
