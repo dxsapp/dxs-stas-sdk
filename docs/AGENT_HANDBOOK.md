@@ -203,10 +203,14 @@ const stas30Factory = new Stas30BundleFactory(
   buildUnlockingScript,
 );
 
-const bundle30 = await stas30Factory.createBundle(1000, {
-  m: 2,
-  addresses: [addr1, addr2, addr3],
-}, "transfer");
+const bundle30 = await stas30Factory.createBundle(
+  1000,
+  {
+    m: 2,
+    addresses: [addr1, addr2, addr3],
+  },
+  "transfer",
+);
 ```
 
 ## 5. Module Map (What lives where)

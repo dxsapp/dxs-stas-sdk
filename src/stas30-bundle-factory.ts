@@ -1,4 +1,11 @@
-import { Address, OutPoint, ScriptType, TPayment, Transaction, Wallet } from "./bitcoin";
+import {
+  Address,
+  OutPoint,
+  ScriptType,
+  TPayment,
+  Transaction,
+  Wallet,
+} from "./bitcoin";
 import { Bytes } from "./bytes";
 import { TransactionBuilder, TransactionReader } from "./transaction";
 import { OutputBuilder } from "./transaction/build/output-builder";
@@ -328,15 +335,15 @@ export class Stas30BundleFactory {
           const inputSatoshis = outPoint1.Satoshis + outPoint2.Satoshis;
 
           let outputs = [
-              {
-                recipient: {
-                  m: 1,
-                  addresses: [this.stasWallet.Address],
-                },
-                satoshis: inputSatoshis,
-                isChange: false,
+            {
+              recipient: {
+                m: 1,
+                addresses: [this.stasWallet.Address],
               },
-            ];
+              satoshis: inputSatoshis,
+              isChange: false,
+            },
+          ];
 
           if (lastMerge && inputSatoshis !== satoshis) {
             outputs = [
@@ -359,7 +366,11 @@ export class Stas30BundleFactory {
             ];
           }
 
-          const destinations = this.buildDestinations(outPoint1, outputs, "merge");
+          const destinations = this.buildDestinations(
+            outPoint1,
+            outputs,
+            "merge",
+          );
 
           const txRaw = this.buildStas30Tx({
             stasPayments: [
@@ -453,8 +464,15 @@ export class Stas30BundleFactory {
     spendType: Stas30SpendType;
     isMerge: boolean;
   }) => {
-    const { stasPayments, feePayment, destinations, note, feeRate, spendType, isMerge } =
-      params;
+    const {
+      stasPayments,
+      feePayment,
+      destinations,
+      note,
+      feeRate,
+      spendType,
+      isMerge,
+    } = params;
 
     if (stasPayments.length === 0)
       throw new Error("At least one STAS input is required");
@@ -474,7 +492,9 @@ export class Stas30BundleFactory {
     txBuilder.addInput(feePayment.OutPoint, feePayment.Owner);
 
     for (const dest of destinations) {
-      const lockingScript = this.buildStas30LockingScriptBuilder(dest.LockingParams);
+      const lockingScript = this.buildStas30LockingScriptBuilder(
+        dest.LockingParams,
+      );
       txBuilder.Outputs.push(new OutputBuilder(lockingScript, dest.Satoshis));
     }
 
@@ -543,13 +563,18 @@ export class Stas30BundleFactory {
       throw new Error("Input satoshis must be equal output satoshis");
   };
 
-  private buildStas30LockingScriptBuilder = (params: Stas3FreezeMultisigParams) => {
+  private buildStas30LockingScriptBuilder = (
+    params: Stas3FreezeMultisigParams,
+  ) => {
     const scriptBytes = buildStas3FreezeMultisigScript(params);
     const tokens = ScriptReader.read(scriptBytes);
     return ScriptBuilder.fromTokens(tokens, ScriptType.unknown);
   };
 
-  private outPointFromTransaction = (tx: Transaction, vout: number): OutPoint => {
+  private outPointFromTransaction = (
+    tx: Transaction,
+    vout: number,
+  ): OutPoint => {
     const output = tx.Outputs[vout];
     const owner = this.getOwnerAddress(output.LockignScript);
 
