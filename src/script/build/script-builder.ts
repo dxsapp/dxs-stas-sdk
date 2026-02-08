@@ -18,10 +18,34 @@ export class ScriptBuilder {
   }
 
   static fromTokens = (tokens: ScriptToken[], scriptType: ScriptType) => {
-    const builder = new ScriptBuilder(scriptType);
+    const toAddress = ScriptBuilder.resolveToAddress(tokens, scriptType);
+    const builder = new ScriptBuilder(scriptType, toAddress);
     builder._tokens = tokens;
 
     return builder;
+  };
+
+  private static resolveToAddress = (
+    tokens: ScriptToken[],
+    scriptType: ScriptType,
+  ): Address | undefined => {
+    const fromToken = (token?: ScriptToken): Address | undefined => {
+      if (!token?.Data || token.Data.length !== 20) return undefined;
+      return new Address(token.Data);
+    };
+
+    if (scriptType === ScriptType.p2pkh) {
+      return fromToken(tokens.find((x) => x.IsReceiverId) ?? tokens[2]);
+    }
+
+    if (
+      scriptType === ScriptType.p2stas ||
+      scriptType === ScriptType.p2stas30
+    ) {
+      return fromToken(tokens.find((x) => x.IsReceiverId) ?? tokens[0]);
+    }
+
+    return undefined;
   };
 
   size = () => {
