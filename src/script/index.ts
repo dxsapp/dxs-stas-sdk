@@ -7,6 +7,12 @@ export * from "./build/stas3-freeze-multisig-builder";
 export * from "./build/script-builder";
 
 export * from "./read/script-reader";
+export * from "./read/script-read-token";
+export * from "./read/base-script-reader";
+export * from "./read/locking-script-reader";
+export * from "./read/script-reader-extensions";
+export * from "./read/stas3-locking-script-decomposer";
+export * from "./read/stas3-unlocking-script-decomposer";
 
 export * from "./script-samples";
 export * from "./script-token";

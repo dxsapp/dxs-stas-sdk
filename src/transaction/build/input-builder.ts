@@ -14,6 +14,7 @@ import { ScriptType } from "../../bitcoin/script-type";
 import { SignatureHashType } from "../../bitcoin/sig-hash-type";
 import { hash256 } from "../../hashes";
 import { ScriptBuilder } from "../../script/build/script-builder";
+import { ScriptReader } from "../../script/read/script-reader";
 import { TransactionBuilder } from "./transaction-builder";
 import { Wallet } from "../../bitcoin";
 import { Bytes, fromHex } from "../../bytes";
@@ -26,6 +27,7 @@ export class InputBilder {
   OutPoint: OutPoint;
   Merge: boolean;
   UnlockingScript?: Bytes;
+  Stas30SpendingType = 1;
   Sequence = TransactionBuilder.DefaultSequence;
 
   private _mergeVout: number = 0;
@@ -45,6 +47,7 @@ export class InputBilder {
   }
 
   sign = () => {
+    const scriptType = this.OutPoint.ScriptType;
     const preimage = this.preimage(TransactionBuilder.DefaultSighashType);
     const hashedPreimage = hash256(preimage);
     const der = this.Owner.sign(hashedPreimage);
@@ -52,7 +55,7 @@ export class InputBilder {
     derWithSigHashType.set(der);
     derWithSigHashType[der.length] = TransactionBuilder.DefaultSighashType;
 
-    if (this.OutPoint.ScriptType === ScriptType.p2pkh) {
+    if (scriptType === ScriptType.p2pkh) {
       const size =
         getChunkSize(derWithSigHashType) + getChunkSize(this.Owner.PublicKey);
       const buffer = new Uint8Array(size);
@@ -62,16 +65,22 @@ export class InputBilder {
       bufferWriter.writeVarChunk(this.Owner.PublicKey);
 
       this.UnlockingScript = buffer;
-    } else if (this.OutPoint.ScriptType === ScriptType.p2stas) {
+    } else if (
+      scriptType === ScriptType.p2stas ||
+      scriptType === ScriptType.p2stas30
+    ) {
       this.prepareMergeInfo();
 
       const script = new ScriptBuilder(ScriptType.p2stas);
+
       let hasNote = false;
+      let hasChangeOutput = false;
 
       for (const output of this.TxBuilder.Outputs) {
         if (output.LockingScript.ScriptType === ScriptType.nullData) {
           const nulldata = output.LockingScript.toBytes();
           const payload = nulldata.subarray(2);
+
           script.addData(payload);
 
           hasNote = true;
@@ -79,11 +88,26 @@ export class InputBilder {
           script
             .addNumber(output.Satoshis)
             .addData(output.LockingScript.ToAddress!.Hash160);
+
+          if (output.LockingScript.ScriptType === ScriptType.p2stas30) {
+            // add action field (2nd variable field) aka IsSecondField
+            script.addData(output.LockingScript._tokens[1].Data!); // it's stats30 script
+          }
+
+          if (output.LockingScript.ScriptType === ScriptType.p2pkh) {
+            hasChangeOutput = true;
+          }
         }
+      }
+
+      if (!hasChangeOutput) {
+        script.addOpCode(OpCode.OP_0);
+        script.addOpCode(OpCode.OP_0);
       }
 
       if (!hasNote) script.addOpCode(OpCode.OP_0);
 
+      // TODO Check if transaction with funding
       const fundingInput =
         this.TxBuilder.Inputs[this.TxBuilder.Inputs.length - 1];
 
@@ -100,10 +124,13 @@ export class InputBilder {
         script.addOpCode(OpCode.OP_0);
       }
 
-      script
-        .addData(preimage)
-        .addData(derWithSigHashType)
-        .addData(this.Owner.PublicKey);
+      script.addData(preimage);
+
+      if (scriptType === ScriptType.p2stas30) {
+        script.addNumber(this.Stas30SpendingType);
+      }
+
+      script.addData(derWithSigHashType).addData(this.Owner.PublicKey);
 
       this.UnlockingScript = script.toBytes();
     }
@@ -158,18 +185,38 @@ export class InputBilder {
       1 + // OP_PUSH
       33; // Public Key
 
-    if (this.OutPoint.ScriptType === ScriptType.p2stas) {
+    if (
+      this.OutPoint.ScriptType === ScriptType.p2stas ||
+      this.OutPoint.ScriptType === ScriptType.p2stas30
+    ) {
       this.prepareMergeInfo();
 
       const fundingIdx = this.TxBuilder.Inputs.length - 1;
       const fundingOutpoint = this.TxBuilder.Inputs[fundingIdx].OutPoint;
 
       size += this.stasNullDataLength();
+
+      let hasChangeOutput = false;
+
       size += this.TxBuilder.Outputs.reduce((a, x) => {
         if (x.LockingScript.ScriptType === ScriptType.nullData) return a;
 
-        return a + getNumberSize(x.Satoshis) + 21;
+        a += getNumberSize(x.Satoshis) + 21;
+
+        if (x.LockingScript.ScriptType === ScriptType.p2stas30) {
+          a += estimateChunkSize(x.LockingScript._tokens[1].DataLength);
+        }
+
+        if (x.LockingScript.ScriptType === ScriptType.p2pkh) {
+          hasChangeOutput = true;
+        }
+
+        return a;
       }, 0);
+
+      if (!hasChangeOutput) {
+        size += 2; // op_false op_false instead of pkh and satoshis
+      }
 
       size += getNumberSize(fundingOutpoint.Vout);
       size += estimateChunkSize(32); // Funding Tx vout
@@ -181,6 +228,10 @@ export class InputBilder {
         size += getNumberSize(this._mergeVout);
         size += getNumberSize(this._mergeSegments.length);
         size += this._mergeSegments.reduce((a, x) => getChunkSize(x) + a, 0);
+      }
+
+      if (this.OutPoint.ScriptType === ScriptType.p2stas30) {
+        size += getNumberSize(this.Stas30SpendingType);
       }
     }
 
