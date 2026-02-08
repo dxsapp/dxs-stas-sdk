@@ -12,6 +12,7 @@ import { TransactionOutput } from "../../bitcoin/transaction-output";
 import { OpCode } from "../../bitcoin/op-codes";
 import { Bytes, concat, equal, fromHex, toHex } from "../../bytes";
 import { hash160, hash256, ripemd160, sha256 } from "../../hashes";
+import { TransactionReader } from "../../transaction/read/transaction-reader";
 
 export type PrevOutput = {
   lockingScript: Bytes;
@@ -29,10 +30,60 @@ export type ScriptEvalResult = {
   error?: string;
   stack: Bytes[];
   altStack: Bytes[];
+  trace?: ScriptTraceStep[];
+  equalityTrace?: ScriptEqualityStep[];
 };
 
 export type ScriptEvalOptions = {
   allowOpReturn?: boolean;
+  scriptFlags?: number;
+  trace?: boolean;
+  traceLimit?: number;
+};
+
+export type ScriptTraceStep = {
+  phase: "unlocking" | "locking";
+  pc: number;
+  opcode: number;
+  stackDepth: number;
+  stackTopHex?: string;
+  altStackDepth: number;
+};
+
+export type ScriptEqualityStep = {
+  phase: "unlocking" | "locking";
+  pc: number;
+  opcode: number;
+  leftHex: string;
+  rightHex: string;
+  result: boolean;
+};
+
+export const SCRIPT_ENABLE_SIGHASH_FORKID = 1 << 16;
+export const SCRIPT_ENABLE_MAGNETIC_OPCODES = 1 << 17;
+export const SCRIPT_ENABLE_MONOLITH_OPCODES = 1 << 18;
+
+const DEFAULT_SCRIPT_FLAGS =
+  SCRIPT_ENABLE_SIGHASH_FORKID |
+  SCRIPT_ENABLE_MAGNETIC_OPCODES |
+  SCRIPT_ENABLE_MONOLITH_OPCODES;
+
+export type ResolvePrevOutput = (
+  txId: string,
+  vout: number,
+) => PrevOutput | undefined;
+
+export type TransactionInputEvalResult = {
+  inputIndex: number;
+  success: boolean;
+  error?: string;
+};
+
+export type TransactionEvalResult = {
+  txId: string;
+  success: boolean;
+  inputs: TransactionInputEvalResult[];
+  errors: string[];
 };
 
 class ScriptEvalError extends Error {
@@ -323,14 +374,28 @@ class ScriptInterpreter {
   private codeSeparator = -1;
   private ctx: ScriptEvalContext;
   private allowOpReturn: boolean;
+  private scriptFlags: number;
+  private traceEnabled: boolean;
+  private traceLimit: number;
+  private tracePhase: "unlocking" | "locking" = "unlocking";
+  private trace: ScriptTraceStep[] = [];
+  private equalityTrace: ScriptEqualityStep[] = [];
 
   constructor(ctx: ScriptEvalContext, options?: ScriptEvalOptions) {
     this.ctx = ctx;
     this.allowOpReturn = options?.allowOpReturn === true;
+    this.scriptFlags = options?.scriptFlags ?? DEFAULT_SCRIPT_FLAGS;
+    this.traceEnabled = options?.trace === true;
+    this.traceLimit = options?.traceLimit ?? 400;
   }
 
   getStack = () => this.stack;
   getAltStack = () => this.altStack;
+  getTrace = () => this.trace;
+  getEqualityTrace = () => this.equalityTrace;
+  setTracePhase = (phase: "unlocking" | "locking") => {
+    this.tracePhase = phase;
+  };
 
   private isExecuting = () => this.execStack.every((v) => v);
 
@@ -353,6 +418,20 @@ class ScriptInterpreter {
   private getScriptCode = () => {
     const start = this.codeSeparator + 1;
     return this.script.subarray(start);
+  };
+
+  private hasFlag = (flag: number): boolean => (this.scriptFlags & flag) !== 0;
+
+  private requireMonolithOpcodes = () => {
+    if (!this.hasFlag(SCRIPT_ENABLE_MONOLITH_OPCODES)) {
+      throw new ScriptEvalError("Monolith opcodes disabled");
+    }
+  };
+
+  private requireMagneticOpcodes = () => {
+    if (!this.hasFlag(SCRIPT_ENABLE_MAGNETIC_OPCODES)) {
+      throw new ScriptEvalError("Magnetic opcodes disabled");
+    }
   };
 
   execute = (script: Bytes) => {
@@ -385,6 +464,19 @@ class ScriptInterpreter {
       }
 
       const halt = this.execOp(opcode, pc);
+      if (this.traceEnabled) {
+        const top =
+          this.stack.length > 0 ? this.stack[this.stack.length - 1] : undefined;
+        this.trace.push({
+          phase: this.tracePhase,
+          pc,
+          opcode,
+          stackDepth: this.stack.length,
+          stackTopHex: top ? toHex(top) : undefined,
+          altStackDepth: this.altStack.length,
+        });
+        if (this.trace.length > this.traceLimit) this.trace.shift();
+      }
       if (halt) break;
       pc = next;
     }
@@ -598,12 +690,14 @@ class ScriptInterpreter {
       }
 
       case OpCode.OP_CAT: {
+        this.requireMonolithOpcodes();
         const b = this.pop();
         const a = this.pop();
         this.push(concat([a, b]));
         return;
       }
       case OpCode.OP_SPLIT: {
+        this.requireMonolithOpcodes();
         const pos = Number(this.popNum());
         const data = this.pop();
         if (pos < 0 || pos > data.length)
@@ -613,6 +707,7 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_NUM2BIN: {
+        this.requireMonolithOpcodes();
         const size = Number(this.popNum());
         const num = this.popNum();
         if (size < 0) throw new ScriptEvalError("OP_NUM2BIN size < 0");
@@ -646,6 +741,7 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_BIN2NUM: {
+        this.requireMonolithOpcodes();
         const num = this.popNum();
         this.push(fromBigInt(num));
         return;
@@ -656,6 +752,7 @@ class ScriptInterpreter {
       }
 
       case OpCode.OP_INVERT: {
+        this.requireMonolithOpcodes();
         const data = this.pop();
         const out = new Uint8Array(data.length);
         for (let i = 0; i < data.length; i++) out[i] = data[i] ^ 0xff;
@@ -665,6 +762,7 @@ class ScriptInterpreter {
       case OpCode.OP_AND:
       case OpCode.OP_OR:
       case OpCode.OP_XOR: {
+        this.requireMonolithOpcodes();
         const b = this.pop();
         const a = this.pop();
         if (a.length !== b.length)
@@ -681,13 +779,39 @@ class ScriptInterpreter {
       case OpCode.OP_EQUAL: {
         const b = this.pop();
         const a = this.pop();
-        pushBool(this.stack, equal(a, b));
+        const ok = equal(a, b);
+        if (this.traceEnabled) {
+          this.equalityTrace.push({
+            phase: this.tracePhase,
+            pc,
+            opcode,
+            leftHex: toHex(a),
+            rightHex: toHex(b),
+            result: ok,
+          });
+          if (this.equalityTrace.length > this.traceLimit)
+            this.equalityTrace.shift();
+        }
+        pushBool(this.stack, ok);
         return;
       }
       case OpCode.OP_EQUALVERIFY: {
         const b = this.pop();
         const a = this.pop();
-        if (!equal(a, b)) throw new ScriptEvalError("OP_EQUALVERIFY failed");
+        const ok = equal(a, b);
+        if (this.traceEnabled) {
+          this.equalityTrace.push({
+            phase: this.tracePhase,
+            pc,
+            opcode,
+            leftHex: toHex(a),
+            rightHex: toHex(b),
+            result: ok,
+          });
+          if (this.equalityTrace.length > this.traceLimit)
+            this.equalityTrace.shift();
+        }
+        if (!ok) throw new ScriptEvalError("OP_EQUALVERIFY failed");
         return;
       }
 
@@ -730,12 +854,14 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_MUL: {
+        this.requireMagneticOpcodes();
         const b = this.popNum();
         const a = this.popNum();
         this.push(fromBigInt(a * b));
         return;
       }
       case OpCode.OP_DIV: {
+        this.requireMagneticOpcodes();
         const b = this.popNum();
         if (b === BigInt(0)) throw new ScriptEvalError("OP_DIV by zero");
         const a = this.popNum();
@@ -743,6 +869,7 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_MOD: {
+        this.requireMagneticOpcodes();
         const b = this.popNum();
         if (b === BigInt(0)) throw new ScriptEvalError("OP_MOD by zero");
         const a = this.popNum();
@@ -750,12 +877,14 @@ class ScriptInterpreter {
         return;
       }
       case OpCode.OP_LSHIFT: {
+        this.requireMagneticOpcodes();
         const b = this.popNum();
         const a = this.popNum();
         this.push(fromBigInt(a << b));
         return;
       }
       case OpCode.OP_RSHIFT: {
+        this.requireMagneticOpcodes();
         const b = this.popNum();
         const a = this.popNum();
         this.push(fromBigInt(a >> b));
@@ -866,6 +995,18 @@ class ScriptInterpreter {
         const sigWithType = this.pop();
         const { signature, sighashType } = parseSignature(sigWithType);
 
+        const requireForkId = this.hasFlag(SCRIPT_ENABLE_SIGHASH_FORKID);
+        const hasForkId =
+          (sighashType & SignatureHashType.SIGHASH_FORKID) ===
+          SignatureHashType.SIGHASH_FORKID;
+        if (requireForkId && !hasForkId) {
+          if (opcode === OpCode.OP_CHECKSIGVERIFY) {
+            throw new ScriptEvalError("OP_CHECKSIGVERIFY missing FORKID");
+          }
+          pushBool(this.stack, false);
+          return;
+        }
+
         const scriptCode = this.getScriptCode();
         const preimage = buildSighashPreimage(
           this.ctx,
@@ -914,6 +1055,14 @@ class ScriptInterpreter {
 
         while (sigIdx < m && keyIdx < n) {
           const { signature, sighashType } = parseSignature(sigs[sigIdx]);
+          const requireForkId = this.hasFlag(SCRIPT_ENABLE_SIGHASH_FORKID);
+          const hasForkId =
+            (sighashType & SignatureHashType.SIGHASH_FORKID) ===
+            SignatureHashType.SIGHASH_FORKID;
+          if (requireForkId && !hasForkId) {
+            keyIdx++;
+            continue;
+          }
           const scriptCode = this.getScriptCode();
           const preimage = buildSighashPreimage(
             this.ctx,
@@ -989,7 +1138,9 @@ export const evaluateScripts = (
   const interpreter = new ScriptInterpreter(ctx, options);
 
   try {
+    interpreter.setTracePhase("unlocking");
     interpreter.execute(unlockingScript);
+    interpreter.setTracePhase("locking");
     interpreter.execute(lockingScript);
 
     const stack = interpreter.getStack();
@@ -999,6 +1150,8 @@ export const evaluateScripts = (
       success,
       stack,
       altStack: interpreter.getAltStack(),
+      trace: interpreter.getTrace(),
+      equalityTrace: interpreter.getEqualityTrace(),
       error: success ? undefined : "Script evaluated to false",
     };
   } catch (err) {
@@ -1006,7 +1159,78 @@ export const evaluateScripts = (
       success: false,
       stack: interpreter.getStack(),
       altStack: interpreter.getAltStack(),
+      trace: interpreter.getTrace(),
+      equalityTrace: interpreter.getEqualityTrace(),
       error: err instanceof Error ? err.message : "Script error",
     };
   }
+};
+
+export const evaluateTransactionHex = (
+  txHex: string,
+  resolvePrevOutput: ResolvePrevOutput,
+  options?: ScriptEvalOptions,
+): TransactionEvalResult => {
+  const tx = TransactionReader.readHex(txHex);
+  const inputResults: TransactionInputEvalResult[] = [];
+  const errors: string[] = [];
+  const prevOutputs: PrevOutput[] = [];
+
+  for (let i = 0; i < tx.Inputs.length; i++) {
+    const input = tx.Inputs[i];
+    const prev = resolvePrevOutput(input.TxId, input.Vout);
+    if (!prev) {
+      const error = `Missing prev output for input ${i}: ${input.TxId}:${input.Vout}`;
+      inputResults.push({ inputIndex: i, success: false, error });
+      errors.push(error);
+      prevOutputs.push({ lockingScript: new Uint8Array(), satoshis: 0 });
+      continue;
+    }
+
+    prevOutputs.push(prev);
+  }
+
+  for (let i = 0; i < tx.Inputs.length; i++) {
+    if (inputResults.some((r) => r.inputIndex === i && !r.success)) continue;
+
+    const result = evaluateScripts(
+      tx.Inputs[i].UnlockingScript,
+      prevOutputs[i].lockingScript,
+      { tx, inputIndex: i, prevOutputs },
+      options,
+    );
+
+    if (!result.success) {
+      inputResults.push({
+        inputIndex: i,
+        success: false,
+        error: result.error,
+      });
+      errors.push(`Input ${i} failed: ${result.error}`);
+    } else {
+      inputResults.push({ inputIndex: i, success: true });
+    }
+  }
+
+  return {
+    txId: tx.Id,
+    success: inputResults.every((r) => r.success),
+    inputs: inputResults.sort((a, b) => a.inputIndex - b.inputIndex),
+    errors,
+  };
+};
+
+export const createPrevOutputResolverFromTransactions = (
+  txMap: Map<string, Transaction>,
+): ResolvePrevOutput => {
+  return (txId: string, vout: number) => {
+    const tx = txMap.get(txId);
+    if (!tx) return undefined;
+    const output = tx.Outputs[vout];
+    if (!output) return undefined;
+    return {
+      lockingScript: output.LockignScript,
+      satoshis: output.Satoshis,
+    };
+  };
 };

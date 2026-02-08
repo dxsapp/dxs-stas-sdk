@@ -3,7 +3,11 @@ import { OpCode } from "../../bitcoin/op-codes";
 import { ScriptType } from "../../bitcoin/script-type";
 import { Bytes, bytesToUtf8, fromHex, toHex } from "../../bytes";
 import { buildStas3BaseTokens } from "../templates/stas3-freeze-multisig-base";
-import { getP2stasTokens, nullDataTokens, p2phkTokens } from "../script-samples";
+import {
+  getP2stasTokens,
+  nullDataTokens,
+  p2phkTokens,
+} from "../script-samples";
 import { ScriptToken } from "../script-token";
 import { BaseScriptReader } from "./base-script-reader";
 import { ScriptReadToken } from "./script-read-token";
@@ -107,7 +111,8 @@ export class LockingScriptReader extends BaseScriptReader {
 
     for (const sample of this.samples) {
       if (!sample.ctx.Result) continue;
-      sample.ctx.Result = sample.ctx.OpReturnReached || sample.tokens.length === count;
+      sample.ctx.Result =
+        sample.ctx.OpReturnReached || sample.tokens.length === count;
     }
 
     this.finalizeStas30();
@@ -241,7 +246,12 @@ export class LockingScriptReader extends BaseScriptReader {
     if (this.stas30Ctx.Stage === "base") return;
     if (this.stas30Ctx.Stage === "redemption") return;
     if (this.stas30Ctx.Stage === "flags") return;
-    if (!this.stas30Ctx.Owner || !this.stas30Ctx.Redemption || !this.stas30Ctx.Flags) return;
+    if (
+      !this.stas30Ctx.Owner ||
+      !this.stas30Ctx.Redemption ||
+      !this.stas30Ctx.Flags
+    )
+      return;
     if (this.stas30Ctx.FreezeEnabled && !this.stas30Ctx.HasAuthority) return;
 
     this.ScriptTypeOverride = ScriptType.p2stas30;

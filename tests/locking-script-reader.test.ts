@@ -47,7 +47,9 @@ describe("locking script reader", () => {
     const symbol = "DXS";
     const userData = utf8ToBytes("hello");
 
-    const script = new P2stasBuilder(receiver, tokenId, symbol, [userData]).toBytes();
+    const script = new P2stasBuilder(receiver, tokenId, symbol, [
+      userData,
+    ]).toBytes();
     const reader = LockingScriptReader.read(script);
 
     expect(reader.ScriptType).toBe(ScriptType.p2stas);

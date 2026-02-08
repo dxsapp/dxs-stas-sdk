@@ -190,4 +190,3 @@ export abstract class BaseScriptReader {
     return 9;
   }
 }
-

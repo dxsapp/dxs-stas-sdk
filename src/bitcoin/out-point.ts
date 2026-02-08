@@ -44,9 +44,10 @@ export class OutPointFull extends OutPoint {
 
     if (
       output.ScriptType !== ScriptType.p2pkh &&
-      output.ScriptType !== ScriptType.p2stas
+      output.ScriptType !== ScriptType.p2stas &&
+      output.ScriptType !== ScriptType.p2stas30
     )
-      throw new Error("p2pkh or p2stat output must be provided");
+      throw new Error("p2pkh, p2stas or p2stas30 output must be provided");
 
     super(
       transaction.Id,

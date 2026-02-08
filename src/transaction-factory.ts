@@ -10,7 +10,7 @@ import {
 import { TransactionBuilder } from "./transaction/build/transaction-builder";
 import { Bytes } from "./bytes";
 
-export const FeeRate = 0.05;
+export const FeeRate = 0.1;
 
 export type TBuildTransferTxRequest = {
   tokenScheme: TokenScheme;
@@ -18,6 +18,7 @@ export type TBuildTransferTxRequest = {
   feePayment: TPayment;
   to: Address;
   note?: Bytes[];
+  feeRate: number;
 };
 
 export const BuildTransferTx = ({
@@ -26,6 +27,7 @@ export const BuildTransferTx = ({
   feePayment,
   to,
   note,
+  feeRate,
 }: TBuildTransferTxRequest) => {
   const txBuilder = TransactionBuilder.init()
     .addInput(stasPayment.OutPoint, stasPayment.Owner)
@@ -40,7 +42,7 @@ export const BuildTransferTx = ({
     .addChangeOutputWithFee(
       feePayment.OutPoint.Address,
       feePayment.OutPoint.Satoshis,
-      FeeRate,
+      feeRate,
       feeOutputIdx,
     )
     .sign()
@@ -53,6 +55,7 @@ export type TBuildSplitTxRequest = {
   feePayment: TPayment;
   destinations: TDestination[];
   note?: Bytes[];
+  feeRate: number;
 };
 
 export const BuildSplitTx = ({
@@ -61,6 +64,7 @@ export const BuildSplitTx = ({
   feePayment,
   destinations,
   note,
+  feeRate,
 }: TBuildSplitTxRequest) => {
   if (destinations.length === 0 || destinations.length > 4)
     throw new Error(
@@ -91,7 +95,7 @@ export const BuildSplitTx = ({
     .addChangeOutputWithFee(
       feePayment.OutPoint.Address,
       feePayment.OutPoint.Satoshis,
-      FeeRate,
+      feeRate,
       feeOutputIdx,
     )
     .sign()
@@ -107,6 +111,7 @@ export type TBuildMergeTxRequest = {
   destination: TDestination;
   splitDestination?: TDestination;
   note?: Bytes[];
+  feeRate: number;
 };
 
 export const BuildMergeTx = ({
@@ -118,6 +123,7 @@ export const BuildMergeTx = ({
   destination,
   splitDestination,
   note,
+  feeRate,
 }: TBuildMergeTxRequest) => {
   if (outPoint1.Address.Value !== outPoint2.Address.Value)
     throw new Error("Both inputs have to belong to same address");
@@ -153,7 +159,7 @@ export const BuildMergeTx = ({
     .addChangeOutputWithFee(
       feePayment.OutPoint.Address,
       feePayment.OutPoint.Satoshis,
-      FeeRate,
+      feeRate,
       feeOutputIdx,
     )
     .sign()
@@ -166,6 +172,7 @@ export type TBuildRedeemTxRequest = {
   feePayment: TPayment;
   splitDestinations?: TDestination[];
   note?: Bytes[];
+  feeRate: number;
 };
 
 export const BuildRedeemTx = ({
@@ -174,6 +181,7 @@ export const BuildRedeemTx = ({
   feePayment,
   splitDestinations,
   note,
+  feeRate,
 }: TBuildRedeemTxRequest) => {
   const redeemAddress = Address.fromHash160Hex(tokenScheme.TokenId);
 
@@ -214,7 +222,7 @@ export const BuildRedeemTx = ({
     .addChangeOutputWithFee(
       feePayment.OutPoint.Address,
       feePayment.OutPoint.Satoshis,
-      FeeRate,
+      feeRate,
       feeOutputIdx,
     )
     .sign()

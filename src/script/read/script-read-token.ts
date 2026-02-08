@@ -15,4 +15,3 @@ export class ScriptReadToken {
     if (valid) this.OpCode = opCodeNum as OpCode;
   }
 }
-

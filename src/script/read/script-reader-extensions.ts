@@ -19,4 +19,3 @@ export const isSplittable = (reader: LockingScriptReader): boolean => {
 
   return marker[0] === 0x0;
 };
-

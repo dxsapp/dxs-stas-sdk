@@ -7,15 +7,24 @@ import { ScriptToken } from "../script-token";
 import { buildStas3BaseTokens } from "../templates/stas3-freeze-multisig-base";
 
 export type SecondFieldInput = Bytes | number | null;
+export type Stas3FlagsInput = {
+  freezable?: boolean;
+};
 
 export type Stas3FreezeMultisigParams = {
   ownerPkh: Bytes;
   secondField: SecondFieldInput;
   redemptionPkh: Bytes;
   frozen?: boolean;
-  flags?: Bytes | null;
+  flags?: Bytes | Stas3FlagsInput | null;
   serviceFields?: Bytes[];
   optionalData?: Bytes[];
+};
+
+export const buildStas3Flags = (flags?: Stas3FlagsInput): Bytes => {
+  const result = new Uint8Array(1);
+  if (flags?.freezable) result[0] |= 0x01;
+  return result;
 };
 
 const ensureLength = (value: Bytes, expected: number, name: string) => {
@@ -56,14 +65,24 @@ const buildSecondFieldToken = (
   return ScriptToken.fromBytes(prefixed);
 };
 
-const buildFlagsToken = (flags?: Bytes | null): ScriptToken => {
-  if (!flags || flags.length === 0)
-    return new ScriptToken(OpCode.OP_0, OpCode.OP_0);
-  if (flags.length > 75) {
-    throw new Error(`flags length must be <= 75 bytes, got ${flags.length}`);
+const buildFlagsToken = (
+  flags?: Bytes | Stas3FlagsInput | null,
+): ScriptToken => {
+  const fallback = new Uint8Array([0x00]);
+  const encoded =
+    flags instanceof Uint8Array
+      ? flags.length === 0
+        ? fallback
+        : flags
+      : flags
+        ? buildStas3Flags(flags)
+        : fallback;
+
+  if (encoded.length > 75) {
+    throw new Error(`flags length must be <= 75 bytes, got ${encoded.length}`);
   }
 
-  return ScriptToken.fromBytes(flags);
+  return ScriptToken.fromBytes(encoded);
 };
 
 const buildDataTokens = (values?: Bytes[]): ScriptToken[] => {

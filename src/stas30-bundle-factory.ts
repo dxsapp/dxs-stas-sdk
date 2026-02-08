@@ -568,7 +568,7 @@ export class Stas30BundleFactory {
   ) => {
     const scriptBytes = buildStas3FreezeMultisigScript(params);
     const tokens = ScriptReader.read(scriptBytes);
-    return ScriptBuilder.fromTokens(tokens, ScriptType.unknown);
+    return ScriptBuilder.fromTokens(tokens, ScriptType.p2stas30);
   };
 
   private outPointFromTransaction = (

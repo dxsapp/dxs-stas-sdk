@@ -104,6 +104,7 @@ describe("testing transaction builder", () => {
       stasPayment: { OutPoint: stasOutPoint, Owner: alicePrivateKey },
       feePayment: { OutPoint: fundingOutPoint, Owner: issuerPrivateKey },
       to: aliceAddress,
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(TransferNoNoteRaw);
@@ -119,6 +120,7 @@ describe("testing transaction builder", () => {
       feePayment: { OutPoint: fundingOutPoint, Owner: issuerPrivateKey },
       to: aliceAddress,
       note: [utf8ToBytes("DXS"), utf8ToBytes("Transfer test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(TransferWithNoteRaw);
@@ -136,6 +138,7 @@ describe("testing transaction builder", () => {
         { Satoshis: 25, Address: aliceAddress },
         { Satoshis: 25, Address: aliceAddress },
       ],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(SplitNoNoteRaw);
@@ -156,6 +159,7 @@ describe("testing transaction builder", () => {
         Satoshis: stasOutPoint1.Satoshis + stasOutPoint2.Satoshis,
         Address: aliceAddress,
       },
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(MergeNoNoteRaw);
@@ -174,6 +178,7 @@ describe("testing transaction builder", () => {
         { Satoshis: 25, Address: aliceAddress },
       ],
       note: [utf8ToBytes("DXS"), utf8ToBytes("Split test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(SplitWithNoteRaw);
@@ -195,6 +200,7 @@ describe("testing transaction builder", () => {
       },
       destination: { Satoshis: 50, Address: aliceAddress },
       note: [utf8ToBytes("DXS"), utf8ToBytes("Merge test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(MergeWithNoteRaw);
@@ -212,6 +218,7 @@ describe("testing transaction builder", () => {
         { Satoshis: 25, Address: aliceAddress },
         { Satoshis: 25, Address: aliceAddress },
       ],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(SplitWithNote2Raw);
@@ -234,6 +241,7 @@ describe("testing transaction builder", () => {
       destination: { Satoshis: 25, Address: aliceAddress },
       splitDestination: { Satoshis: 25, Address: aliceAddress },
       note: [utf8ToBytes("DXS"), utf8ToBytes("Merge split test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(MergeSplitWithNoteRaw);
@@ -255,6 +263,7 @@ describe("testing transaction builder", () => {
       },
       destination: { Satoshis: 50, Address: aliceAddress },
       note: [utf8ToBytes("DXS"), utf8ToBytes("Merge test 2")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(MergeWithNote2Raw);
@@ -273,6 +282,7 @@ describe("testing transaction builder", () => {
       },
       to: issuerAddress,
       note: [utf8ToBytes("DXS"), utf8ToBytes("Transfer to issuer test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(TransferToIssuerRaw);
