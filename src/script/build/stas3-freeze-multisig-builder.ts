@@ -5,8 +5,18 @@ import { ScriptType } from "../../bitcoin/script-type";
 import { ScriptBuilder } from "./script-builder";
 import { ScriptToken } from "../script-token";
 import { buildStas3BaseTokens } from "../templates/stas3-freeze-multisig-base";
+import {
+  Stas3ActionSecondField,
+  Stas3SwapSecondField,
+  encodeStas3SecondField,
+} from "../stas3-second-field";
 
-export type SecondFieldInput = Bytes | number | null;
+export type SecondFieldInput =
+  | Bytes
+  | number
+  | null
+  | Stas3SwapSecondField
+  | Stas3ActionSecondField;
 export type Stas3FlagsInput = {
   freezable?: boolean;
 };
@@ -48,6 +58,10 @@ const buildSecondFieldToken = (
   field: SecondFieldInput,
   frozen: boolean,
 ): ScriptToken => {
+  if (typeof field === "object" && field && "kind" in field) {
+    return ScriptToken.fromBytes(encodeStas3SecondField(field));
+  }
+
   if (field === null) {
     return new ScriptToken(
       frozen ? OpCode.OP_2 : OpCode.OP_0,

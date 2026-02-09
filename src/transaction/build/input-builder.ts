@@ -59,7 +59,7 @@ export class InputBilder {
     derWithSigHashType.set(der);
     derWithSigHashType[der.length] = TransactionBuilder.DefaultSighashType;
 
-    if (scriptType === ScriptType.p2pkh) {
+    if (scriptType === ScriptType.p2pkh || scriptType === ScriptType.p2mpkh) {
       const size =
         getChunkSize(derWithSigHashType) + getChunkSize(this.Owner.PublicKey);
       const buffer = new Uint8Array(size);
@@ -107,7 +107,10 @@ export class InputBilder {
             }
           }
 
-          if (output.LockingScript.ScriptType === ScriptType.p2pkh) {
+          if (
+            output.LockingScript.ScriptType === ScriptType.p2pkh ||
+            output.LockingScript.ScriptType === ScriptType.p2mpkh
+          ) {
             hasChangeOutput = true;
           }
         }
@@ -235,7 +238,10 @@ export class InputBilder {
       );
     };
 
-    if (this.OutPoint.ScriptType === ScriptType.p2pkh) {
+    if (
+      this.OutPoint.ScriptType === ScriptType.p2pkh ||
+      this.OutPoint.ScriptType === ScriptType.p2mpkh
+    ) {
       return estimateChunkSize(singleSigTailSize);
     }
 
@@ -264,7 +270,10 @@ export class InputBilder {
           a += estimateChunkSize(x.LockingScript._tokens[1].DataLength);
         }
 
-        if (x.LockingScript.ScriptType === ScriptType.p2pkh) {
+        if (
+          x.LockingScript.ScriptType === ScriptType.p2pkh ||
+          x.LockingScript.ScriptType === ScriptType.p2mpkh
+        ) {
           hasChangeOutput = true;
         }
 

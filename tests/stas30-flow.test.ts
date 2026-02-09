@@ -178,7 +178,7 @@ const buildRedeemTx = ({
   const txBuilder = TransactionBuilder.init()
     .addInput(stasOutPoint, stasOwner)
     .addInput(feeOutPoint, feeOwner)
-    .addP2PkhOutput(stasOutPoint.Satoshis, redeemAddress);
+    .addP2MpkhOutput(stasOutPoint.Satoshis, redeemAddress);
 
   const feeOutputIdx = txBuilder.Outputs.length;
   txBuilder.Inputs[0].Stas30SpendingType = spendingType;

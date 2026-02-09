@@ -6,11 +6,16 @@ import { buildStas3BaseTokens } from "../templates/stas3-freeze-multisig-base";
 import {
   getP2stasTokens,
   nullDataTokens,
+  p2mpkhTokens,
   p2phkTokens,
 } from "../script-samples";
 import { ScriptToken } from "../script-token";
 import { BaseScriptReader } from "./base-script-reader";
 import { ScriptReadToken } from "./script-read-token";
+import {
+  Stas3ParsedSecondField,
+  decodeStas3SecondField,
+} from "../stas3-second-field";
 
 type DetectContext = {
   Result: boolean;
@@ -46,11 +51,31 @@ type Stas30DetectContext = {
   OptionalData: Bytes[];
 };
 
+const tryDecodeSecondField = (
+  data: Bytes | undefined,
+): Stas3ParsedSecondField | undefined => {
+  if (!data) return undefined;
+  try {
+    return decodeStas3SecondField(data);
+  } catch {
+    return {
+      kind: "unknown",
+      action: data[0] ?? 0,
+      payload: data.subarray(1),
+    };
+  }
+};
+
 export class LockingScriptReader extends BaseScriptReader {
   private samples: ScriptSample[] = [
     {
       type: ScriptType.p2pkh,
       tokens: p2phkTokens,
+      ctx: { Result: true, OpReturnReached: false },
+    },
+    {
+      type: ScriptType.p2mpkh,
+      tokens: p2mpkhTokens,
       ctx: { Result: true, OpReturnReached: false },
     },
     {
@@ -83,6 +108,7 @@ export class LockingScriptReader extends BaseScriptReader {
     Owner: Bytes;
     SecondFieldData?: Bytes;
     SecondFieldOpCode?: number;
+    SecondFieldParsed?: Stas3ParsedSecondField;
     Redemption: Bytes;
     Flags: Bytes;
     FreezeEnabled: boolean;
@@ -262,6 +288,7 @@ export class LockingScriptReader extends BaseScriptReader {
       Owner: this.stas30Ctx.Owner,
       SecondFieldData: this.stas30Ctx.SecondFieldData,
       SecondFieldOpCode: this.stas30Ctx.SecondFieldOpCode,
+      SecondFieldParsed: tryDecodeSecondField(this.stas30Ctx.SecondFieldData),
       Redemption: this.stas30Ctx.Redemption,
       Flags: this.stas30Ctx.Flags,
       FreezeEnabled: this.stas30Ctx.FreezeEnabled,

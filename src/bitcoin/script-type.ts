@@ -7,4 +7,5 @@ export enum ScriptType {
   nullData = 5,
   p2stas = 6,
   p2stas30 = 7,
+  p2mpkh = 8,
 }

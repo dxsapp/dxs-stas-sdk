@@ -2,6 +2,7 @@ import { NullDataBuilder } from "../src/script/build/null-data-builder";
 import { Address } from "../src/bitcoin/address";
 import { Wallet } from "../src/bitcoin/wallet";
 import { P2pkhBuilder } from "../src/script/build/p2pkh-builder";
+import { P2mpkhBuilder } from "../src/script/build/p2mpkh-builder";
 import { P2stasBuilder } from "../src/script/build/p2stas-builder";
 import { utf8ToBytes } from "../src/bytes";
 import { ScriptBuilder } from "../src/script/build/script-builder";
@@ -10,6 +11,8 @@ import { buildStas3FreezeMultisigTokens } from "../src/script/build/stas3-freeze
 import { fromHex } from "../src/bytes";
 
 describe("testing script building", () => {
+  const p2mAddress = Address.fromBase58("1AoPwWXXk41vth2J9bHa6wMu65q4j89Q16");
+
   test("create wallet from mnemonic", () => {
     const wallet = Wallet.fromMnemonic(
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
@@ -42,6 +45,15 @@ describe("testing script building", () => {
     expect(result).toBe("76a9146b7f6a5d5677d1f3635e589b2eacc75d08dc6c4588ac");
   });
 
+  test("build p2mpkh script", () => {
+    const builder = new P2mpkhBuilder(p2mAddress);
+    const scriptHex = builder.toHex();
+
+    expect(scriptHex.startsWith("76a914")).toBe(true);
+    expect(scriptHex).toContain("88201218763ac67");
+    expect(scriptHex.endsWith("ae68")).toBe(true);
+  });
+
   test("build p2stas script", () => {
     const scriptBuilder = new P2stasBuilder(
       Address.fromBase58("1C2dVLqv1kjNn7pztpQ51bpXVEJfoWUNxe"),
@@ -62,6 +74,13 @@ describe("testing script building", () => {
     const rebuilt = ScriptBuilder.fromTokens(base._tokens, ScriptType.p2pkh);
 
     expect(rebuilt.ToAddress?.Value).toBe("1AoPwWXXk41vth2J9bHa6wMu65q4j89Q16");
+  });
+
+  test("fromTokens resolves ToAddress for p2mpkh", () => {
+    const base = new P2mpkhBuilder(p2mAddress);
+    const rebuilt = ScriptBuilder.fromTokens(base._tokens, ScriptType.p2mpkh);
+
+    expect(rebuilt.ToAddress?.Value).toBe(p2mAddress.Value);
   });
 
   test("fromTokens resolves ToAddress for p2stas30 when owner is hash160", () => {

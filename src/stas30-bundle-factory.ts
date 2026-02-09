@@ -592,6 +592,7 @@ export class Stas30BundleFactory {
     const index = tx.Outputs.findIndex(
       (output) =>
         output.ScriptType !== ScriptType.p2pkh &&
+        output.ScriptType !== ScriptType.p2mpkh &&
         output.ScriptType !== ScriptType.nullData,
     );
 
@@ -603,7 +604,10 @@ export class Stas30BundleFactory {
   private getFeeOutPoint = (tx: Transaction): OutPoint => {
     for (let i = tx.Outputs.length - 1; i >= 0; i--) {
       const output = tx.Outputs[i];
-      if (output.ScriptType === ScriptType.p2pkh) {
+      if (
+        output.ScriptType === ScriptType.p2pkh ||
+        output.ScriptType === ScriptType.p2mpkh
+      ) {
         return new OutPoint(
           tx.Id,
           i,

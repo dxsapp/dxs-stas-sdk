@@ -1,10 +1,12 @@
 import { Address } from "../src/bitcoin/address";
 import { ScriptType } from "../src/bitcoin/script-type";
 import { fromHex, toHex, utf8ToBytes } from "../src/bytes";
+import { P2mpkhBuilder } from "../src/script/build/p2mpkh-builder";
 import { P2stasBuilder } from "../src/script/build/p2stas-builder";
 import { buildStas3FreezeMultisigScript } from "../src/script/build/stas3-freeze-multisig-builder";
 import {
   LockingScriptReader,
+  buildStas3SwapSecondField,
   getData,
   getSymbol,
   getTokenId,
@@ -18,6 +20,17 @@ describe("locking script reader", () => {
     expect(reader.ScriptType).toBe(ScriptType.p2pkh);
     expect(reader.Address?.Value).toBe("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
     expect(reader.Data ?? []).toHaveLength(0);
+  });
+
+  test("detects p2mpkh and extracts address", () => {
+    const receiver = Address.fromHash160Hex(
+      "0011223344556677889900112233445566778899",
+    );
+    const script = new P2mpkhBuilder(receiver).toBytes();
+    const reader = LockingScriptReader.read(script);
+
+    expect(reader.ScriptType).toBe(ScriptType.p2mpkh);
+    expect(reader.Address?.Value).toBe(receiver.Value);
   });
 
   test("detects nullData and reads payload", () => {
@@ -131,5 +144,30 @@ describe("locking script reader", () => {
     expect(toHex(reader.Stas30!.ServiceFields[0])).toBe(toHex(authority));
     expect(reader.Stas30!.OptionalData).toHaveLength(1);
     expect(toHex(reader.Stas30!.OptionalData[0])).toBe(toHex(optional));
+  });
+
+  test("parses p2stas30 swap second field", () => {
+    const owner = fromHex("1111222233334444555566667777888899990000");
+    const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    const swapSecond = buildStas3SwapSecondField({
+      requestedScriptHash: fromHex("11".repeat(32)),
+      requestedPkh: fromHex("22".repeat(20)),
+      rateNumerator: 1,
+      rateDenominator: 100,
+    });
+
+    const script = buildStas3FreezeMultisigScript({
+      ownerPkh: owner,
+      secondField: swapSecond,
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x00]),
+    });
+
+    const reader = LockingScriptReader.read(script);
+    expect(reader.ScriptType).toBe(ScriptType.p2stas30);
+    expect(reader.Stas30?.SecondFieldParsed?.kind).toBe("swap");
+    if (reader.Stas30?.SecondFieldParsed?.kind !== "swap") return;
+    expect(reader.Stas30.SecondFieldParsed.rateNumerator).toBe(1);
+    expect(reader.Stas30.SecondFieldParsed.rateDenominator).toBe(100);
   });
 });

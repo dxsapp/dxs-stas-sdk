@@ -34,7 +34,7 @@ export class ScriptBuilder {
       return new Address(token.Data);
     };
 
-    if (scriptType === ScriptType.p2pkh) {
+    if (scriptType === ScriptType.p2pkh || scriptType === ScriptType.p2mpkh) {
       return fromToken(tokens.find((x) => x.IsReceiverId) ?? tokens[2]);
     }
 

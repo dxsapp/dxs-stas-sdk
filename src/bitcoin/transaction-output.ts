@@ -26,7 +26,10 @@ export class TransactionOutput {
       return;
     }
 
-    if (reader.ScriptType === ScriptType.p2pkh) {
+    if (
+      reader.ScriptType === ScriptType.p2pkh ||
+      reader.ScriptType === ScriptType.p2mpkh
+    ) {
       this.data = reader.Data ?? [];
       return;
     }
