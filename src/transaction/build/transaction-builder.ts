@@ -147,13 +147,53 @@ export class TransactionBuilder {
     return this;
   };
 
-  sign = () => {
+  sign = (force = false) => {
     for (const input of this.Inputs) {
-      input.sign();
+      input.sign(force);
     }
 
     return this;
   };
+
+  addChangeOutputWithFeeAndFinalizeUnlocking(
+    to: Address,
+    change: number,
+    satoshisPerByte: number,
+    idx: number | null = null,
+    maxIterations = 8,
+  ) {
+    const script = new P2pkhBuilder(to);
+    const output = new OutputBuilder(script, 0);
+
+    if (idx !== null) this.Outputs.splice(idx, 0, output);
+    else this.Outputs.push(output);
+
+    let prevChange = -1;
+
+    for (let i = 0; i < maxIterations; i++) {
+      this.sign(true);
+
+      const fee = this.getFee(satoshisPerByte);
+      const nextChange = change - fee;
+
+      if (nextChange <= 0) {
+        throw new TransactionBuilderError(
+          `Insufficient satoshis to pay fee`,
+          `Insufficient satoshis to pay fee. Change: ${change}; Fee: ${fee}`,
+        );
+      }
+
+      output.Satoshis = nextChange;
+
+      if (nextChange === prevChange) break;
+      prevChange = nextChange;
+    }
+
+    // Re-sign once against the final change amount.
+    this.sign(true);
+
+    return this;
+  }
 
   toBytes = () => {
     const size = this.size();

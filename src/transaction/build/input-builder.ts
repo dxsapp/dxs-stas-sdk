@@ -19,6 +19,8 @@ import { TransactionBuilder } from "./transaction-builder";
 import { Wallet } from "../../bitcoin";
 import { Bytes, fromHex } from "../../bytes";
 
+export type TUnlockingScriptFactory = (input: InputBilder) => Bytes;
+
 export class InputBilder {
   protected TxBuilder: TransactionBuilder;
   protected Owner: PrivateKey | Wallet;
@@ -27,6 +29,7 @@ export class InputBilder {
   OutPoint: OutPoint;
   Merge: boolean;
   UnlockingScript?: Bytes;
+  UnlockingScriptFactory?: TUnlockingScriptFactory;
   Stas30SpendingType = 1;
   Sequence = TransactionBuilder.DefaultSequence;
 
@@ -46,8 +49,13 @@ export class InputBilder {
     this.Merge = merge;
   }
 
-  sign = () => {
-    if (this.UnlockingScript !== undefined) return;
+  sign = (force = false) => {
+    if (this.UnlockingScriptFactory) {
+      this.UnlockingScript = this.UnlockingScriptFactory(this);
+      return;
+    }
+
+    if (!force && this.UnlockingScript !== undefined) return;
 
     const scriptType = this.OutPoint.ScriptType;
     const preimage = this.preimage(TransactionBuilder.DefaultSighashType);
@@ -193,6 +201,10 @@ export class InputBilder {
   unlockingScriptSize = (): number => {
     if (this.UnlockingScript !== undefined) {
       return estimateChunkSize(this.UnlockingScript.length);
+    }
+
+    if (this.UnlockingScriptFactory) {
+      return estimateChunkSize(this.UnlockingScriptFactory(this).length);
     }
 
     let size =

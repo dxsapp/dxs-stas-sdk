@@ -168,10 +168,8 @@ const buildAuthorityUnlockingScript = ({
   return script.toBytes();
 };
 
-const applyChangeAndFinalAuthorityUnlocking = ({
+const attachAuthorityUnlockingFactory = ({
   txBuilder,
-  feeInputSatoshis,
-  changeAddress,
   stasInputIndex,
   spendingType,
   authoritySigners,
@@ -179,22 +177,16 @@ const applyChangeAndFinalAuthorityUnlocking = ({
   authorityThreshold,
 }: {
   txBuilder: TransactionBuilder;
-  feeInputSatoshis: number;
-  changeAddress: Address;
   stasInputIndex: number;
   spendingType: number;
   authoritySigners: Wallet[];
   authorityPubKeys: Uint8Array[];
   authorityThreshold: number;
 }) => {
-  const changeOutput = new OutputBuilder(new P2pkhBuilder(changeAddress), 0);
-  txBuilder.Outputs.splice(1, 0, changeOutput);
-  txBuilder.Inputs[stasInputIndex].Stas30SpendingType = spendingType;
-
-  let prevChange = -1;
-  for (let i = 0; i < 5; i++) {
-    txBuilder.Inputs[stasInputIndex].UnlockingScript =
-      buildAuthorityUnlockingScript({
+  const stasInput = txBuilder.Inputs[stasInputIndex];
+  stasInput.Stas30SpendingType = spendingType;
+  stasInput.UnlockingScriptFactory = () =>
+    buildAuthorityUnlockingScript({
         txBuilder,
         stasInputIndex,
         spendingType,
@@ -202,24 +194,6 @@ const applyChangeAndFinalAuthorityUnlocking = ({
         authorityPubKeys,
         authorityThreshold,
       });
-
-    const fee = txBuilder.getFee(FeeRate);
-    const nextChange = feeInputSatoshis - fee;
-    if (nextChange <= 0) throw new Error("Insufficient satoshis for fee");
-    changeOutput.Satoshis = nextChange;
-    if (nextChange === prevChange) break;
-    prevChange = nextChange;
-  }
-
-  txBuilder.Inputs[stasInputIndex].UnlockingScript =
-    buildAuthorityUnlockingScript({
-      txBuilder,
-      stasInputIndex,
-      spendingType,
-      authoritySigners,
-      authorityPubKeys,
-      authorityThreshold,
-    });
 };
 
 describe("stas30 multisig authority flow", () => {
@@ -390,16 +364,20 @@ describe("stas30 multisig authority flow", () => {
         transfer1StasOutPoint.Satoshis,
       ),
     );
-    applyChangeAndFinalAuthorityUnlocking({
+    attachAuthorityUnlockingFactory({
       txBuilder: freezeBuilder,
-      feeInputSatoshis: transfer1FeeOutPoint.Satoshis,
-      changeAddress: bob.Address,
       stasInputIndex: 0,
       spendingType: 2,
       authoritySigners: [cat1, cat3, cat5],
       authorityPubKeys,
       authorityThreshold: 3,
     });
+    freezeBuilder.addChangeOutputWithFeeAndFinalizeUnlocking(
+      bob.Address,
+      transfer1FeeOutPoint.Satoshis,
+      FeeRate,
+      1,
+    );
     const freezeTxHex = freezeBuilder.sign().toHex();
 
     const freezeEval = evaluateTransactionHex(
@@ -439,16 +417,20 @@ describe("stas30 multisig authority flow", () => {
         frozenStasOutPoint.Satoshis,
       ),
     );
-    applyChangeAndFinalAuthorityUnlocking({
+    attachAuthorityUnlockingFactory({
       txBuilder: unfreezeBuilder,
-      feeInputSatoshis: frozenFeeOutPoint.Satoshis,
-      changeAddress: bob.Address,
       stasInputIndex: 0,
       spendingType: 2,
       authoritySigners: [cat1, cat2, cat4],
       authorityPubKeys,
       authorityThreshold: 3,
     });
+    unfreezeBuilder.addChangeOutputWithFeeAndFinalizeUnlocking(
+      bob.Address,
+      frozenFeeOutPoint.Satoshis,
+      FeeRate,
+      1,
+    );
     const unfreezeTxHex = unfreezeBuilder.sign().toHex();
 
     const unfreezeEval = evaluateTransactionHex(
