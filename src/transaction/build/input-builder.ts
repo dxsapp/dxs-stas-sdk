@@ -47,6 +47,8 @@ export class InputBilder {
   }
 
   sign = () => {
+    if (this.UnlockingScript !== undefined) return;
+
     const scriptType = this.OutPoint.ScriptType;
     const preimage = this.preimage(TransactionBuilder.DefaultSighashType);
     const hashedPreimage = hash256(preimage);

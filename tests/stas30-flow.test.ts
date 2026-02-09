@@ -22,6 +22,7 @@ import {
   buildTransferFromFixture,
   createRealFundingFlowFixture,
 } from "./helpers/stas30-flow-helpers";
+import { assertFeeInRange } from "./helpers/fee-assertions";
 import { dumpTransferDebug } from "./debug/stas30-transfer-debug";
 
 const resolveFromTx = (txHex: string) => {
@@ -223,6 +224,76 @@ describe("stas30 flow", () => {
     expect(unlock.parsed).toBe(true);
     expect(unlock.spendingType).toBe(1);
     expect(transferEval.success).toBe(true);
+  });
+
+  test("real funding: fee is within expected range for built STAS30 steps", () => {
+    const fixture = createRealFundingFlowFixture();
+
+    assertFeeInRange(
+      fixture.contractTxHex,
+      (txId, vout) => {
+        if (
+          txId !== fixture.sourceFunding.TxId ||
+          vout !== fixture.sourceFunding.Vout
+        ) {
+          return undefined;
+        }
+        return {
+          lockingScript: fixture.sourceFunding.LockignScript,
+          satoshis: fixture.sourceFunding.Satoshis,
+        };
+      },
+      FeeRate,
+      1,
+    );
+    assertFeeInRange(fixture.issueTxHex, resolveFromTx(fixture.contractTxHex), FeeRate, 2);
+
+    const transferTxHex = buildTransferFromFixture(fixture, false);
+    assertFeeInRange(transferTxHex, resolveFromTx(fixture.issueTxHex), FeeRate, 2);
+
+    const freezeTxHex = buildFreezeFromFixture(fixture);
+    assertFeeInRange(freezeTxHex, resolveFromTx(fixture.issueTxHex), FeeRate, 2);
+
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+    const frozenStasOutPoint = new OutPoint(
+      freezeTx.Id,
+      0,
+      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].Satoshis,
+      fixture.alice.Address,
+      ScriptType.p2stas30,
+    );
+    const frozenFeeOutPoint = new OutPoint(
+      freezeTx.Id,
+      1,
+      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const unfreezeTxHex = BuildStas3UnfreezeTx({
+      stasPayments: [
+        {
+          OutPoint: frozenStasOutPoint,
+          Owner: fixture.cat,
+        },
+      ],
+      feePayment: {
+        OutPoint: frozenFeeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: frozenStasOutPoint.Satoshis,
+          To: fixture.alice.Address,
+          Frozen: false,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+
+    assertFeeInRange(unfreezeTxHex, resolveFromTx(freezeTxHex), FeeRate, 2);
   });
 
   test("real funding: freeze flow is valid", () => {

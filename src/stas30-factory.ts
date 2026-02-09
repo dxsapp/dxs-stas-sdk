@@ -72,11 +72,42 @@ const deriveFlagsFromScheme = (scheme: TokenScheme): Bytes =>
 const deriveServiceFieldsFromScheme = (scheme: TokenScheme): Bytes[] => {
   if (!scheme.Freeze) return [];
 
-  const keys = scheme.Authority?.publicKeys ?? [];
-  if (keys.length !== 1) {
+  const authority = scheme.Authority;
+  const keys = authority?.publicKeys ?? [];
+  if (keys.length === 0) {
     throw new Error(
-      "Freeze-enabled scheme must define exactly one authority public key for service field derivation",
+      "Freeze-enabled scheme must define authority public keys for service field derivation",
     );
+  }
+
+  if ((authority?.m ?? 1) !== 1) {
+    const m = authority!.m;
+    const n = keys.length;
+    if (m <= 0 || m > n) {
+      throw new Error(
+        `Freeze-enabled scheme has invalid authority threshold m=${m}, n=${n}`,
+      );
+    }
+
+    const preimage = new Uint8Array(1 + n * (1 + 33) + 1);
+    let offset = 0;
+    preimage[offset++] = m & 0xff;
+
+    for (const keyHex of keys) {
+      const key = fromHex(keyHex);
+      if (key.length !== 33) {
+        throw new Error(
+          `Authority public key must be 33 bytes, got ${key.length}`,
+        );
+      }
+      preimage[offset++] = 0x21;
+      preimage.set(key, offset);
+      offset += key.length;
+    }
+
+    preimage[offset] = n & 0xff;
+
+    return [hash160(preimage)];
   }
 
   return [hash160(fromHex(keys[0]))];
