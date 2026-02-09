@@ -213,6 +213,129 @@ const buildRedeemTx = ({
 };
 
 describe("stas30 flow", () => {
+  const createSwapContext = ({
+    satoshisA = 100,
+    satoshisB = 100,
+    secondFieldA,
+    secondFieldB,
+    frozenA = false,
+    frozenB = false,
+  }: {
+    satoshisA?: number;
+    satoshisB?: number;
+    secondFieldA: ReturnType<typeof buildStas3SwapSecondField> | null;
+    secondFieldB: ReturnType<typeof buildStas3SwapSecondField> | null;
+    frozenA?: boolean;
+    frozenB?: boolean;
+  }) => {
+    const bob = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
+    const cat = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/1");
+
+    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeB = new TokenScheme(
+      "STAS30B",
+      toHex(cat.Address.Hash160),
+      "S30B",
+      1,
+      {
+        freeze: true,
+        confiscation: true,
+        isDivisible: true,
+        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+      },
+    );
+
+    const fundingA = createRealFundingOutPoint(bob);
+    const fundingB = createRealFundingOutPoint(cat);
+
+    const issueA = BuildStas3IssueTxs({
+      fundingPayment: { OutPoint: fundingA, Owner: bob },
+      scheme: schemeA,
+      destinations: [
+        {
+          Satoshis: satoshisA,
+          To: bob.Address,
+          SecondField: secondFieldA,
+          Frozen: frozenA,
+        },
+      ],
+      feeRate: FeeRate,
+    });
+    const issueB = BuildStas3IssueTxs({
+      fundingPayment: { OutPoint: fundingB, Owner: cat },
+      scheme: schemeB,
+      destinations: [
+        {
+          Satoshis: satoshisB,
+          To: cat.Address,
+          SecondField: secondFieldB,
+          Frozen: frozenB,
+        },
+      ],
+      feeRate: FeeRate,
+    });
+
+    const txIssueA = TransactionReader.readHex(issueA.issueTxHex);
+    const txIssueB = TransactionReader.readHex(issueB.issueTxHex);
+    const stasA = new OutPoint(
+      txIssueA.Id,
+      0,
+      txIssueA.Outputs[0].LockignScript,
+      txIssueA.Outputs[0].Satoshis,
+      bob.Address,
+      ScriptType.p2stas30,
+    );
+    stasA.Transaction = txIssueA;
+
+    const stasB = new OutPoint(
+      txIssueB.Id,
+      0,
+      txIssueB.Outputs[0].LockignScript,
+      txIssueB.Outputs[0].Satoshis,
+      cat.Address,
+      ScriptType.p2stas30,
+    );
+    stasB.Transaction = txIssueB;
+
+    const fee = new OutPoint(
+      txIssueA.Id,
+      1,
+      txIssueA.Outputs[1].LockignScript,
+      txIssueA.Outputs[1].Satoshis,
+      bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const resolvePrev = (txId: string, vout: number) => {
+      if (txId === txIssueA.Id) {
+        const out = txIssueA.Outputs[vout];
+        if (out)
+          return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+      }
+      if (txId === txIssueB.Id) {
+        const out = txIssueB.Outputs[vout];
+        if (out)
+          return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+      }
+      return undefined;
+    };
+
+    return {
+      bob,
+      cat,
+      schemeA,
+      schemeB,
+      stasA,
+      stasB,
+      fee,
+      resolvePrev,
+    };
+  };
+
   test("reference transfer (P2PKH): stas input validates with preimage-derived prevout", () => {
     const txHex = readFileSync(".temp/Transfer P2PKH TX.txt", "utf8").trim();
     const tx = TransactionReader.readHex(txHex);
@@ -746,6 +869,584 @@ describe("stas30 flow", () => {
     expect(swapEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(true);
     expect(out0.secondField).toEqual({ kind: "opcode", opcode: 0 });
     expect(out1.secondField).toEqual({ kind: "opcode", opcode: 0 });
+  });
+
+  test("real funding: swap + transfer with one remainder and fractional rate", () => {
+    const bob = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
+    const cat = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/1");
+    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
+      freeze: true,
+      confiscation: true,
+      isDivisible: true,
+      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+    });
+    const sampleBTail = buildStas30LockingScriptForOwnerField({
+      ownerField: cat.Address.Hash160,
+      tokenIdHex: schemeB.TokenId,
+      freezable: schemeB.Freeze,
+      authorityServiceField: hash160(bob.PublicKey),
+      frozen: false,
+    });
+    const secondFieldA = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+      requestedPkh: bob.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 2,
+    });
+
+    const ctx = createSwapContext({
+      satoshisA: 100,
+      satoshisB: 100,
+      secondFieldA,
+      secondFieldB: null,
+    });
+
+    const swapTxHex = BuildStas3BaseTx({
+      stasPayments: [
+        { OutPoint: ctx.stasA, Owner: ctx.bob },
+        { OutPoint: ctx.stasB, Owner: ctx.cat },
+      ],
+      feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
+      destinations: [
+        {
+          Satoshis: 50,
+          LockingParams: {
+            owner: ctx.bob.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 100,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeA.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
+            serviceFields: [hash160(ctx.cat.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 50,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+      ],
+      feeRate: FeeRate,
+      omitChangeOutput: true,
+      spendingType: 1,
+    });
+
+    const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
+      allowOpReturn: true,
+    });
+    if (!evalResult.success) {
+      // eslint-disable-next-line no-console
+      console.log(
+        "swap+swap one remainder",
+        JSON.stringify(evalResult.inputs.map((x) => ({
+          idx: x.inputIndex,
+          ok: x.success,
+          err: x.error,
+        }))),
+      );
+    }
+    expect(evalResult.success).toBe(true);
+  });
+
+  test("real funding: swap + swap with one remainder and fractional rate", () => {
+    const bob = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
+    const cat = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/1");
+    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
+      freeze: true,
+      confiscation: true,
+      isDivisible: true,
+      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+    });
+    const sampleATail = buildStas30LockingScriptForOwnerField({
+      ownerField: bob.Address.Hash160,
+      tokenIdHex: schemeA.TokenId,
+      freezable: schemeA.Freeze,
+      authorityServiceField: hash160(cat.PublicKey),
+      frozen: false,
+    });
+    const sampleBTail = buildStas30LockingScriptForOwnerField({
+      ownerField: cat.Address.Hash160,
+      tokenIdHex: schemeB.TokenId,
+      freezable: schemeB.Freeze,
+      authorityServiceField: hash160(bob.PublicKey),
+      frozen: false,
+    });
+    const secondFieldA = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+      requestedPkh: bob.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 2,
+    });
+    const secondFieldB = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleATail),
+      requestedPkh: cat.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 1,
+    });
+    const ctx = createSwapContext({
+      satoshisA: 100,
+      satoshisB: 100,
+      secondFieldA,
+      secondFieldB,
+    });
+
+    const swapTxHex = BuildStas3BaseTx({
+      stasPayments: [
+        { OutPoint: ctx.stasA, Owner: ctx.bob },
+        { OutPoint: ctx.stasB, Owner: ctx.cat },
+      ],
+      feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
+      destinations: [
+        {
+          Satoshis: 50,
+          LockingParams: {
+            owner: ctx.bob.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 100,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeA.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
+            serviceFields: [hash160(ctx.cat.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 50,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: secondFieldB,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+      ],
+      feeRate: FeeRate,
+      omitChangeOutput: true,
+      spendingType: 4,
+    });
+
+    const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
+      allowOpReturn: true,
+    });
+    expect(evalResult.success).toBe(true);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 1)?.success).toBe(true);
+  });
+
+  test("real funding: transfer + swap with two remainders and fractional rate", () => {
+    const bob = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
+    const cat = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/1");
+    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
+      freeze: true,
+      confiscation: true,
+      isDivisible: true,
+      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+    });
+    const sampleBTail = buildStas30LockingScriptForOwnerField({
+      ownerField: cat.Address.Hash160,
+      tokenIdHex: schemeB.TokenId,
+      freezable: schemeB.Freeze,
+      authorityServiceField: hash160(bob.PublicKey),
+      frozen: false,
+    });
+    const secondFieldA = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+      requestedPkh: bob.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 2,
+    });
+    const ctx = createSwapContext({
+      satoshisA: 100,
+      satoshisB: 100,
+      secondFieldA,
+      secondFieldB: null,
+    });
+
+    const swapTxHex = BuildStas3BaseTx({
+      stasPayments: [
+        { OutPoint: ctx.stasA, Owner: ctx.bob },
+        { OutPoint: ctx.stasB, Owner: ctx.cat },
+      ],
+      feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
+      destinations: [
+        {
+          Satoshis: 40,
+          LockingParams: {
+            owner: ctx.bob.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 80,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeA.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
+            serviceFields: [hash160(ctx.cat.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 20,
+          LockingParams: {
+            owner: ctx.bob.Address.Hash160,
+            secondField: secondFieldA,
+            redemptionPkh: fromHex(ctx.schemeA.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
+            serviceFields: [hash160(ctx.cat.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 60,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+      ],
+      feeRate: FeeRate,
+      omitChangeOutput: true,
+      spendingType: 1,
+    });
+
+    const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
+      allowOpReturn: true,
+    });
+    expect(evalResult.success).toBe(true);
+  });
+
+  test("real funding: swap + swap with two remainders and fractional rate", () => {
+    const bob = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
+    const cat = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/1");
+    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeB = new TokenScheme(
+      "STAS30B",
+      toHex(cat.Address.Hash160),
+      "S30B",
+      1,
+      {
+        freeze: true,
+        confiscation: true,
+        isDivisible: true,
+        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+      },
+    );
+    const sampleATail = buildStas30LockingScriptForOwnerField({
+      ownerField: bob.Address.Hash160,
+      tokenIdHex: schemeA.TokenId,
+      freezable: schemeA.Freeze,
+      authorityServiceField: hash160(cat.PublicKey),
+      frozen: false,
+    });
+    const sampleBTail = buildStas30LockingScriptForOwnerField({
+      ownerField: cat.Address.Hash160,
+      tokenIdHex: schemeB.TokenId,
+      freezable: schemeB.Freeze,
+      authorityServiceField: hash160(bob.PublicKey),
+      frozen: false,
+    });
+    const secondFieldA = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+      requestedPkh: bob.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 2,
+    });
+    const secondFieldB = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleATail),
+      requestedPkh: cat.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 1,
+    });
+    const ctx = createSwapContext({
+      satoshisA: 100,
+      satoshisB: 100,
+      secondFieldA,
+      secondFieldB,
+    });
+
+    const swapTxHex = BuildStas3BaseTx({
+      stasPayments: [
+        { OutPoint: ctx.stasA, Owner: ctx.bob },
+        { OutPoint: ctx.stasB, Owner: ctx.cat },
+      ],
+      feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
+      destinations: [
+        {
+          Satoshis: 40,
+          LockingParams: {
+            owner: ctx.bob.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 80,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeA.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
+            serviceFields: [hash160(ctx.cat.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 20,
+          LockingParams: {
+            owner: ctx.bob.Address.Hash160,
+            secondField: secondFieldA,
+            redemptionPkh: fromHex(ctx.schemeA.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
+            serviceFields: [hash160(ctx.cat.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 60,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: secondFieldB,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+      ],
+      feeRate: FeeRate,
+      omitChangeOutput: true,
+      spendingType: 4,
+    });
+
+    const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
+      allowOpReturn: true,
+    });
+    expect(evalResult.success).toBe(true);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 1)?.success).toBe(true);
+  });
+
+  test("real funding: swap + transfer rejects frozen swap input", () => {
+    const bob = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
+    const cat = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/1");
+    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
+      freeze: true,
+      confiscation: true,
+      isDivisible: true,
+      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+    });
+    const sampleBTail = buildStas30LockingScriptForOwnerField({
+      ownerField: cat.Address.Hash160,
+      tokenIdHex: schemeB.TokenId,
+      freezable: schemeB.Freeze,
+      authorityServiceField: hash160(bob.PublicKey),
+      frozen: false,
+    });
+    const secondFieldA = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+      requestedPkh: bob.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 1,
+    });
+    const ctx = createSwapContext({
+      satoshisA: 100,
+      satoshisB: 100,
+      secondFieldA,
+      secondFieldB: null,
+      frozenA: true,
+    });
+
+    const swapTxHex = BuildStas3BaseTx({
+      stasPayments: [
+        { OutPoint: ctx.stasA, Owner: ctx.bob },
+        { OutPoint: ctx.stasB, Owner: ctx.cat },
+      ],
+      feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
+      destinations: [
+        {
+          Satoshis: 100,
+          LockingParams: {
+            owner: ctx.bob.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 100,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeA.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
+            serviceFields: [hash160(ctx.cat.PublicKey)],
+            optionalData: [],
+          },
+        },
+      ],
+      feeRate: FeeRate,
+      omitChangeOutput: true,
+      spendingType: 1,
+    });
+
+    const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
+      allowOpReturn: true,
+    });
+    expect(evalResult.success).toBe(false);
+  });
+
+  test("real funding: swap + swap rejects frozen input", () => {
+    const bob = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
+    const cat = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/1");
+    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
+      freeze: true,
+      confiscation: true,
+      isDivisible: true,
+      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+    });
+    const sampleATail = buildStas30LockingScriptForOwnerField({
+      ownerField: bob.Address.Hash160,
+      tokenIdHex: schemeA.TokenId,
+      freezable: schemeA.Freeze,
+      authorityServiceField: hash160(cat.PublicKey),
+      frozen: false,
+    });
+    const sampleBTail = buildStas30LockingScriptForOwnerField({
+      ownerField: cat.Address.Hash160,
+      tokenIdHex: schemeB.TokenId,
+      freezable: schemeB.Freeze,
+      authorityServiceField: hash160(bob.PublicKey),
+      frozen: false,
+    });
+    const secondFieldA = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+      requestedPkh: bob.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 1,
+    });
+    const secondFieldB = buildStas3SwapSecondField({
+      requestedScriptHash: computeStas30RequestedScriptHash(sampleATail),
+      requestedPkh: cat.Address.Hash160,
+      rateNumerator: 1,
+      rateDenominator: 1,
+    });
+    const ctx = createSwapContext({
+      satoshisA: 100,
+      satoshisB: 100,
+      secondFieldA,
+      secondFieldB,
+      frozenB: true,
+    });
+
+    const swapTxHex = BuildStas3BaseTx({
+      stasPayments: [
+        { OutPoint: ctx.stasA, Owner: ctx.bob },
+        { OutPoint: ctx.stasB, Owner: ctx.cat },
+      ],
+      feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
+      destinations: [
+        {
+          Satoshis: 100,
+          LockingParams: {
+            owner: ctx.bob.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeB.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
+            serviceFields: [hash160(ctx.bob.PublicKey)],
+            optionalData: [],
+          },
+        },
+        {
+          Satoshis: 100,
+          LockingParams: {
+            owner: ctx.cat.Address.Hash160,
+            secondField: null,
+            redemptionPkh: fromHex(ctx.schemeA.TokenId),
+            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
+            serviceFields: [hash160(ctx.cat.PublicKey)],
+            optionalData: [],
+          },
+        },
+      ],
+      feeRate: FeeRate,
+      omitChangeOutput: true,
+      spendingType: 4,
+    });
+
+    const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
+      allowOpReturn: true,
+    });
+    expect(evalResult.success).toBe(false);
   });
 
   test("real funding: transfer with-change flow (current failing case)", () => {
