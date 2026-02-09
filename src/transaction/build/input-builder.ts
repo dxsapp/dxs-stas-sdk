@@ -19,8 +19,6 @@ import { TransactionBuilder } from "./transaction-builder";
 import { Wallet } from "../../bitcoin";
 import { Bytes, fromHex } from "../../bytes";
 
-export type TUnlockingScriptFactory = (input: InputBilder) => Bytes;
-
 export class InputBilder {
   protected TxBuilder: TransactionBuilder;
   protected Owner: PrivateKey | Wallet;
@@ -29,7 +27,8 @@ export class InputBilder {
   OutPoint: OutPoint;
   Merge: boolean;
   UnlockingScript?: Bytes;
-  UnlockingScriptFactory?: TUnlockingScriptFactory;
+  AuthoritySignaturesCount?: number;
+  AuthorityPubKeysCount?: number;
   Stas30SpendingType = 1;
   Sequence = TransactionBuilder.DefaultSequence;
 
@@ -50,11 +49,6 @@ export class InputBilder {
   }
 
   sign = (force = false) => {
-    if (this.UnlockingScriptFactory) {
-      this.UnlockingScript = this.UnlockingScriptFactory(this);
-      return;
-    }
-
     if (!force && this.UnlockingScript !== undefined) return;
 
     const scriptType = this.OutPoint.ScriptType;
@@ -202,16 +196,44 @@ export class InputBilder {
     if (this.UnlockingScript !== undefined) {
       return estimateChunkSize(this.UnlockingScript.length);
     }
-
-    if (this.UnlockingScriptFactory) {
-      return estimateChunkSize(this.UnlockingScriptFactory(this).length);
-    }
-
-    let size =
+    const singleSigTailSize =
       1 + // OP_PUSH
       73 + // DER-encoded signature (70-73 bytes)
       1 + // OP_PUSH
       33; // Public Key
+
+    const authorityTailSize = () => {
+      if (
+        this.AuthoritySignaturesCount === undefined ||
+        this.AuthorityPubKeysCount === undefined
+      ) {
+        return singleSigTailSize;
+      }
+
+      const sigCount = this.AuthoritySignaturesCount;
+      const pubKeyCount = this.AuthorityPubKeysCount;
+
+      if (sigCount <= 0 || pubKeyCount <= 0) {
+        throw new Error("Authority signature/public-key counts must be > 0");
+      }
+
+      const mlpkhPreimageSize =
+        1 + // m
+        pubKeyCount * (1 + 33) + // push(33)+pubKey for each key
+        1; // n
+
+      return (
+        1 + // OP_0 dummy for CHECKMULTISIG
+        sigCount * (1 + 73) + // worst-case signatures
+        estimateChunkSize(mlpkhPreimageSize)
+      );
+    };
+
+    if (this.OutPoint.ScriptType === ScriptType.p2pkh) {
+      return estimateChunkSize(singleSigTailSize);
+    }
+
+    let size = 0;
 
     if (
       this.OutPoint.ScriptType === ScriptType.p2stas ||
@@ -261,6 +283,16 @@ export class InputBilder {
       if (this.OutPoint.ScriptType === ScriptType.p2stas30) {
         size += getNumberSize(this.Stas30SpendingType);
       }
+
+      if (this.OutPoint.ScriptType === ScriptType.p2stas30) {
+        size += authorityTailSize();
+      } else {
+        size += singleSigTailSize;
+      }
+    }
+
+    if (size === 0) {
+      size = singleSigTailSize;
     }
 
     return estimateChunkSize(size);
