@@ -187,13 +187,13 @@ const attachAuthorityUnlockingFactory = ({
   stasInput.Stas30SpendingType = spendingType;
   stasInput.UnlockingScriptFactory = () =>
     buildAuthorityUnlockingScript({
-        txBuilder,
-        stasInputIndex,
-        spendingType,
-        authoritySigners,
-        authorityPubKeys,
-        authorityThreshold,
-      });
+      txBuilder,
+      stasInputIndex,
+      spendingType,
+      authoritySigners,
+      authorityPubKeys,
+      authorityThreshold,
+    });
 };
 
 describe("stas30 multisig authority flow", () => {
