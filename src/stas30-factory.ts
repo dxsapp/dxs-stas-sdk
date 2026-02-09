@@ -226,7 +226,11 @@ export const BuildStas3BaseTx = ({
   const stasInputIdxs: number[] = [];
 
   for (const payment of stasPayments) {
-    txBuilder.addInput(payment.OutPoint, payment.Owner);
+    if (stasPayments.length > 1) {
+      txBuilder.addStasMergeInput(payment.OutPoint, payment.Owner);
+    } else {
+      txBuilder.addInput(payment.OutPoint, payment.Owner);
+    }
     stasInputIdxs.push(txBuilder.Inputs.length - 1);
   }
 

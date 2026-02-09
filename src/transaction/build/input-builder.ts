@@ -421,14 +421,20 @@ export class InputBilder {
   private prepareMergeInfo = () => {
     if (!this.Merge || this._mergeSegments.length > 0) return;
 
-    const lockingScript = this.TxBuilder.Inputs[0].OutPoint.LockignScript;
-    const scriptToCut = cloneBytes(lockingScript, 0, 23);
     const mergeUtxo = this.TxBuilder.Inputs[this.Idx === 0 ? 1 : 0];
+    const mergeRaw = mergeUtxo.OutPoint.Transaction?.Raw;
+    if (!mergeRaw) {
+      throw new Error("Merge input requires source transaction raw bytes");
+    }
 
     this._mergeVout = mergeUtxo.OutPoint.Vout;
-    this._mergeSegments = splitBytes(
-      mergeUtxo.OutPoint.Transaction!.Raw,
-      scriptToCut,
-    ).reverse();
+    if (this.OutPoint.ScriptType === ScriptType.p2stas30) {
+      this._mergeSegments = [mergeRaw];
+      return;
+    }
+
+    const lockingScript = this.TxBuilder.Inputs[0].OutPoint.LockignScript;
+    const scriptToCut = cloneBytes(lockingScript, 0, 23);
+    this._mergeSegments = splitBytes(mergeRaw, scriptToCut).reverse();
   };
 }
