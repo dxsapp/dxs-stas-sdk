@@ -12,7 +12,8 @@ export type Stas3FlagsInput = {
 };
 
 export type Stas3FreezeMultisigParams = {
-  ownerPkh: Bytes;
+  owner?: Bytes;
+  ownerPkh?: Bytes;
   secondField: SecondFieldInput;
   redemptionPkh: Bytes;
   frozen?: boolean;
@@ -31,6 +32,14 @@ const ensureLength = (value: Bytes, expected: number, name: string) => {
   if (value.length !== expected) {
     throw new Error(`${name} must be ${expected} bytes, got ${value.length}`);
   }
+};
+
+const resolveOwner = (params: Stas3FreezeMultisigParams): Bytes => {
+  const owner = params.owner ?? params.ownerPkh;
+  if (!owner || owner.length === 0) {
+    throw new Error("owner must be provided");
+  }
+  return owner;
 };
 
 const buildOwnerToken = (value: Bytes) => ScriptToken.fromBytes(value);
@@ -95,10 +104,9 @@ export const buildStas3FreezeMultisigTokens = (
 ): ScriptToken[] => {
   const frozen = params.frozen === true;
 
-  ensureLength(params.ownerPkh, 20, "ownerPkh");
   ensureLength(params.redemptionPkh, 20, "redemptionPkh");
 
-  const ownerToken = buildOwnerToken(params.ownerPkh);
+  const ownerToken = buildOwnerToken(resolveOwner(params));
   const secondToken = buildSecondFieldToken(params.secondField, frozen);
   const redemptionToken = ScriptToken.fromBytes(params.redemptionPkh);
   const flagsToken = buildFlagsToken(params.flags);

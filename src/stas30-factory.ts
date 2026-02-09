@@ -25,7 +25,12 @@ export type TStas3DestinationByLockingParams = {
 
 export type TStas3DestinationByScheme = {
   Satoshis: number;
-  To: Address;
+  To?: Address;
+  ToOwner?: Bytes;
+  ToOwnerMultisig?: {
+    m: number;
+    publicKeys: string[];
+  };
   SecondField?: SecondFieldInput;
   Frozen?: boolean;
   OptionalData?: Bytes[];
@@ -125,8 +130,46 @@ const resolveLockingParams = (
       "Scheme must be provided at request level when destination does not define LockingParams",
     );
   }
+  const ownerFromMultisig = (() => {
+    if (!dest.ToOwnerMultisig) return undefined;
+
+    const { m, publicKeys } = dest.ToOwnerMultisig;
+    if (publicKeys.length === 0) {
+      throw new Error("ToOwnerMultisig.publicKeys must not be empty");
+    }
+    if (m <= 0 || m > publicKeys.length) {
+      throw new Error(
+        `ToOwnerMultisig has invalid threshold m=${m}, n=${publicKeys.length}`,
+      );
+    }
+
+    const preimage = new Uint8Array(1 + publicKeys.length * (1 + 33) + 1);
+    let off = 0;
+    preimage[off++] = m & 0xff;
+    for (const keyHex of publicKeys) {
+      const key = fromHex(keyHex);
+      if (key.length !== 33) {
+        throw new Error(
+          `ToOwnerMultisig public key must be 33 bytes, got ${key.length}`,
+        );
+      }
+      preimage[off++] = 0x21;
+      preimage.set(key, off);
+      off += key.length;
+    }
+    preimage[off] = publicKeys.length & 0xff;
+    return hash160(preimage);
+  })();
+
+  const owner = dest.ToOwner ?? ownerFromMultisig ?? dest.To?.Hash160;
+  if (!owner) {
+    throw new Error(
+      "Destination must provide To (address) or ToOwner (raw owner field bytes)",
+    );
+  }
+
   return {
-    ownerPkh: dest.To.Hash160,
+    owner,
     secondField: dest.SecondField ?? null,
     redemptionPkh: fromHex(scheme.TokenId),
     frozen: dest.Frozen === true,

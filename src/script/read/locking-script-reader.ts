@@ -255,6 +255,9 @@ export class LockingScriptReader extends BaseScriptReader {
     if (this.stas30Ctx.FreezeEnabled && !this.stas30Ctx.HasAuthority) return;
 
     this.ScriptTypeOverride = ScriptType.p2stas30;
+    if (this.stas30Ctx.Owner.length === 20) {
+      this.Address = new Address(this.stas30Ctx.Owner);
+    }
     this.Stas30 = {
       Owner: this.stas30Ctx.Owner,
       SecondFieldData: this.stas30Ctx.SecondFieldData,

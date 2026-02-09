@@ -1,14 +1,22 @@
 import { readFileSync } from "fs";
 import { ByteReader } from "../src/binary";
 import { bs58check } from "../src/base";
+import { Address } from "../src/bitcoin/address";
+import { OpCode } from "../src/bitcoin/op-codes";
 import { PrivateKey } from "../src/bitcoin/private-key";
 import { Wallet } from "../src/bitcoin/wallet";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
+import { OutputBuilder } from "../src/transaction/build/output-builder";
 import { evaluateScripts, evaluateTransactionHex } from "../src/script";
 import {
   decomposeStas3LockingScript,
   decomposeStas3UnlockingScript,
 } from "../src/script";
+import { ScriptBuilder } from "../src/script/build/script-builder";
+import {
+  buildStas3Flags,
+  buildStas3FreezeMultisigTokens,
+} from "../src/script/build/stas3-freeze-multisig-builder";
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
 import { fromHex, toHex } from "../src/bytes";
 import { OutPoint, ScriptType } from "../src/bitcoin";
@@ -24,6 +32,8 @@ import {
 } from "./helpers/stas30-flow-helpers";
 import { assertFeeInRange } from "./helpers/fee-assertions";
 import { dumpTransferDebug } from "./debug/stas30-transfer-debug";
+import { hash160, hash256 } from "../src/hashes";
+import { reverseBytes } from "../src/buffer/buffer-utils";
 
 const resolveFromTx = (txHex: string) => {
   const tx = TransactionReader.readHex(txHex);
@@ -33,6 +43,121 @@ const resolveFromTx = (txHex: string) => {
     if (!out) return undefined;
     return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
   };
+};
+
+const buildMlpkhPreimage = (m: number, pubKeys: Uint8Array[]): Uint8Array => {
+  const n = pubKeys.length;
+  const result = new Uint8Array(1 + n * (1 + 33) + 1);
+  let off = 0;
+  result[off++] = m & 0xff;
+  for (const key of pubKeys) {
+    result[off++] = 0x21;
+    result.set(key, off);
+    off += key.length;
+  }
+  result[off] = n & 0xff;
+  return result;
+};
+
+const buildStas30LockingScriptForOwnerField = ({
+  ownerField,
+  tokenIdHex,
+  freezable,
+  authorityServiceField,
+  frozen = false,
+}: {
+  ownerField: Uint8Array;
+  tokenIdHex: string;
+  freezable: boolean;
+  authorityServiceField: Uint8Array;
+  frozen?: boolean;
+}) => {
+  const tokens = buildStas3FreezeMultisigTokens({
+    owner: ownerField,
+    secondField: null,
+    redemptionPkh: fromHex(tokenIdHex),
+    frozen,
+    flags: buildStas3Flags({ freezable }),
+    serviceFields: freezable ? [authorityServiceField] : [],
+    optionalData: [],
+  });
+  return ScriptBuilder.fromTokens(tokens, ScriptType.p2stas30);
+};
+
+const buildOwnerMultisigUnlockingScript = ({
+  txBuilder,
+  stasInputIndex,
+  spendingType,
+  signers,
+  pubKeys,
+  threshold,
+}: {
+  txBuilder: TransactionBuilder;
+  stasInputIndex: number;
+  spendingType: number;
+  signers: Wallet[];
+  pubKeys: Uint8Array[];
+  threshold: number;
+}) => {
+  const script = new ScriptBuilder(ScriptType.p2stas);
+  let hasNote = false;
+  let hasChange = false;
+
+  for (const output of txBuilder.Outputs) {
+    if (output.LockingScript.ScriptType === ScriptType.nullData) {
+      const payload = output.LockingScript.toBytes().subarray(2);
+      script.addData(payload);
+      hasNote = true;
+      continue;
+    }
+
+    const ownerField =
+      output.LockingScript.ToAddress?.Hash160 ??
+      output.LockingScript._tokens[0]?.Data;
+    if (!ownerField) throw new Error("Output is missing owner field");
+
+    script.addNumber(output.Satoshis).addData(ownerField);
+
+    if (output.LockingScript.ScriptType === ScriptType.p2stas30) {
+      const secondFieldToken = output.LockingScript._tokens[1];
+      if (secondFieldToken?.Data) script.addData(secondFieldToken.Data);
+      else if (secondFieldToken) script.addOpCode(secondFieldToken.OpCodeNum);
+      else throw new Error("STAS30 output missing second field");
+    }
+
+    if (output.LockingScript.ScriptType === ScriptType.p2pkh) hasChange = true;
+  }
+
+  if (!hasChange) {
+    script.addOpCode(OpCode.OP_0);
+    script.addOpCode(OpCode.OP_0);
+  }
+  if (!hasNote) script.addOpCode(OpCode.OP_0);
+
+  const fundingInput = txBuilder.Inputs[txBuilder.Inputs.length - 1];
+  script
+    .addNumber(fundingInput.OutPoint.Vout)
+    .addData(reverseBytes(fromHex(fundingInput.OutPoint.TxId)))
+    .addOpCode(OpCode.OP_0);
+
+  const preimage = txBuilder.Inputs[stasInputIndex].preimage(
+    TransactionBuilder.DefaultSighashType,
+  );
+  const preimageHash = hash256(preimage);
+
+  script.addData(preimage).addNumber(spendingType);
+  script.addOpCode(OpCode.OP_0);
+
+  for (const signer of signers) {
+    const der = signer.sign(preimageHash);
+    const derWithType = new Uint8Array(der.length + 1);
+    derWithType.set(der);
+    derWithType[der.length] = TransactionBuilder.DefaultSighashType;
+    script.addData(derWithType);
+  }
+
+  script.addData(buildMlpkhPreimage(threshold, pubKeys));
+  return script.toBytes();
 };
 
 const buildRedeemTx = ({
@@ -224,6 +349,128 @@ describe("stas30 flow", () => {
     expect(unlock.parsed).toBe(true);
     expect(unlock.spendingType).toBe(1);
     expect(transferEval.success).toBe(true);
+  });
+
+  test("real funding: transfer to owner-multisig output is valid", () => {
+    const fixture = createRealFundingFlowFixture();
+    const multisigTransferTxHex = BuildStas3TransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        ToOwnerMultisig: {
+          m: 2,
+          publicKeys: [
+            toHex(fixture.bob.PublicKey),
+            toHex(fixture.cat.PublicKey),
+            toHex(fixture.alice.PublicKey),
+          ],
+        },
+      },
+      omitChangeOutput: true,
+    });
+
+    const evalResult = evaluateTransactionHex(
+      multisigTransferTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+    const tx = TransactionReader.readHex(multisigTransferTxHex);
+
+    expect(evalResult.success).toBe(true);
+    expect(tx.Outputs[0].ScriptType).toBe(ScriptType.p2stas30);
+    expect(tx.Outputs[0].Address).toBeDefined();
+  });
+
+  test("real funding: owner-multisig can spend token with m-of-n unlocking", () => {
+    const fixture = createRealFundingFlowFixture();
+    const ownerPubKeys = [
+      fixture.bob.PublicKey,
+      fixture.cat.PublicKey,
+      fixture.alice.PublicKey,
+    ];
+    const ownerThreshold = 2;
+    const ownerMlpkh = hash160(buildMlpkhPreimage(ownerThreshold, ownerPubKeys));
+
+    const toOwnerMultisigTxHex = BuildStas3TransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        ToOwnerMultisig: {
+          m: ownerThreshold,
+          publicKeys: ownerPubKeys.map((x) => toHex(x)),
+        },
+      },
+    });
+
+    const prevTx = TransactionReader.readHex(toOwnerMultisigTxHex);
+    const stasOutPoint = new OutPoint(
+      prevTx.Id,
+      0,
+      prevTx.Outputs[0].LockignScript,
+      prevTx.Outputs[0].Satoshis,
+      new Address(ownerMlpkh),
+      ScriptType.p2stas30,
+    );
+    const feeOutPoint = new OutPoint(
+      prevTx.Id,
+      1,
+      prevTx.Outputs[1].LockignScript,
+      prevTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const authorityServiceField = hash160(fixture.cat.PublicKey);
+    const transferOutLock = buildStas30LockingScriptForOwnerField({
+      ownerField: fixture.bob.Address.Hash160,
+      tokenIdHex: fixture.scheme.TokenId,
+      freezable: fixture.scheme.Freeze,
+      authorityServiceField,
+      frozen: false,
+    });
+
+    const txBuilder = TransactionBuilder.init()
+      .addInput(stasOutPoint, fixture.bob)
+      .addInput(feeOutPoint, fixture.bob);
+
+    txBuilder.Outputs.push(new OutputBuilder(transferOutLock, stasOutPoint.Satoshis));
+
+    txBuilder.Inputs[0].UnlockingScript = buildOwnerMultisigUnlockingScript({
+      txBuilder,
+      stasInputIndex: 0,
+      spendingType: 1,
+      signers: [fixture.bob, fixture.cat],
+      pubKeys: ownerPubKeys,
+      threshold: ownerThreshold,
+    });
+
+    const spendTxHex = txBuilder.sign().toHex();
+    const evalResult = evaluateTransactionHex(
+      spendTxHex,
+      resolveFromTx(toOwnerMultisigTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(evalResult.success).toBe(true);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      true,
+    );
   });
 
   test("real funding: fee is within expected range for built STAS30 steps", () => {

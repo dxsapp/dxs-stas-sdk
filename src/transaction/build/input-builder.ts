@@ -89,14 +89,9 @@ export class InputBilder {
 
           hasNote = true;
         } else {
-          if (!output.LockingScript.ToAddress) {
-            throw new Error(
-              `Output locking script is missing ToAddress (scriptType=${output.LockingScript.ScriptType})`,
-            );
-          }
           script
             .addNumber(output.Satoshis)
-            .addData(output.LockingScript.ToAddress.Hash160);
+            .addData(this.resolveOutputOwnerField(output.LockingScript));
 
           if (output.LockingScript.ScriptType === ScriptType.p2stas30) {
             const secondFieldToken = output.LockingScript._tokens[1];
@@ -190,6 +185,17 @@ export class InputBilder {
     return estimateChunkSize(nullDataOutput.LockingScript.size() - 2);
   };
 
+  private resolveOutputOwnerField = (script: ScriptBuilder): Bytes => {
+    if (script.ToAddress) return script.ToAddress.Hash160;
+
+    const ownerToken = script._tokens[0];
+    if (!ownerToken?.Data || ownerToken.Data.length === 0) {
+      throw new Error("Output locking script is missing owner field");
+    }
+
+    return ownerToken.Data;
+  };
+
   prevoutHashLength = () => (32 + 4) * this.TxBuilder.Inputs.length;
 
   unlockingScriptSize = (): number => {
@@ -251,7 +257,8 @@ export class InputBilder {
       size += this.TxBuilder.Outputs.reduce((a, x) => {
         if (x.LockingScript.ScriptType === ScriptType.nullData) return a;
 
-        a += getNumberSize(x.Satoshis) + 21;
+        const ownerField = this.resolveOutputOwnerField(x.LockingScript);
+        a += getNumberSize(x.Satoshis) + estimateChunkSize(ownerField.length);
 
         if (x.LockingScript.ScriptType === ScriptType.p2stas30) {
           a += estimateChunkSize(x.LockingScript._tokens[1].DataLength);
