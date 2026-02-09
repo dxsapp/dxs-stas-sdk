@@ -879,12 +879,18 @@ describe("stas30 flow", () => {
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
     const schemeA = createDefaultStas30Scheme(bob, cat);
-    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
-      freeze: true,
-      confiscation: true,
-      isDivisible: true,
-      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
-    });
+    const schemeB = new TokenScheme(
+      "STAS30B",
+      toHex(cat.Address.Hash160),
+      "S30B",
+      1,
+      {
+        freeze: true,
+        confiscation: true,
+        isDivisible: true,
+        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+      },
+    );
     const sampleBTail = buildStas30LockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
@@ -955,17 +961,6 @@ describe("stas30 flow", () => {
     const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
       allowOpReturn: true,
     });
-    if (!evalResult.success) {
-      // eslint-disable-next-line no-console
-      console.log(
-        "swap+swap one remainder",
-        JSON.stringify(evalResult.inputs.map((x) => ({
-          idx: x.inputIndex,
-          ok: x.success,
-          err: x.error,
-        }))),
-      );
-    }
     expect(evalResult.success).toBe(true);
   });
 
@@ -977,12 +972,18 @@ describe("stas30 flow", () => {
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
     const schemeA = createDefaultStas30Scheme(bob, cat);
-    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
-      freeze: true,
-      confiscation: true,
-      isDivisible: true,
-      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
-    });
+    const schemeB = new TokenScheme(
+      "STAS30B",
+      toHex(cat.Address.Hash160),
+      "S30B",
+      1,
+      {
+        freeze: true,
+        confiscation: true,
+        isDivisible: true,
+        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+      },
+    );
     const sampleATail = buildStas30LockingScriptForOwnerField({
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
@@ -1066,8 +1067,12 @@ describe("stas30 flow", () => {
       allowOpReturn: true,
     });
     expect(evalResult.success).toBe(true);
-    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
-    expect(evalResult.inputs.find((x) => x.inputIndex === 1)?.success).toBe(true);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      true,
+    );
+    expect(evalResult.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      true,
+    );
   });
 
   test("real funding: transfer + swap with two remainders and fractional rate", () => {
@@ -1078,12 +1083,18 @@ describe("stas30 flow", () => {
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
     const schemeA = createDefaultStas30Scheme(bob, cat);
-    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
-      freeze: true,
-      confiscation: true,
-      isDivisible: true,
-      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
-    });
+    const schemeB = new TokenScheme(
+      "STAS30B",
+      toHex(cat.Address.Hash160),
+      "S30B",
+      1,
+      {
+        freeze: true,
+        confiscation: true,
+        isDivisible: true,
+        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+      },
+    );
     const sampleBTail = buildStas30LockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
@@ -1281,8 +1292,12 @@ describe("stas30 flow", () => {
       allowOpReturn: true,
     });
     expect(evalResult.success).toBe(true);
-    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
-    expect(evalResult.inputs.find((x) => x.inputIndex === 1)?.success).toBe(true);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      true,
+    );
+    expect(evalResult.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      true,
+    );
   });
 
   test("real funding: swap + transfer rejects frozen swap input", () => {
@@ -1292,12 +1307,18 @@ describe("stas30 flow", () => {
     const cat = Wallet.fromMnemonic(
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
-    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
-      freeze: true,
-      confiscation: true,
-      isDivisible: true,
-      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
-    });
+    const schemeB = new TokenScheme(
+      "STAS30B",
+      toHex(cat.Address.Hash160),
+      "S30B",
+      1,
+      {
+        freeze: true,
+        confiscation: true,
+        isDivisible: true,
+        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+      },
+    );
     const sampleBTail = buildStas30LockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
@@ -1368,12 +1389,18 @@ describe("stas30 flow", () => {
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
     const schemeA = createDefaultStas30Scheme(bob, cat);
-    const schemeB = new TokenScheme("STAS30B", toHex(cat.Address.Hash160), "S30B", 1, {
-      freeze: true,
-      confiscation: true,
-      isDivisible: true,
-      authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
-    });
+    const schemeB = new TokenScheme(
+      "STAS30B",
+      toHex(cat.Address.Hash160),
+      "S30B",
+      1,
+      {
+        freeze: true,
+        confiscation: true,
+        isDivisible: true,
+        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+      },
+    );
     const sampleATail = buildStas30LockingScriptForOwnerField({
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
