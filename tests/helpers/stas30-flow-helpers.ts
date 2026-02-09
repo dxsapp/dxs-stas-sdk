@@ -3,6 +3,7 @@ import { TokenScheme } from "../../src/bitcoin/token-scheme";
 import { Wallet } from "../../src/bitcoin/wallet";
 import { P2pkhBuilder } from "../../src/script/build/p2pkh-builder";
 import {
+  BuildStas3FreezeTx,
   BuildStas3IssueTxs,
   BuildStas3TransferTx,
 } from "../../src/stas30-factory";
@@ -130,4 +131,26 @@ export const buildTransferFromFixture = (
       To: fixture.bob.Address,
     },
     omitChangeOutput,
+  });
+
+export const buildFreezeFromFixture = (fixture: TStas30FlowFixture) =>
+  BuildStas3FreezeTx({
+    stasPayments: [
+      {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.cat,
+      },
+    ],
+    feePayment: {
+      OutPoint: fixture.feeOutPoint,
+      Owner: fixture.bob,
+    },
+    destinations: [
+      {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.alice.Address,
+        Frozen: true,
+      },
+    ],
+    Scheme: fixture.scheme,
   });

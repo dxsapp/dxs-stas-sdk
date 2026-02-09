@@ -2,6 +2,8 @@ import { readFileSync } from "fs";
 import { ByteReader } from "../src/binary";
 import { bs58check } from "../src/base";
 import { PrivateKey } from "../src/bitcoin/private-key";
+import { Wallet } from "../src/bitcoin/wallet";
+import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
 import { evaluateScripts, evaluateTransactionHex } from "../src/script";
 import {
   decomposeStas3LockingScript,
@@ -9,7 +11,11 @@ import {
 } from "../src/script";
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
 import { fromHex, toHex } from "../src/bytes";
+import { OutPoint, ScriptType } from "../src/bitcoin";
+import { BuildStas3TransferTx, BuildStas3UnfreezeTx } from "../src/stas30-factory";
+import { FeeRate } from "../src/transaction-factory";
 import {
+  buildFreezeFromFixture,
   buildTransferFromFixture,
   createRealFundingFlowFixture,
 } from "./helpers/stas30-flow-helpers";
@@ -23,6 +29,40 @@ const resolveFromTx = (txHex: string) => {
     if (!out) return undefined;
     return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
   };
+};
+
+const buildRedeemTx = ({
+  stasOutPoint,
+  stasOwner,
+  feeOutPoint,
+  feeOwner,
+  redeemAddress,
+  spendingType = 1,
+}: {
+  stasOutPoint: OutPoint;
+  stasOwner: PrivateKey | Wallet;
+  feeOutPoint: OutPoint;
+  feeOwner: PrivateKey | Wallet;
+  redeemAddress: OutPoint["Address"];
+  spendingType?: number;
+}) => {
+  const txBuilder = TransactionBuilder.init()
+    .addInput(stasOutPoint, stasOwner)
+    .addInput(feeOutPoint, feeOwner)
+    .addP2PkhOutput(stasOutPoint.Satoshis, redeemAddress);
+
+  const feeOutputIdx = txBuilder.Outputs.length;
+  txBuilder.Inputs[0].Stas30SpendingType = spendingType;
+
+  return txBuilder
+    .addChangeOutputWithFee(
+      feeOutPoint.Address,
+      feeOutPoint.Satoshis,
+      FeeRate,
+      feeOutputIdx,
+    )
+    .sign()
+    .toHex();
 };
 
 describe("stas30 flow", () => {
@@ -181,6 +221,266 @@ describe("stas30 flow", () => {
     expect(unlock.spendingType).toBe(1);
     expect(transferEval.success).toBe(true);
   });
+
+  test("real funding: freeze flow is valid", () => {
+    const fixture = createRealFundingFlowFixture();
+    const freezeTxHex = buildFreezeFromFixture(fixture);
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+
+    const freezeEval = evaluateTransactionHex(
+      freezeTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(freezeTx.Inputs.length).toBe(2);
+    expect(freezeTx.Outputs.length).toBe(2);
+    expect(freezeTx.Outputs[0].Satoshis).toBe(fixture.stasOutPoint.Satoshis);
+    expect(freezeEval.success).toBe(true);
+    expect(freezeEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      true,
+    );
+    expect(freezeEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      true,
+    );
+  });
+
+  test("real funding: owner cannot spend frozen utxo", () => {
+    const fixture = createRealFundingFlowFixture();
+    const freezeTxHex = buildFreezeFromFixture(fixture);
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+
+    const frozenStasOutPoint = new OutPoint(
+      freezeTx.Id,
+      0,
+      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].Satoshis,
+      fixture.alice.Address,
+      ScriptType.p2stas30,
+    );
+
+    const feeOutPoint = new OutPoint(
+      freezeTx.Id,
+      1,
+      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const spendFrozenTxHex = BuildStas3TransferTx({
+      stasPayment: {
+        OutPoint: frozenStasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: frozenStasOutPoint.Satoshis,
+        To: fixture.bob.Address,
+      },
+      omitChangeOutput: true,
+    });
+
+    const spendFrozenEval = evaluateTransactionHex(
+      spendFrozenTxHex,
+      resolveFromTx(freezeTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(spendFrozenEval.success).toBe(false);
+    expect(
+      spendFrozenEval.inputs.find((x) => x.inputIndex === 0)?.success,
+    ).toBe(false);
+  });
+
+  test("real funding: unfreeze flow is valid", () => {
+    const fixture = createRealFundingFlowFixture();
+    const freezeTxHex = buildFreezeFromFixture(fixture);
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+
+    const frozenStasOutPoint = new OutPoint(
+      freezeTx.Id,
+      0,
+      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].Satoshis,
+      fixture.alice.Address,
+      ScriptType.p2stas30,
+    );
+
+    const feeOutPoint = new OutPoint(
+      freezeTx.Id,
+      1,
+      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const unfreezeTxHex = BuildStas3UnfreezeTx({
+      stasPayments: [
+        {
+          OutPoint: frozenStasOutPoint,
+          Owner: fixture.cat,
+        },
+      ],
+      feePayment: {
+        OutPoint: feeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: frozenStasOutPoint.Satoshis,
+          To: fixture.alice.Address,
+          Frozen: false,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+
+    const unfreezeTx = TransactionReader.readHex(unfreezeTxHex);
+    const unfreezeEval = evaluateTransactionHex(
+      unfreezeTxHex,
+      resolveFromTx(freezeTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(unfreezeTx.Inputs.length).toBe(2);
+    expect(unfreezeTx.Outputs.length).toBe(2);
+    expect(unfreezeTx.Outputs[0].Satoshis).toBe(frozenStasOutPoint.Satoshis);
+    expect(unfreezeEval.success).toBe(true);
+    expect(unfreezeEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      true,
+    );
+    expect(unfreezeEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      true,
+    );
+  });
+
+  test("real funding: owner can spend unfrozen utxo", () => {
+    const fixture = createRealFundingFlowFixture();
+    const freezeTxHex = buildFreezeFromFixture(fixture);
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+
+    const frozenStasOutPoint = new OutPoint(
+      freezeTx.Id,
+      0,
+      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].Satoshis,
+      fixture.alice.Address,
+      ScriptType.p2stas30,
+    );
+
+    const freezeFeeOutPoint = new OutPoint(
+      freezeTx.Id,
+      1,
+      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const unfreezeTxHex = BuildStas3UnfreezeTx({
+      stasPayments: [
+        {
+          OutPoint: frozenStasOutPoint,
+          Owner: fixture.cat,
+        },
+      ],
+      feePayment: {
+        OutPoint: freezeFeeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: frozenStasOutPoint.Satoshis,
+          To: fixture.alice.Address,
+          Frozen: false,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+    const unfreezeTx = TransactionReader.readHex(unfreezeTxHex);
+
+    const unfrozenStasOutPoint = new OutPoint(
+      unfreezeTx.Id,
+      0,
+      unfreezeTx.Outputs[0].LockignScript,
+      unfreezeTx.Outputs[0].Satoshis,
+      fixture.alice.Address,
+      ScriptType.p2stas30,
+    );
+    const unfreezeFeeOutPoint = new OutPoint(
+      unfreezeTx.Id,
+      1,
+      unfreezeTx.Outputs[1].LockignScript,
+      unfreezeTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const spendUnfrozenTxHex = BuildStas3TransferTx({
+      stasPayment: {
+        OutPoint: unfrozenStasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: unfreezeFeeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: unfrozenStasOutPoint.Satoshis,
+        To: fixture.bob.Address,
+      },
+      omitChangeOutput: true,
+    });
+    const spendUnfrozenEval = evaluateTransactionHex(
+      spendUnfrozenTxHex,
+      resolveFromTx(unfreezeTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(spendUnfrozenEval.success).toBe(true);
+    expect(
+      spendUnfrozenEval.inputs.find((x) => x.inputIndex === 0)?.success,
+    ).toBe(true);
+    expect(
+      spendUnfrozenEval.inputs.find((x) => x.inputIndex === 1)?.success,
+    ).toBe(true);
+  });
+
+  test("real funding: redeem by non-issuer is rejected", () => {
+    const fixture = createRealFundingFlowFixture();
+    const stasOutPoint = fixture.stasOutPoint;
+    const feeOutPoint = fixture.feeOutPoint;
+
+    const redeemTxHex = buildRedeemTx({
+      stasOutPoint,
+      stasOwner: fixture.alice,
+      feeOutPoint,
+      feeOwner: fixture.bob,
+      redeemAddress: fixture.bob.Address,
+    });
+
+    const redeemEval = evaluateTransactionHex(
+      redeemTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(redeemEval.success).toBe(false);
+    expect(redeemEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
+    );
+  });
+
+  test.todo(
+    "real funding: issuer can redeem after receiving token (requires confirmed redeem unlocking format for STAS30)",
+  );
 
   test.todo(
     "real funding flow continuation: issue -> transfer -> freeze -> unfreeze -> redeem with on-chain fixtures",
