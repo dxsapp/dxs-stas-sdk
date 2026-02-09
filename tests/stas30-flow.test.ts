@@ -397,7 +397,9 @@ describe("stas30 flow", () => {
       fixture.alice.PublicKey,
     ];
     const ownerThreshold = 2;
-    const ownerMlpkh = hash160(buildMlpkhPreimage(ownerThreshold, ownerPubKeys));
+    const ownerMlpkh = hash160(
+      buildMlpkhPreimage(ownerThreshold, ownerPubKeys),
+    );
 
     const toOwnerMultisigTxHex = BuildStas3TransferTx({
       stasPayment: {
@@ -449,7 +451,9 @@ describe("stas30 flow", () => {
       .addInput(stasOutPoint, fixture.bob)
       .addInput(feeOutPoint, fixture.bob);
 
-    txBuilder.Outputs.push(new OutputBuilder(transferOutLock, stasOutPoint.Satoshis));
+    txBuilder.Outputs.push(
+      new OutputBuilder(transferOutLock, stasOutPoint.Satoshis),
+    );
 
     txBuilder.Inputs[0].UnlockingScript = buildOwnerMultisigUnlockingScript({
       txBuilder,
