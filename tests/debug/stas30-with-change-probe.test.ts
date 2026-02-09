@@ -1,6 +1,4 @@
-import { evaluateScripts } from "../../src/script";
-import { ScriptReader } from "../../src/script";
-import { ScriptBuilder } from "../../src/script";
+import { evaluateScripts, ScriptBuilder, ScriptReader } from "../../src/script";
 import { ScriptToken } from "../../src/script/script-token";
 import { ScriptType } from "../../src/bitcoin/script-type";
 import { TransactionReader } from "../../src/transaction/read/transaction-reader";
@@ -39,7 +37,7 @@ describe("stas30 with-change probe", () => {
       op: t.OpCodeNum,
       data: t.Data ? toHex(t.Data) : null,
     }));
-    // eslint-disable-next-line no-console
+    // tslint:disable-next-line:no-console
     console.log("base first tokens", show);
 
     const evalVariant = (name: string, tokens: ScriptToken[]) => {
@@ -66,7 +64,7 @@ describe("stas30 with-change probe", () => {
         },
         { allowOpReturn: true, trace: false },
       );
-      // eslint-disable-next-line no-console
+      // tslint:disable-next-line:no-console
       console.log(name, r.success, r.error);
     };
 

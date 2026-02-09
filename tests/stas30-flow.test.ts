@@ -7,8 +7,10 @@ import { PrivateKey } from "../src/bitcoin/private-key";
 import { Wallet } from "../src/bitcoin/wallet";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
 import { OutputBuilder } from "../src/transaction/build/output-builder";
-import { evaluateScripts, evaluateTransactionHex } from "../src/script";
 import {
+  evaluateScripts,
+  evaluateTransactionHex,
+  buildStas3SwapSecondField,
   decomposeStas3LockingScript,
   decomposeStas3UnlockingScript,
 } from "../src/script";
@@ -40,7 +42,6 @@ import { assertFeeInRange } from "./helpers/fee-assertions";
 import { dumpTransferDebug } from "./debug/stas30-transfer-debug";
 import { hash160, hash256, sha256 } from "../src/hashes";
 import { reverseBytes } from "../src/buffer/buffer-utils";
-import { buildStas3SwapSecondField } from "../src/script";
 
 const resolveFromTx = (txHex: string) => {
   const tx = TransactionReader.readHex(txHex);

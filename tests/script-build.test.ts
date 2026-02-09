@@ -4,11 +4,10 @@ import { Wallet } from "../src/bitcoin/wallet";
 import { P2pkhBuilder } from "../src/script/build/p2pkh-builder";
 import { P2mpkhBuilder } from "../src/script/build/p2mpkh-builder";
 import { P2stasBuilder } from "../src/script/build/p2stas-builder";
-import { utf8ToBytes } from "../src/bytes";
+import { fromHex, utf8ToBytes } from "../src/bytes";
 import { ScriptBuilder } from "../src/script/build/script-builder";
 import { ScriptType } from "../src/bitcoin/script-type";
 import { buildStas3FreezeMultisigTokens } from "../src/script/build/stas3-freeze-multisig-builder";
-import { fromHex } from "../src/bytes";
 
 describe("testing script building", () => {
   const p2mAddress = Address.fromBase58("1AoPwWXXk41vth2J9bHa6wMu65q4j89Q16");

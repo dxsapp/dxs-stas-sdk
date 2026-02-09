@@ -526,11 +526,11 @@ export class Stas30BundleFactory {
 
   private buildDestinations = (
     sourceOutPoint: OutPoint,
-    outputs: Array<{
+    outputs: {
       recipient: TStas30Recipient;
       satoshis: number;
       isChange: boolean;
-    }>,
+    }[],
     spendType: Stas30SpendType,
   ): TStas30Destination[] => {
     const outputCount = outputs.length;

@@ -176,11 +176,10 @@ export const decomposeStas3UnlockingScript = (
     result.fundingVout = fundingVout;
   }
 
-  if (mergeMarkerChunk.opcode === OpCode.OP_0 && !mergeMarkerChunk.data) {
-    result.mergeMode = "none";
-  } else {
-    result.mergeMode = "present";
-  }
+  result.mergeMode =
+    mergeMarkerChunk.opcode === OpCode.OP_0 && !mergeMarkerChunk.data
+      ? "none"
+      : "present";
 
   const head = chunks.slice(0, chunks.length - 7);
   if (head.length < 3) {

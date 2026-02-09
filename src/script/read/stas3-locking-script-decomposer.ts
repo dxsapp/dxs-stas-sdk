@@ -101,11 +101,9 @@ export const decomposeStas3LockingScript = (
     return result;
   }
 
-  if (second.data) {
-    result.secondField = { kind: "data", hex: toHex(second.data) };
-  } else {
-    result.secondField = { kind: "opcode", opcode: second.opcode };
-  }
+  result.secondField = second.data
+    ? { kind: "data", hex: toHex(second.data) }
+    : { kind: "opcode", opcode: second.opcode };
 
   const baseStart = second.end;
   const baseEnd = baseStart + STAS3_BASE_SCRIPT.length;

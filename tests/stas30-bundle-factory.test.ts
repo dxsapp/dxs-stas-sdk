@@ -1,4 +1,3 @@
-import { jest } from "@jest/globals";
 import {
   Stas30BundleFactory,
   TStas30Recipient,
@@ -20,11 +19,26 @@ const redemptionPkh = fromHex("b4ab0fffa02223a8a40d9e7f7823e61b38625382");
 
 type TestFactory = {
   factory: Stas30BundleFactory;
-  buildUnlockingScript: ReturnType<typeof jest.fn>;
+  buildUnlockingScript: SpyFn<[UnlockingArgs], Uint8Array>;
   recipient: TStas30Recipient;
 };
 
 type UnlockingArgs = Parameters<TStas30UnlockingScriptBuilder>[0];
+type SpyFn<Args extends unknown[], Ret> = ((...args: Args) => Ret) & {
+  calls: Args[];
+};
+
+const createSpy = <Args extends unknown[], Ret>(
+  impl: (...args: Args) => Ret,
+): SpyFn<Args, Ret> => {
+  const calls: Args[] = [];
+  const fn = ((...args: Args) => {
+    calls.push(args);
+    return impl(...args);
+  }) as SpyFn<Args, Ret>;
+  fn.calls = calls;
+  return fn;
+};
 
 const makeOutPoint = (
   txId: string,
@@ -57,11 +71,11 @@ const makeFactory = (stasSatoshis = 1000): TestFactory => {
     feeScript,
   );
 
-  const getStasUtxoSet = jest.fn(async () => [stasOutPoint]);
-  const getFundingUtxo = jest.fn(async () => feeOutPoint);
-  const getTransactions = jest.fn(async () => ({}));
+  const getStasUtxoSet = createSpy(async () => [stasOutPoint]);
+  const getFundingUtxo = createSpy(async () => feeOutPoint);
+  const getTransactions = createSpy(async () => ({}));
 
-  const buildLockingParams = jest.fn(() => ({
+  const buildLockingParams = createSpy(() => ({
     ownerPkh,
     secondField: null,
     redemptionPkh,
@@ -71,10 +85,9 @@ const makeFactory = (stasSatoshis = 1000): TestFactory => {
     optionalData: [],
   }));
 
-  const buildUnlockingScript = jest.fn((args: UnlockingArgs) => {
-    void args;
-    return new Uint8Array();
-  });
+  const buildUnlockingScript = createSpy(
+    (_args: UnlockingArgs) => new Uint8Array(),
+  );
 
   const factory = new Stas30BundleFactory(
     stasWallet,
@@ -101,8 +114,8 @@ describe("Stas30BundleFactory spendType flags", () => {
     await factory.createFreezeBundle(1000, recipient);
     await factory.createUnfreezeBundle(1000, recipient);
 
-    const calls = buildUnlockingScript.mock.calls.map(
-      (call: [UnlockingArgs]) => call[0],
+    const calls = buildUnlockingScript.calls.map(
+      (call) => call[0] as UnlockingArgs,
     );
     const freezeCalls = calls.filter(
       (c: UnlockingArgs) => c.spendType === "freeze",
@@ -128,8 +141,8 @@ describe("Stas30BundleFactory spendType flags", () => {
     await factory.createTransferBundle(1000, recipient);
     await factory.createSwapBundle(1000, recipient);
 
-    const calls = buildUnlockingScript.mock.calls.map(
-      (call: [UnlockingArgs]) => call[0],
+    const calls = buildUnlockingScript.calls.map(
+      (call) => call[0] as UnlockingArgs,
     );
     const transferCalls = calls.filter(
       (c: UnlockingArgs) => c.spendType === "transfer",
