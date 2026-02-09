@@ -1,5 +1,10 @@
 # Agent Handbook
 
+Protocol invariants reference:
+
+- STAS30 operation invariants are maintained in `docs/STAS30_SCRIPT_INVARIANTS.md`.
+- STAS3 freeze/multisig template notes are in `docs/STAS3_FREEZE_MULTISIG.md`.
+
 ## 1. Repository Snapshot
 
 - The repository root includes `src`, `tests`, `dist`, `docs`, `index.ts`, `package.json`, `package-lock.json`, `tsconfig.json`, `jest.config.js`, `rollup.config.ts`, and `tslint.json`. (see: docs/COMMAND_LOG.md -> ls (after moving docs))
