@@ -246,13 +246,28 @@ describe("stas30 flow", () => {
       FeeRate,
       1,
     );
-    assertFeeInRange(fixture.issueTxHex, resolveFromTx(fixture.contractTxHex), FeeRate, 2);
+    assertFeeInRange(
+      fixture.issueTxHex,
+      resolveFromTx(fixture.contractTxHex),
+      FeeRate,
+      2,
+    );
 
     const transferTxHex = buildTransferFromFixture(fixture, false);
-    assertFeeInRange(transferTxHex, resolveFromTx(fixture.issueTxHex), FeeRate, 2);
+    assertFeeInRange(
+      transferTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      FeeRate,
+      2,
+    );
 
     const freezeTxHex = buildFreezeFromFixture(fixture);
-    assertFeeInRange(freezeTxHex, resolveFromTx(fixture.issueTxHex), FeeRate, 2);
+    assertFeeInRange(
+      freezeTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      FeeRate,
+      2,
+    );
 
     const freezeTx = TransactionReader.readHex(freezeTxHex);
     const frozenStasOutPoint = new OutPoint(

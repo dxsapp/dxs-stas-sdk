@@ -17,7 +17,9 @@ export const assertFeeInRange = (
   const totalInput = tx.Inputs.reduce((sum, input) => {
     const prev = resolvePrevOutput(input.TxId, input.Vout);
     if (!prev) {
-      throw new Error(`Missing prevout for fee check: ${input.TxId}:${input.Vout}`);
+      throw new Error(
+        `Missing prevout for fee check: ${input.TxId}:${input.Vout}`,
+      );
     }
     return sum + prev.satoshis;
   }, 0);

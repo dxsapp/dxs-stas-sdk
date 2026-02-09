@@ -16,7 +16,10 @@ import {
   buildStas3FreezeMultisigTokens,
 } from "../src/script/build/stas3-freeze-multisig-builder";
 import { evaluateTransactionHex } from "../src/script";
-import { BuildStas3IssueTxs, BuildStas3TransferTx } from "../src/stas30-factory";
+import {
+  BuildStas3IssueTxs,
+  BuildStas3TransferTx,
+} from "../src/stas30-factory";
 import { FeeRate } from "../src/transaction-factory";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
 import { OutputBuilder } from "../src/transaction/build/output-builder";
@@ -190,14 +193,15 @@ const applyChangeAndFinalAuthorityUnlocking = ({
 
   let prevChange = -1;
   for (let i = 0; i < 5; i++) {
-    txBuilder.Inputs[stasInputIndex].UnlockingScript = buildAuthorityUnlockingScript({
-      txBuilder,
-      stasInputIndex,
-      spendingType,
-      authoritySigners,
-      authorityPubKeys,
-      authorityThreshold,
-    });
+    txBuilder.Inputs[stasInputIndex].UnlockingScript =
+      buildAuthorityUnlockingScript({
+        txBuilder,
+        stasInputIndex,
+        spendingType,
+        authoritySigners,
+        authorityPubKeys,
+        authorityThreshold,
+      });
 
     const fee = txBuilder.getFee(FeeRate);
     const nextChange = feeInputSatoshis - fee;
@@ -207,27 +211,32 @@ const applyChangeAndFinalAuthorityUnlocking = ({
     prevChange = nextChange;
   }
 
-  txBuilder.Inputs[stasInputIndex].UnlockingScript = buildAuthorityUnlockingScript({
-    txBuilder,
-    stasInputIndex,
-    spendingType,
-    authoritySigners,
-    authorityPubKeys,
-    authorityThreshold,
-  });
+  txBuilder.Inputs[stasInputIndex].UnlockingScript =
+    buildAuthorityUnlockingScript({
+      txBuilder,
+      stasInputIndex,
+      spendingType,
+      authoritySigners,
+      authorityPubKeys,
+      authorityThreshold,
+    });
 };
 
 describe("stas30 multisig authority flow", () => {
   test("dummy funding: issue -> transfer -> freeze(3/5) -> unfreeze(3/5) -> transfer", () => {
     const bob = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
-    const cat1 = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/1");
-    const cat2 = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/2");
-    const cat3 = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/3");
-    const cat4 = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/4");
-    const cat5 = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/5");
-    const alice = Wallet.fromMnemonic(mnemonic).deriveWallet(
-      "m/44'/236'/0'/0/6",
-    );
+    const cat1 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/1");
+    const cat2 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/2");
+    const cat3 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/3");
+    const cat4 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/4");
+    const cat5 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/5");
+    const alice =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/6");
 
     const fundingOutPoint = new OutPoint(
       "11".repeat(32),
