@@ -85,13 +85,27 @@ export class InputBilder {
 
           hasNote = true;
         } else {
+          if (!output.LockingScript.ToAddress) {
+            throw new Error(
+              `Output locking script is missing ToAddress (scriptType=${output.LockingScript.ScriptType})`,
+            );
+          }
           script
             .addNumber(output.Satoshis)
-            .addData(output.LockingScript.ToAddress!.Hash160);
+            .addData(output.LockingScript.ToAddress.Hash160);
 
           if (output.LockingScript.ScriptType === ScriptType.p2stas30) {
-            // add action field (2nd variable field) aka IsSecondField
-            script.addData(output.LockingScript._tokens[1].Data!); // it's stats30 script
+            const secondFieldToken = output.LockingScript._tokens[1];
+
+            if (secondFieldToken?.Data) {
+              script.addData(secondFieldToken.Data);
+            } else if (secondFieldToken) {
+              script.addOpCode(secondFieldToken.OpCodeNum);
+            } else {
+              throw new Error(
+                "STAS30 output is missing second-field token in locking script",
+              );
+            }
           }
 
           if (output.LockingScript.ScriptType === ScriptType.p2pkh) {

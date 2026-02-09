@@ -125,7 +125,7 @@ export const decomposeStas3UnlockingScript = (
     cursor = chunk.end;
   }
 
-  if (chunks.length < 12) {
+  if (chunks.length < 9) {
     result.errors.push("too few chunks for STAS3 unlocking layout");
     return result;
   }
@@ -137,9 +137,6 @@ export const decomposeStas3UnlockingScript = (
   const mergeMarkerChunk = chunks[chunks.length - 5];
   const fundingTxIdChunk = chunks[chunks.length - 6];
   const fundingVoutChunk = chunks[chunks.length - 7];
-  const auth3 = chunks[chunks.length - 8];
-  const auth2 = chunks[chunks.length - 9];
-  const auth1 = chunks[chunks.length - 10];
 
   if (!pubChunk.data || pubChunk.data.length !== 33) {
     result.errors.push("public key chunk not found at script end");
@@ -179,23 +176,14 @@ export const decomposeStas3UnlockingScript = (
     result.fundingVout = fundingVout;
   }
 
-  result.authPlaceholderOpcodes = [auth1.opcode, auth2.opcode, auth3.opcode];
-  if (
-    auth1.opcode !== OpCode.OP_0 ||
-    auth2.opcode !== OpCode.OP_0 ||
-    auth3.opcode !== OpCode.OP_0
-  ) {
-    result.errors.push("authority placeholders are not OP_0 OP_0 OP_0");
-  }
-
   if (mergeMarkerChunk.opcode === OpCode.OP_0 && !mergeMarkerChunk.data) {
     result.mergeMode = "none";
   } else {
     result.mergeMode = "present";
   }
 
-  const head = chunks.slice(0, chunks.length - 10);
-  if (head.length < 2) {
+  const head = chunks.slice(0, chunks.length - 7);
+  if (head.length < 3) {
     result.errors.push("missing first token-output chunks");
     return result;
   }
@@ -216,7 +204,43 @@ export const decomposeStas3UnlockingScript = (
     result.firstOutputReceiverPkhHex = toHex(pkhChunk.data);
   }
 
-  for (let i = 2; i < head.length; i++) {
+  let noteStartIdx = 3;
+  const tailHead = head.slice(3);
+  const auth1 = tailHead[0];
+  const auth2 = tailHead[1];
+  const auth3 = tailHead[2];
+  result.authPlaceholderOpcodes = [
+    auth1?.opcode ?? -1,
+    auth2?.opcode ?? -1,
+    auth3?.opcode ?? -1,
+  ];
+
+  // with-change: [changeSatoshis(scriptnum), changePkh(20), notes...]
+  const hasChangePair =
+    !!auth1 &&
+    !!auth2 &&
+    parseNumberChunk(auth1) !== undefined &&
+    !!auth2.data &&
+    auth2.data.length === 20;
+
+  // no-change: [OP_0, OP_0, notes...]
+  const hasNoChangePlaceholders =
+    !!auth1 &&
+    !!auth2 &&
+    auth1.opcode === OpCode.OP_0 &&
+    !auth1.data &&
+    auth2.opcode === OpCode.OP_0 &&
+    !auth2.data;
+
+  if (hasChangePair) {
+    noteStartIdx = 5;
+  } else if (hasNoChangePlaceholders) {
+    noteStartIdx = 5;
+  } else if (tailHead.length > 0) {
+    result.errors.push("unexpected post-output layout before funding fields");
+  }
+
+  for (let i = noteStartIdx; i < head.length; i++) {
     const chunk = head[i];
     if (chunk.opcode === OpCode.OP_0 && !chunk.data) {
       result.hasExplicitEmptyNote = true;

@@ -179,7 +179,7 @@ describe("stas30 flow", () => {
     expect(transferTx.Outputs.length).toBe(2);
     expect(unlock.parsed).toBe(true);
     expect(unlock.spendingType).toBe(1);
-    expect(transferEval.success).toBe(false);
+    expect(transferEval.success).toBe(true);
   });
 
   test.todo(
