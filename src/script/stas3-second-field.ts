@@ -122,7 +122,9 @@ export const encodeStas3SecondField = (
   return out;
 };
 
-export const decodeStas3SecondField = (bytes: Bytes): Stas3ParsedSecondField => {
+export const decodeStas3SecondField = (
+  bytes: Bytes,
+): Stas3ParsedSecondField => {
   if (bytes.length === 0) return { kind: "empty" };
 
   const action = bytes[0];
