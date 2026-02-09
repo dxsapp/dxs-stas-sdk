@@ -12,7 +12,10 @@ import {
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
 import { fromHex, toHex } from "../src/bytes";
 import { OutPoint, ScriptType } from "../src/bitcoin";
-import { BuildStas3TransferTx, BuildStas3UnfreezeTx } from "../src/stas30-factory";
+import {
+  BuildStas3TransferTx,
+  BuildStas3UnfreezeTx,
+} from "../src/stas30-factory";
 import { FeeRate } from "../src/transaction-factory";
 import {
   buildFreezeFromFixture,
