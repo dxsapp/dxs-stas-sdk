@@ -123,9 +123,7 @@ export class InputBilder {
 
       if (!hasNote) script.addOpCode(OpCode.OP_0);
 
-      // TODO Check if transaction with funding
-      const fundingInput =
-        this.TxBuilder.Inputs[this.TxBuilder.Inputs.length - 1];
+      const fundingInput = this.resolveFundingInput();
 
       script
         .addNumber(fundingInput.OutPoint.Vout)
@@ -199,6 +197,30 @@ export class InputBilder {
     return ownerToken.Data;
   };
 
+  private isStasScriptType = (scriptType: ScriptType): boolean =>
+    scriptType === ScriptType.p2stas || scriptType === ScriptType.dstas;
+
+  private resolveFundingInput = (): InputBilder => {
+    const candidates = this.TxBuilder.Inputs.filter(
+      (input, idx) =>
+        idx !== this.Idx && !this.isStasScriptType(input.OutPoint.ScriptType),
+    );
+
+    if (candidates.length === 0) {
+      throw new Error(
+        "Unable to resolve funding input: expected one non-STAS input",
+      );
+    }
+
+    if (candidates.length > 1) {
+      throw new Error(
+        "Unable to resolve funding input: multiple non-STAS inputs are present",
+      );
+    }
+
+    return candidates[0];
+  };
+
   prevoutHashLength = () => (32 + 4) * this.TxBuilder.Inputs.length;
 
   unlockingScriptSize = (): number => {
@@ -253,8 +275,7 @@ export class InputBilder {
     ) {
       this.prepareMergeInfo();
 
-      const fundingIdx = this.TxBuilder.Inputs.length - 1;
-      const fundingOutpoint = this.TxBuilder.Inputs[fundingIdx].OutPoint;
+      const fundingOutpoint = this.resolveFundingInput().OutPoint;
 
       size += this.stasNullDataLength();
 

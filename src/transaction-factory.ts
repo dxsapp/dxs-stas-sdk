@@ -193,7 +193,7 @@ export const BuildRedeemTx = ({
 
   const splitAmount =
     splitDestinations?.reduce((a, x) => a + x.Satoshis, 0) ?? 0;
-  const redeemAmount = feePayment.OutPoint.Satoshis - splitAmount;
+  const redeemAmount = stasPayment.OutPoint.Satoshis - splitAmount;
 
   if (redeemAmount < 0)
     throw new Error("Input satoshis must be equal output satoshis");

@@ -7,10 +7,9 @@ import { BuildDstasBaseTx } from "../src/dstas-factory";
 
 describe("DSTAS factory guards", () => {
   test("merge rejects more than 2 STAS inputs", () => {
-    const wallet =
-      Wallet.fromMnemonic(
-        "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
-      ).deriveWallet("m/44'/236'/0'/0/0");
+    const wallet = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
     const script = new P2pkhBuilder(wallet.Address).toBytes();
 
     const makeOutPoint = (txByte: string, satoshis: number) =>
@@ -48,5 +47,4 @@ describe("DSTAS factory guards", () => {
       }),
     ).toThrow("At most 2 STAS inputs are supported");
   });
-
 });

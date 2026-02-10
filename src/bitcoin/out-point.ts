@@ -50,12 +50,18 @@ export class OutPointFull extends OutPoint {
     )
       throw new Error("p2pkh, p2mpkh, p2stas or dstas output must be provided");
 
+    if (!output.Address) {
+      throw new Error(
+        "Output does not expose address (for example, DSTAS multisig owner). Build OutPoint manually.",
+      );
+    }
+
     super(
       transaction.Id,
       vout,
       output.LockignScript,
       output.Satoshis,
-      output.Address!,
+      output.Address,
       output.ScriptType,
     );
 

@@ -6,6 +6,7 @@ import { TokenScheme } from "../src/bitcoin/token-scheme";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
 import {
   BuildMergeTx,
+  BuildRedeemTx,
   BuildSplitTx,
   BuildTransferTx,
 } from "../src/transaction-factory";
@@ -286,6 +287,48 @@ describe("testing transaction builder", () => {
     });
 
     expect(tx).toBe(TransferToIssuerRaw);
+  });
+
+  test("build STAS redeem uses STAS input amount for redeem output", () => {
+    const sourceTx = TransactionReader.readHex(TransferToIssuerRaw);
+    const stasOutPoint = OutPoint.fromTransaction(sourceTx, 0);
+    const fundingOutPoint = OutPoint.fromTransaction(sourceTx, 1);
+
+    const txRaw = BuildRedeemTx({
+      tokenScheme,
+      stasPayment: { OutPoint: stasOutPoint, Owner: issuerPrivateKey },
+      feePayment: { OutPoint: fundingOutPoint, Owner: issuerPrivateKey },
+      feeRate: 0.05,
+    });
+    const tx = TransactionReader.readHex(txRaw);
+
+    expect(tx.Outputs[0].Satoshis).toBe(stasOutPoint.Satoshis);
+    expect(tx.Outputs[0].Address?.Value).toBe(issuerAddress.Value);
+  });
+
+  test("build STAS transfer when fee input is not last", () => {
+    const sourceTx = TransactionReader.readHex(IssueTxRaw);
+    const stasOutPoint = OutPoint.fromTransaction(sourceTx, 0);
+    const fundingOutPoint = OutPoint.fromTransaction(sourceTx, 1);
+
+    const txRaw = TransactionBuilder.init()
+      .addInput(fundingOutPoint, issuerPrivateKey)
+      .addInput(stasOutPoint, alicePrivateKey)
+      .addStasOutputByScheme(tokenScheme, stasOutPoint.Satoshis, aliceAddress)
+      .addChangeOutputWithFee(
+        fundingOutPoint.Address,
+        fundingOutPoint.Satoshis,
+        0.05,
+      )
+      .sign()
+      .toHex();
+    const tx = TransactionReader.readHex(txRaw);
+
+    // This used to depend on "fee input is the last input".
+    // The transfer must be buildable and signed with fee input at index 0.
+    expect(tx.Inputs.length).toBe(2);
+    expect(tx.Inputs[0].UnlockingScript.length).toBeGreaterThan(0);
+    expect(tx.Inputs[1].UnlockingScript.length).toBeGreaterThan(0);
   });
 
   test("build STAS RedeemSplit with note transaction", () => {
