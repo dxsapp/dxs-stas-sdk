@@ -49,7 +49,10 @@ const makeOutPoint = (
   scriptBytes: Uint8Array,
 ) => new OutPoint(txId, 0, scriptBytes, satoshis, address, scriptType);
 
-const makeFactory = (stasSatoshis = 1000, feeSatoshis = 100000): TestFactory => {
+const makeFactory = (
+  stasSatoshis = 1000,
+  feeSatoshis = 100000,
+): TestFactory => {
   const stasWallet =
     Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
   const feeWallet =
