@@ -88,18 +88,18 @@ describe("locking script reader", () => {
     expect(reader.ScriptType).toBe(ScriptType.unknown);
   });
 
-  test("keeps stas30 detection streaming (no post-scan token buffer/api)", () => {
+  test("keeps dstas detection streaming (no post-scan token buffer/api)", () => {
     const reader = LockingScriptReader.read(fromHex("51"));
     const internals = reader as unknown as Record<string, unknown>;
 
     expect("allTokens" in internals).toBe(false);
-    expect("tryDetectP2Stas30" in internals).toBe(false);
+    expect("tryDetectP2Dstas" in internals).toBe(false);
   });
 
-  test("detects p2stas30 freeze-off and fills fields", () => {
+  test("detects dstas freeze-off and fills fields", () => {
     const owner = fromHex("0011223344556677889900112233445566778899");
     const redemption = fromHex("e3b111de8fec527b41f4189e313638075d96ccd6");
-    const optional = utf8ToBytes("hello-stas30");
+    const optional = utf8ToBytes("hello-dstas");
     const script = buildStas3FreezeMultisigScript({
       ownerPkh: owner,
       secondField: fromHex("00"),
@@ -111,17 +111,17 @@ describe("locking script reader", () => {
 
     const reader = LockingScriptReader.read(script);
 
-    expect(reader.ScriptType).toBe(ScriptType.p2stas30);
-    expect(toHex(reader.Stas30!.Owner)).toBe(toHex(owner));
-    expect(toHex(reader.Stas30!.Redemption)).toBe(toHex(redemption));
-    expect(toHex(reader.Stas30!.Flags)).toBe("00");
-    expect(reader.Stas30!.FreezeEnabled).toBe(false);
-    expect(reader.Stas30!.ServiceFields).toHaveLength(0);
-    expect(reader.Stas30!.OptionalData).toHaveLength(1);
-    expect(toHex(reader.Stas30!.OptionalData[0])).toBe(toHex(optional));
+    expect(reader.ScriptType).toBe(ScriptType.dstas);
+    expect(toHex(reader.Dstas!.Owner)).toBe(toHex(owner));
+    expect(toHex(reader.Dstas!.Redemption)).toBe(toHex(redemption));
+    expect(toHex(reader.Dstas!.Flags)).toBe("00");
+    expect(reader.Dstas!.FreezeEnabled).toBe(false);
+    expect(reader.Dstas!.ServiceFields).toHaveLength(0);
+    expect(reader.Dstas!.OptionalData).toHaveLength(1);
+    expect(toHex(reader.Dstas!.OptionalData[0])).toBe(toHex(optional));
   });
 
-  test("detects p2stas30 freeze-on and requires authority in service fields", () => {
+  test("detects dstas freeze-on and requires authority in service fields", () => {
     const owner = fromHex("1111222233334444555566667777888899990000");
     const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     const authority = fromHex("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
@@ -138,15 +138,15 @@ describe("locking script reader", () => {
 
     const reader = LockingScriptReader.read(script);
 
-    expect(reader.ScriptType).toBe(ScriptType.p2stas30);
-    expect(reader.Stas30!.FreezeEnabled).toBe(true);
-    expect(reader.Stas30!.ServiceFields).toHaveLength(1);
-    expect(toHex(reader.Stas30!.ServiceFields[0])).toBe(toHex(authority));
-    expect(reader.Stas30!.OptionalData).toHaveLength(1);
-    expect(toHex(reader.Stas30!.OptionalData[0])).toBe(toHex(optional));
+    expect(reader.ScriptType).toBe(ScriptType.dstas);
+    expect(reader.Dstas!.FreezeEnabled).toBe(true);
+    expect(reader.Dstas!.ServiceFields).toHaveLength(1);
+    expect(toHex(reader.Dstas!.ServiceFields[0])).toBe(toHex(authority));
+    expect(reader.Dstas!.OptionalData).toHaveLength(1);
+    expect(toHex(reader.Dstas!.OptionalData[0])).toBe(toHex(optional));
   });
 
-  test("parses p2stas30 swap second field", () => {
+  test("parses dstas swap second field", () => {
     const owner = fromHex("1111222233334444555566667777888899990000");
     const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     const swapSecond = buildStas3SwapSecondField({
@@ -164,10 +164,10 @@ describe("locking script reader", () => {
     });
 
     const reader = LockingScriptReader.read(script);
-    expect(reader.ScriptType).toBe(ScriptType.p2stas30);
-    expect(reader.Stas30?.SecondFieldParsed?.kind).toBe("swap");
-    if (reader.Stas30?.SecondFieldParsed?.kind !== "swap") return;
-    expect(reader.Stas30.SecondFieldParsed.rateNumerator).toBe(1);
-    expect(reader.Stas30.SecondFieldParsed.rateDenominator).toBe(100);
+    expect(reader.ScriptType).toBe(ScriptType.dstas);
+    expect(reader.Dstas?.SecondFieldParsed?.kind).toBe("swap");
+    if (reader.Dstas?.SecondFieldParsed?.kind !== "swap") return;
+    expect(reader.Dstas.SecondFieldParsed.rateNumerator).toBe(1);
+    expect(reader.Dstas.SecondFieldParsed.rateDenominator).toBe(100);
   });
 });

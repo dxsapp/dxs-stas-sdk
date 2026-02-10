@@ -13,7 +13,7 @@ describe("token scheme", () => {
   });
 
   test("serializes freeze/confiscation/divisible and authority", () => {
-    const scheme = new TokenScheme("Stas30", "bb".repeat(32), "S30", 1, {
+    const scheme = new TokenScheme("Dstas", "bb".repeat(32), "S30", 1, {
       freeze: true,
       confiscation: true,
       isDivisible: true,

@@ -3,10 +3,10 @@ import { TokenScheme } from "../../src/bitcoin/token-scheme";
 import { Wallet } from "../../src/bitcoin/wallet";
 import { P2pkhBuilder } from "../../src/script/build/p2pkh-builder";
 import {
-  BuildStas3FreezeTx,
-  BuildStas3IssueTxs,
-  BuildStas3TransferTx,
-} from "../../src/stas30-factory";
+  BuildDstasFreezeTx,
+  BuildDstasIssueTxs,
+  BuildDstasTransferTx,
+} from "../../src/dstas-factory";
 import { TransactionReader } from "../../src/transaction/read/transaction-reader";
 import { ScriptType } from "../../src/bitcoin/script-type";
 import { toHex } from "../../src/bytes";
@@ -19,7 +19,7 @@ export const realFundingTxId =
 export const realFundingVout = 0;
 export const realFundingSatoshis = 1_935;
 
-export type TStas30FlowFixture = {
+export type TDstasFlowFixture = {
   bob: Wallet;
   cat: Wallet;
   alice: Wallet;
@@ -43,8 +43,8 @@ export const createRealFundingOutPoint = (owner: Wallet) =>
     ScriptType.p2pkh,
   );
 
-export const createDefaultStas30Scheme = (issuer: Wallet, authority: Wallet) =>
-  new TokenScheme("STAS30", toHex(issuer.Address.Hash160), "S30", 1, {
+export const createDefaultDstasScheme = (issuer: Wallet, authority: Wallet) =>
+  new TokenScheme("Divisible STAS", toHex(issuer.Address.Hash160), "S30", 1, {
     freeze: true,
     confiscation: true,
     isDivisible: true,
@@ -54,15 +54,15 @@ export const createDefaultStas30Scheme = (issuer: Wallet, authority: Wallet) =>
     },
   });
 
-export const createRealFundingFlowFixture = (): TStas30FlowFixture => {
+export const createRealFundingFlowFixture = (): TDstasFlowFixture => {
   const bob = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
   const cat = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/1");
   const alice = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/2");
 
   const sourceFunding = createRealFundingOutPoint(bob);
-  const scheme = createDefaultStas30Scheme(bob, cat);
+  const scheme = createDefaultDstasScheme(bob, cat);
 
-  const { contractTxHex, issueTxHex } = BuildStas3IssueTxs({
+  const { contractTxHex, issueTxHex } = BuildDstasIssueTxs({
     fundingPayment: {
       OutPoint: sourceFunding,
       Owner: bob,
@@ -85,7 +85,7 @@ export const createRealFundingFlowFixture = (): TStas30FlowFixture => {
     issueTx.Outputs[0].LockignScript,
     issueTx.Outputs[0].Satoshis,
     alice.Address,
-    ScriptType.p2stas30,
+    ScriptType.dstas,
   );
 
   const feeOutPoint = new OutPoint(
@@ -113,10 +113,10 @@ export const createRealFundingFlowFixture = (): TStas30FlowFixture => {
 };
 
 export const buildTransferFromFixture = (
-  fixture: TStas30FlowFixture,
+  fixture: TDstasFlowFixture,
   omitChangeOutput: boolean,
 ) =>
-  BuildStas3TransferTx({
+  BuildDstasTransferTx({
     stasPayment: {
       OutPoint: fixture.stasOutPoint,
       Owner: fixture.alice,
@@ -133,8 +133,8 @@ export const buildTransferFromFixture = (
     omitChangeOutput,
   });
 
-export const buildFreezeFromFixture = (fixture: TStas30FlowFixture) =>
-  BuildStas3FreezeTx({
+export const buildFreezeFromFixture = (fixture: TDstasFlowFixture) =>
+  BuildDstasFreezeTx({
     stasPayments: [
       {
         OutPoint: fixture.stasOutPoint,

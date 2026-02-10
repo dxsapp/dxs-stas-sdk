@@ -46,10 +46,10 @@ export class OutPointFull extends OutPoint {
       output.ScriptType !== ScriptType.p2pkh &&
       output.ScriptType !== ScriptType.p2mpkh &&
       output.ScriptType !== ScriptType.p2stas &&
-      output.ScriptType !== ScriptType.p2stas30
+      output.ScriptType !== ScriptType.dstas
     )
       throw new Error(
-        "p2pkh, p2mpkh, p2stas or p2stas30 output must be provided",
+        "p2pkh, p2mpkh, p2stas or dstas output must be provided",
       );
 
     super(

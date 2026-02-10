@@ -82,7 +82,7 @@ describe("testing script building", () => {
     expect(rebuilt.ToAddress?.Value).toBe(p2mAddress.Value);
   });
 
-  test("fromTokens resolves ToAddress for p2stas30 when owner is hash160", () => {
+  test("fromTokens resolves ToAddress for dstas when owner is hash160", () => {
     const owner = fromHex("0011223344556677889900112233445566778899");
     const tokens = buildStas3FreezeMultisigTokens({
       ownerPkh: owner,
@@ -93,7 +93,7 @@ describe("testing script building", () => {
       optionalData: [],
     });
 
-    const rebuilt = ScriptBuilder.fromTokens(tokens, ScriptType.p2stas30);
+    const rebuilt = ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
 
     expect(rebuilt.ToAddress).toBeDefined();
     expect(rebuilt.ToAddress?.Hash160).toEqual(owner);

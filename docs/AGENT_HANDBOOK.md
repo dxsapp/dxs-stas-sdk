@@ -2,13 +2,13 @@
 
 Protocol invariants reference:
 
-- STAS30 operation invariants are maintained in `docs/STAS30_SCRIPT_INVARIANTS.md`.
+- Divisible STAS operation invariants are maintained in `docs/DSTAS_SCRIPT_INVARIANTS.md`.
 - STAS3 freeze/multisig template notes are in `docs/STAS3_FREEZE_MULTISIG.md`.
 
 ## 1. Repository Snapshot
 
 - The repository root includes `src`, `tests`, `dist`, `docs`, `index.ts`, `package.json`, `package-lock.json`, `tsconfig.json`, `jest.config.js`, `rollup.config.ts`, and `tslint.json`. (see: docs/COMMAND_LOG.md -> ls (after moving docs))
-- Source code is organized under `src/bitcoin`, `src/buffer`, `src/script`, and `src/transaction`, with top-level modules like `src/transaction-factory.ts`, `src/stas30-factory.ts`, `src/stas-bundle-factory.ts`, `src/base.ts`, and `src/hashes.ts`. (see: docs/COMMAND_LOG.md -> Repo Tree (top-level + 2 depth))
+- Source code is organized under `src/bitcoin`, `src/buffer`, `src/script`, and `src/transaction`, with top-level modules like `src/transaction-factory.ts`, `src/dstas-factory.ts`, `src/stas-bundle-factory.ts`, `src/base.ts`, and `src/hashes.ts`. (see: docs/COMMAND_LOG.md -> Repo Tree (top-level + 2 depth))
 - Tests live under `tests/` and include transaction, script, and script-eval coverage files. (see: docs/COMMAND_LOG.md -> ls (after moving docs))
 - Build artifacts are emitted into `dist/` per the TypeScript outDir configuration. (see: tsconfig.json:52-59)
 
@@ -44,7 +44,7 @@ Protocol invariants reference:
 
 - Package entry points are `main: dist/index.js` and `types: dist/index.d.ts` in `package.json`. (see: package.json:5-6)
 - The root `index.ts` re-exports `./src`, which is the source entrypoint for public exports. (see: index.ts:1)
-- `src/index.ts` re-exports the `bitcoin`, `buffer`, `bytes`, `binary`, `script`, `stas-bundle-factory`, `transaction`, `transaction-factory`, `stas30-factory`, `base`, and `hashes` modules. (see: src/index.ts:1-12)
+- `src/index.ts` re-exports the `bitcoin`, `buffer`, `bytes`, `binary`, `script`, `stas-bundle-factory`, `transaction`, `transaction-factory`, `dstas-factory`, `base`, and `hashes` modules. (see: src/index.ts:1-12)
 
 Bitcoin exports:
 
@@ -96,7 +96,7 @@ High-level transaction factories:
 - `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, and `BuildRedeemTx` are helpers that build specific STAS workflows over `TransactionBuilder`. (see: src/transaction-factory.ts:22-221)
 - `FeeRate` is a constant used for transaction fee calculations in factory helpers. (see: src/transaction-factory.ts:12-13)
 - The request types `TBuildTransferTxRequest`, `TBuildSplitTxRequest`, `TBuildMergeTxRequest`, and `TBuildRedeemTxRequest` describe factory inputs. (see: src/transaction-factory.ts:14-168)
-- STAS 3.0 flows are implemented in `BuildStas3BaseTx` and wrapper helpers (`BuildStas3TransferTx`, `BuildStas3SplitTx`, `BuildStas3MergeTx`, `BuildStas3FreezeTx`, `BuildStas3UnfreezeTx`, `BuildStas3SwapTx`, `BuildStas3MultisigTx`). (see: src/stas30-factory.ts:1-167)
+- STAS 3.0 flows are implemented in `BuildStas3BaseTx` and wrapper helpers (`BuildStas3TransferTx`, `BuildStas3SplitTx`, `BuildStas3MergeTx`, `BuildStas3FreezeTx`, `BuildStas3UnfreezeTx`, `BuildStas3SwapTx`, `BuildStas3MultisigTx`). (see: src/dstas-factory.ts:1-167)
 
 Bundle factory:
 
@@ -193,7 +193,7 @@ const bundle = await factory.createBundle(1000, {
 });
 ```
 
-- STAS 3.0 bundle factory uses a recipient object (M-of-N) and custom locking/unlocking builders. (see: src/stas30-bundle-factory.ts:1-365)
+- STAS 3.0 bundle factory uses a recipient object (M-of-N) and custom locking/unlocking builders. (see: src/dstas-bundle-factory.ts:1-365)
 
 ```ts
 import { Stas30BundleFactory } from "dxs-stas-sdk";
@@ -226,7 +226,7 @@ const bundle30 = await stas30Factory.createBundle(
 - `src/script/templates/*` stores STAS 3.0 template references, including the ASM template and precompiled base token list. (see: src/script/templates/stas3-freeze-multisig.ts:1-2, src/script/templates/stas3-freeze-multisig-base.ts:1-120)
 - `src/transaction/*` implements transaction construction (`TransactionBuilder`) and parsing (`TransactionReader`). (see: src/transaction/index.ts:1-4, src/transaction/build/transaction-builder.ts:23-172)
 - `src/transaction-factory.ts` provides high-level STAS v1 transaction helper functions (transfer/split/merge/redeem). (see: src/transaction-factory.ts:12-221)
-- `src/stas30-factory.ts` provides STAS 3.0 transaction helpers and semantic wrappers for freeze/unfreeze/swap/multisig flows. (see: src/stas30-factory.ts:1-167)
+- `src/dstas-factory.ts` provides STAS 3.0 transaction helpers and semantic wrappers for freeze/unfreeze/swap/multisig flows. (see: src/dstas-factory.ts:1-167)
 - `src/stas-bundle-factory.ts` provides multi-transaction bundling orchestration. (see: src/stas-bundle-factory.ts:40-374)
 - `src/hashes.ts` and `src/base.ts` supply hashing and Base58Check utilities used by address and signature logic. (see: src/hashes.ts:5-13, src/base.ts:1-4)
 
@@ -263,9 +263,9 @@ Redeem (BuildRedeemTx):
 
 STAS 3.0 Base (BuildStas3BaseTx):
 
-1. Validate at least one STAS input and destination; enforce exact satoshi conservation across STAS inputs/outputs. (see: src/stas30-factory.ts:52-76)
-2. Add STAS inputs, fee input, and build locking scripts via `buildStas3FreezeMultisigScript`. (see: src/stas30-factory.ts:78-107)
-3. Optionally add null-data outputs, then add change output with fee, inject unlocking scripts for STAS inputs, sign, and serialize. (see: src/stas30-factory.ts:109-139)
+1. Validate at least one STAS input and destination; enforce exact satoshi conservation across STAS inputs/outputs. (see: src/dstas-factory.ts:52-76)
+2. Add STAS inputs, fee input, and build locking scripts via `buildStas3FreezeMultisigScript`. (see: src/dstas-factory.ts:78-107)
+3. Optionally add null-data outputs, then add change output with fee, inject unlocking scripts for STAS inputs, sign, and serialize. (see: src/dstas-factory.ts:109-139)
 
 Transaction signing (InputBilder.sign):
 

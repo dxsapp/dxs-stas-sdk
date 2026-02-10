@@ -2,7 +2,7 @@
 
 This document summarizes the freezability rules and how the SDK builds the STAS 3.0 "freeze + multisig" locking script template.
 
-For operation-level transaction structure invariants (mint/transfer/merge/split/redeem), see `docs/STAS30_SCRIPT_INVARIANTS.md`.
+For operation-level transaction structure invariants (mint/transfer/merge/split/redeem), see `docs/DSTAS_SCRIPT_INVARIANTS.md`.
 
 ## Fields in the Template
 

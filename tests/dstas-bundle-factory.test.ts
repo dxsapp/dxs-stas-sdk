@@ -1,8 +1,8 @@
 import {
-  Stas30BundleFactory,
-  TStas30Recipient,
-  TStas30UnlockingScriptBuilder,
-} from "../src/stas30-bundle-factory";
+  DstasBundleFactory,
+  TDstasRecipient,
+  TDstasUnlockingScriptBuilder,
+} from "../src/dstas-bundle-factory";
 import { Wallet } from "../src/bitcoin/wallet";
 import { P2pkhBuilder } from "../src/script/build/p2pkh-builder";
 import { OutPoint } from "../src/bitcoin/out-point";
@@ -18,12 +18,12 @@ const ownerPkh = fromHex("2f2ec98dfa6429a028536a6c9451f702daa3a333");
 const redemptionPkh = fromHex("b4ab0fffa02223a8a40d9e7f7823e61b38625382");
 
 type TestFactory = {
-  factory: Stas30BundleFactory;
+  factory: DstasBundleFactory;
   buildUnlockingScript: SpyFn<[UnlockingArgs], Uint8Array>;
-  recipient: TStas30Recipient;
+  recipient: TDstasRecipient;
 };
 
-type UnlockingArgs = Parameters<TStas30UnlockingScriptBuilder>[0];
+type UnlockingArgs = Parameters<TDstasUnlockingScriptBuilder>[0];
 type SpyFn<Args extends unknown[], Ret> = ((...args: Args) => Ret) & {
   calls: Args[];
 };
@@ -89,7 +89,7 @@ const makeFactory = (stasSatoshis = 1000): TestFactory => {
     (_args: UnlockingArgs) => new Uint8Array(),
   );
 
-  const factory = new Stas30BundleFactory(
+  const factory = new DstasBundleFactory(
     stasWallet,
     feeWallet,
     getFundingUtxo,
@@ -99,7 +99,7 @@ const makeFactory = (stasSatoshis = 1000): TestFactory => {
     buildUnlockingScript,
   );
 
-  const recipient: TStas30Recipient = {
+  const recipient: TDstasRecipient = {
     m: 1,
     addresses: [stasWallet.Address],
   };
@@ -107,7 +107,7 @@ const makeFactory = (stasSatoshis = 1000): TestFactory => {
   return { factory, buildUnlockingScript, recipient };
 };
 
-describe("Stas30BundleFactory spendType flags", () => {
+describe("DstasBundleFactory spendType flags", () => {
   test("freeze/unfreeze set isFreezeLike=true", async () => {
     const { factory, buildUnlockingScript, recipient } = makeFactory(1000);
 

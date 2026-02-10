@@ -17,9 +17,9 @@ import {
 } from "../src/script/build/stas3-freeze-multisig-builder";
 import { evaluateTransactionHex } from "../src/script";
 import {
-  BuildStas3IssueTxs,
-  BuildStas3TransferTx,
-} from "../src/stas30-factory";
+  BuildDstasIssueTxs,
+  BuildDstasTransferTx,
+} from "../src/dstas-factory";
 import { FeeRate } from "../src/transaction-factory";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
 import { OutputBuilder } from "../src/transaction/build/output-builder";
@@ -64,7 +64,7 @@ const buildAuthorityServiceField = (scheme: TokenScheme): Uint8Array => {
   return hash160(buildAuthorityMlpkhPreimage(authority.m, pubKeys));
 };
 
-const buildStas30LockingScript = (
+const buildDstasLockingScript = (
   owner: Address,
   scheme: TokenScheme,
   frozen: boolean,
@@ -79,7 +79,7 @@ const buildStas30LockingScript = (
     optionalData: [],
   });
 
-  return ScriptBuilder.fromTokens(tokens, ScriptType.p2stas30);
+  return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
 };
 
 const buildAuthorityUnlockingScript = ({
@@ -117,14 +117,14 @@ const buildAuthorityUnlockingScript = ({
       .addNumber(output.Satoshis)
       .addData(output.LockingScript.ToAddress.Hash160);
 
-    if (output.LockingScript.ScriptType === ScriptType.p2stas30) {
+    if (output.LockingScript.ScriptType === ScriptType.dstas) {
       const secondFieldToken = output.LockingScript._tokens[1];
       if (secondFieldToken?.Data) {
         script.addData(secondFieldToken.Data);
       } else if (secondFieldToken) {
         script.addOpCode(secondFieldToken.OpCodeNum);
       } else {
-        throw new Error("STAS30 output missing second-field token");
+        throw new Error("Divisible STAS output missing second-field token");
       }
     }
 
@@ -184,7 +184,7 @@ const prepareAuthorityUnlockingSize = ({
   authorityThreshold: number;
 }) => {
   const stasInput = txBuilder.Inputs[stasInputIndex];
-  stasInput.Stas30SpendingType = spendingType;
+  stasInput.DstasSpendingType = spendingType;
   stasInput.AuthoritySignaturesCount = authoritySigners.length;
   stasInput.AuthorityPubKeysCount = authorityPubKeys.length;
 };
@@ -205,7 +205,7 @@ const finalizeAuthorityUnlocking = ({
   authorityThreshold: number;
 }) => {
   const stasInput = txBuilder.Inputs[stasInputIndex];
-  stasInput.Stas30SpendingType = spendingType;
+  stasInput.DstasSpendingType = spendingType;
   stasInput.UnlockingScript = buildAuthorityUnlockingScript({
     txBuilder,
     stasInputIndex,
@@ -216,7 +216,7 @@ const finalizeAuthorityUnlocking = ({
   });
 };
 
-describe("stas30 multisig authority flow", () => {
+describe("dstas multisig authority flow", () => {
   test("dummy funding: issue -> transfer -> freeze(3/5) -> unfreeze(3/5) -> transfer", () => {
     const bob = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
     const cat1 =
@@ -250,7 +250,7 @@ describe("stas30 multisig authority flow", () => {
     ];
 
     const scheme = new TokenScheme(
-      "STAS30-MSIG-AUTH",
+      "Divisible STAS-MSIG-AUTH",
       toHex(bob.Address.Hash160),
       "S30M",
       1,
@@ -265,7 +265,7 @@ describe("stas30 multisig authority flow", () => {
       },
     );
 
-    const { contractTxHex, issueTxHex } = BuildStas3IssueTxs({
+    const { contractTxHex, issueTxHex } = BuildDstasIssueTxs({
       fundingPayment: {
         OutPoint: fundingOutPoint,
         Owner: bob,
@@ -323,7 +323,7 @@ describe("stas30 multisig authority flow", () => {
       issueTx.Outputs[0].LockignScript,
       issueTx.Outputs[0].Satoshis,
       alice.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     const issueFeeOutPoint = new OutPoint(
       issueTx.Id,
@@ -334,7 +334,7 @@ describe("stas30 multisig authority flow", () => {
       ScriptType.p2pkh,
     );
 
-    const transfer1TxHex = BuildStas3TransferTx({
+    const transfer1TxHex = BuildDstasTransferTx({
       stasPayment: {
         OutPoint: issueStasOutPoint,
         Owner: alice,
@@ -364,7 +364,7 @@ describe("stas30 multisig authority flow", () => {
       transfer1Tx.Outputs[0].LockignScript,
       transfer1Tx.Outputs[0].Satoshis,
       bob.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     const transfer1FeeOutPoint = new OutPoint(
       transfer1Tx.Id,
@@ -380,7 +380,7 @@ describe("stas30 multisig authority flow", () => {
       .addInput(transfer1FeeOutPoint, bob);
     freezeBuilder.Outputs.push(
       new OutputBuilder(
-        buildStas30LockingScript(bob.Address, scheme, true),
+        buildDstasLockingScript(bob.Address, scheme, true),
         transfer1StasOutPoint.Satoshis,
       ),
     );
@@ -425,7 +425,7 @@ describe("stas30 multisig authority flow", () => {
       freezeTx.Outputs[0].LockignScript,
       freezeTx.Outputs[0].Satoshis,
       bob.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     const frozenFeeOutPoint = new OutPoint(
       freezeTx.Id,
@@ -441,7 +441,7 @@ describe("stas30 multisig authority flow", () => {
       .addInput(frozenFeeOutPoint, bob);
     unfreezeBuilder.Outputs.push(
       new OutputBuilder(
-        buildStas30LockingScript(bob.Address, scheme, false),
+        buildDstasLockingScript(bob.Address, scheme, false),
         frozenStasOutPoint.Satoshis,
       ),
     );
@@ -484,7 +484,7 @@ describe("stas30 multisig authority flow", () => {
       unfreezeTx.Outputs[0].LockignScript,
       unfreezeTx.Outputs[0].Satoshis,
       bob.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     const transfer2FeeOutPoint = new OutPoint(
       unfreezeTx.Id,
@@ -495,7 +495,7 @@ describe("stas30 multisig authority flow", () => {
       ScriptType.p2pkh,
     );
 
-    const transfer2TxHex = BuildStas3TransferTx({
+    const transfer2TxHex = BuildDstasTransferTx({
       stasPayment: {
         OutPoint: unfrozenStasOutPoint,
         Owner: bob,

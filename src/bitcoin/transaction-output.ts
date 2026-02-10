@@ -46,11 +46,11 @@ export class TransactionOutput {
       return;
     }
 
-    if (reader.ScriptType === ScriptType.p2stas30 && reader.Stas30) {
-      this.TokenId = toHex(reader.Stas30.Redemption);
-      this.data.push(reader.Stas30.Flags);
-      this.data.push(...reader.Stas30.ServiceFields);
-      this.data.push(...reader.Stas30.OptionalData);
+    if (reader.ScriptType === ScriptType.dstas && reader.Dstas) {
+      this.TokenId = toHex(reader.Dstas.Redemption);
+      this.data.push(reader.Dstas.Flags);
+      this.data.push(...reader.Dstas.ServiceFields);
+      this.data.push(...reader.Dstas.OptionalData);
     }
   }
 }

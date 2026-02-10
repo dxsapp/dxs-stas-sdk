@@ -20,28 +20,28 @@ import { ScriptReader } from "./script/read/script-reader";
 
 export const AvgFeeForStas30Merge = 500;
 
-export type TStas30FundingUtxoRequest = {
+export type TDstasFundingUtxoRequest = {
   utxoIdsToSpend: string[];
   estimatedFeeSatoshis: number;
   transactionsCount: number;
 };
 
-export type TStas30GetUtxoFunction = (satoshis?: number) => Promise<OutPoint[]>;
-export type TStas30GetFundingUtxoFunction = (
-  request: TStas30FundingUtxoRequest,
+export type TDstasGetUtxoFunction = (satoshis?: number) => Promise<OutPoint[]>;
+export type TDstasGetFundingUtxoFunction = (
+  request: TDstasFundingUtxoRequest,
 ) => Promise<OutPoint>;
-export type TStas30GetTransactionsFunction = (
+export type TDstasGetTransactionsFunction = (
   ids: string[],
 ) => Promise<Record<string, Transaction>>;
 
-export type TStas30PayoutBundle = {
+export type TDstasPayoutBundle = {
   transactions?: string[];
   feeSatoshis: number;
   message?: string;
   devMessage?: string;
 };
 
-export type Stas30SpendType =
+export type DstasSpendType =
   | "transfer"
   | "split"
   | "merge"
@@ -49,35 +49,35 @@ export type Stas30SpendType =
   | "unfreeze"
   | "swap";
 
-export type TStas30Recipient = {
+export type TDstasRecipient = {
   m: number;
   addresses: Address[];
 };
 
-export type TStas30LockingParamsBuilder = (args: {
+export type TDstasLockingParamsBuilder = (args: {
   fromOutPoint: OutPoint;
-  recipient: TStas30Recipient;
-  spendType: Stas30SpendType;
+  recipient: TDstasRecipient;
+  spendType: DstasSpendType;
   isFreezeLike: boolean;
   outputIndex: number;
   outputCount: number;
   isChange: boolean;
 }) => Stas3FreezeMultisigParams;
 
-export type TStas30UnlockingScriptBuilder = (args: {
+export type TDstasUnlockingScriptBuilder = (args: {
   txBuilder: TransactionBuilder;
   inputIndex: number;
   outPoint: OutPoint;
-  spendType: Stas30SpendType;
+  spendType: DstasSpendType;
   isFreezeLike: boolean;
   isMerge: boolean;
 }) => Bytes;
 
-export type TStas30Payment = TPayment & {
+export type TDstasPayment = TPayment & {
   UnlockingScript?: Bytes;
 };
 
-export type TStas30Destination = {
+export type TDstasDestination = {
   Satoshis: number;
   LockingParams: Stas3FreezeMultisigParams;
 };
@@ -85,47 +85,47 @@ export type TStas30Destination = {
 const DummyTxId =
   "0000000000000000000000000000000000000000000000000000000000000000";
 
-export class Stas30BundleFactory {
+export class DstasBundleFactory {
   constructor(
     private readonly stasWallet: Wallet,
     private readonly feeWallet: Wallet,
-    private readonly getFundingUtxo: TStas30GetFundingUtxoFunction,
-    private readonly getStasUtxoSet: TStas30GetUtxoFunction,
-    private readonly getTransactions: TStas30GetTransactionsFunction,
-    private readonly buildLockingParams: TStas30LockingParamsBuilder,
-    private readonly buildUnlockingScript: TStas30UnlockingScriptBuilder,
+    private readonly getFundingUtxo: TDstasGetFundingUtxoFunction,
+    private readonly getStasUtxoSet: TDstasGetUtxoFunction,
+    private readonly getTransactions: TDstasGetTransactionsFunction,
+    private readonly buildLockingParams: TDstasLockingParamsBuilder,
+    private readonly buildUnlockingScript: TDstasUnlockingScriptBuilder,
   ) {}
 
   public createTransferBundle = async (
     amountSatoshis: number,
-    recipient: TStas30Recipient,
+    recipient: TDstasRecipient,
     note?: Bytes[],
   ) => this.createBundle(amountSatoshis, recipient, "transfer", note);
 
   public createFreezeBundle = async (
     amountSatoshis: number,
-    recipient: TStas30Recipient,
+    recipient: TDstasRecipient,
     note?: Bytes[],
   ) => this.createBundle(amountSatoshis, recipient, "freeze", note);
 
   public createUnfreezeBundle = async (
     amountSatoshis: number,
-    recipient: TStas30Recipient,
+    recipient: TDstasRecipient,
     note?: Bytes[],
   ) => this.createBundle(amountSatoshis, recipient, "unfreeze", note);
 
   public createSwapBundle = async (
     amountSatoshis: number,
-    recipient: TStas30Recipient,
+    recipient: TDstasRecipient,
     note?: Bytes[],
   ) => this.createBundle(amountSatoshis, recipient, "swap", note);
 
   public createBundle = async (
     amountSatoshis: number,
-    recipient: TStas30Recipient,
-    spendType: Stas30SpendType,
+    recipient: TDstasRecipient,
+    spendType: DstasSpendType,
     note?: Bytes[],
-  ): Promise<TStas30PayoutBundle> => {
+  ): Promise<TDstasPayoutBundle> => {
     const stasUtxoSet = (await this.getStasUtxoSet(amountSatoshis)).sort(
       (a, b) => a.Satoshis - b.Satoshis,
     );
@@ -177,8 +177,8 @@ export class Stas30BundleFactory {
     stasUtxos: OutPoint[],
     satoshisToSend: number,
     feeUtxo: OutPoint,
-    recipient: TStas30Recipient,
-    spendType: Stas30SpendType,
+    recipient: TDstasRecipient,
+    spendType: DstasSpendType,
     note?: Bytes[],
   ) => {
     const { mergeTransactions, mergeFeeUtxo, stasUtxo } =
@@ -282,7 +282,7 @@ export class Stas30BundleFactory {
         levelsBeforeTransfer = 0;
 
         for (const outPoint of currentLevel) {
-          const stasPayment: TStas30Payment = {
+          const stasPayment: TDstasPayment = {
             OutPoint: outPoint,
             Owner: this.stasWallet,
           };
@@ -401,8 +401,8 @@ export class Stas30BundleFactory {
   private buildTransferTransaction = (
     stasUtxo: OutPoint,
     feeUtxo: OutPoint,
-    recipient: TStas30Recipient,
-    spendType: Stas30SpendType,
+    recipient: TDstasRecipient,
+    spendType: DstasSpendType,
     note?: Bytes[],
   ): string => {
     const destinations = this.buildDestinations(
@@ -424,9 +424,9 @@ export class Stas30BundleFactory {
   private buildSplitTransaction = (
     stasUtxo: OutPoint,
     satoshis: number,
-    recipient: TStas30Recipient,
+    recipient: TDstasRecipient,
     feeUtxo: OutPoint,
-    spendType: Stas30SpendType,
+    spendType: DstasSpendType,
     note?: Bytes[],
   ): string => {
     const destinations = this.buildDestinations(
@@ -456,12 +456,12 @@ export class Stas30BundleFactory {
   };
 
   private buildStas30Tx = (params: {
-    stasPayments: TStas30Payment[];
+    stasPayments: TDstasPayment[];
     feePayment: TPayment;
-    destinations: TStas30Destination[];
+    destinations: TDstasDestination[];
     note?: Bytes[];
     feeRate?: number;
-    spendType: Stas30SpendType;
+    spendType: DstasSpendType;
     isMerge: boolean;
   }) => {
     const {
@@ -492,7 +492,7 @@ export class Stas30BundleFactory {
     txBuilder.addInput(feePayment.OutPoint, feePayment.Owner);
 
     for (const dest of destinations) {
-      const lockingScript = this.buildStas30LockingScriptBuilder(
+      const lockingScript = this.buildDstasLockingScriptBuilder(
         dest.LockingParams,
       );
       txBuilder.Outputs.push(new OutputBuilder(lockingScript, dest.Satoshis));
@@ -527,12 +527,12 @@ export class Stas30BundleFactory {
   private buildDestinations = (
     sourceOutPoint: OutPoint,
     outputs: {
-      recipient: TStas30Recipient;
+      recipient: TDstasRecipient;
       satoshis: number;
       isChange: boolean;
     }[],
-    spendType: Stas30SpendType,
-  ): TStas30Destination[] => {
+    spendType: DstasSpendType,
+  ): TDstasDestination[] => {
     const outputCount = outputs.length;
 
     return outputs.map((output, index) => ({
@@ -550,8 +550,8 @@ export class Stas30BundleFactory {
   };
 
   private validateStasAmounts = (
-    stasPayments: TStas30Payment[],
-    destinations: TStas30Destination[],
+    stasPayments: TDstasPayment[],
+    destinations: TDstasDestination[],
   ) => {
     const inputTotal = stasPayments.reduce(
       (sum, p) => sum + p.OutPoint.Satoshis,
@@ -563,12 +563,12 @@ export class Stas30BundleFactory {
       throw new Error("Input satoshis must be equal output satoshis");
   };
 
-  private buildStas30LockingScriptBuilder = (
+  private buildDstasLockingScriptBuilder = (
     params: Stas3FreezeMultisigParams,
   ) => {
     const scriptBytes = buildStas3FreezeMultisigScript(params);
     const tokens = ScriptReader.read(scriptBytes);
-    return ScriptBuilder.fromTokens(tokens, ScriptType.p2stas30);
+    return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
   };
 
   private outPointFromTransaction = (

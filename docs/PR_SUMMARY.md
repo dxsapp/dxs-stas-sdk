@@ -1,6 +1,6 @@
 # Summary
 
-- Added STAS30 flow coverage for `mint -> transfer -> freeze/unfreeze -> redeem`.
+- Added Divisible STAS flow coverage for `mint -> transfer -> freeze/unfreeze -> redeem`.
 - Added swap flow coverage for:
   - swap cancel
   - swap+transfer
@@ -8,7 +8,7 @@
   - fractional rates
   - one/two remainders
   - frozen-input rejection
-- Added owner multisig support for STAS30 locking path and tests for `3-of-5` owner spending.
+- Added owner multisig support for Divisible STAS locking path and tests for `3-of-5` owner spending.
 - Added second-field codec support and requested-script-hash integration from updated protocol notes.
 - Switched redemption path to updated P2MPKH-compatible handling and aligned issuer UTXO assumptions.
 - Refined unlocking layout handling for with-change/no-change and multi-input merge payload in evaluation path.
@@ -17,16 +17,16 @@
 
 # Key Files
 
-- `src/stas30-factory.ts`
-- `src/stas30-bundle-factory.ts`
+- `src/dstas-factory.ts`
+- `src/dstas-bundle-factory.ts`
 - `src/transaction/build/input-builder.ts`
 - `src/script/read/locking-script-reader.ts`
 - `src/script/read/stas3-locking-script-decomposer.ts`
 - `src/script/read/stas3-unlocking-script-decomposer.ts`
 - `src/script/stas3-second-field.ts`
-- `tests/stas30-flow.test.ts`
+- `tests/dstas-flow.test.ts`
 - `tests/stas30-multisig-authority-flow.test.ts`
-- `tests/stas30-bundle-factory.test.ts`
+- `tests/dstas-bundle-factory.test.ts`
 - `tests/locking-script-reader.test.ts`
 
 # Validation

@@ -104,7 +104,7 @@ export class LockingScriptReader extends BaseScriptReader {
 
   Address?: Address;
   Data?: Bytes[];
-  Stas30?: {
+  Dstas?: {
     Owner: Bytes;
     SecondFieldData?: Bytes;
     SecondFieldOpCode?: number;
@@ -141,7 +141,7 @@ export class LockingScriptReader extends BaseScriptReader {
         sample.ctx.OpReturnReached || sample.tokens.length === count;
     }
 
-    this.finalizeStas30();
+    this.finalizeDstas();
   }
 
   protected handleToken(token: ScriptReadToken, tokenIdx: number): boolean {
@@ -265,7 +265,7 @@ export class LockingScriptReader extends BaseScriptReader {
     }
   }
 
-  private finalizeStas30(): void {
+  private finalizeDstas(): void {
     if (!this.stas30Ctx.Result) return;
     if (this.stas30Ctx.Stage === "owner") return;
     if (this.stas30Ctx.Stage === "second") return;
@@ -280,11 +280,11 @@ export class LockingScriptReader extends BaseScriptReader {
       return;
     if (this.stas30Ctx.FreezeEnabled && !this.stas30Ctx.HasAuthority) return;
 
-    this.ScriptTypeOverride = ScriptType.p2stas30;
+    this.ScriptTypeOverride = ScriptType.dstas;
     if (this.stas30Ctx.Owner.length === 20) {
       this.Address = new Address(this.stas30Ctx.Owner);
     }
-    this.Stas30 = {
+    this.Dstas = {
       Owner: this.stas30Ctx.Owner,
       SecondFieldData: this.stas30Ctx.SecondFieldData,
       SecondFieldOpCode: this.stas30Ctx.SecondFieldOpCode,

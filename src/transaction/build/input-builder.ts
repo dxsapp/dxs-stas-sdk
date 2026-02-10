@@ -29,7 +29,7 @@ export class InputBilder {
   UnlockingScript?: Bytes;
   AuthoritySignaturesCount?: number;
   AuthorityPubKeysCount?: number;
-  Stas30SpendingType = 1;
+  DstasSpendingType = 1;
   Sequence = TransactionBuilder.DefaultSequence;
 
   private _mergeVout: number = 0;
@@ -71,7 +71,7 @@ export class InputBilder {
       this.UnlockingScript = buffer;
     } else if (
       scriptType === ScriptType.p2stas ||
-      scriptType === ScriptType.p2stas30
+      scriptType === ScriptType.dstas
     ) {
       this.prepareMergeInfo();
 
@@ -93,7 +93,7 @@ export class InputBilder {
             .addNumber(output.Satoshis)
             .addData(this.resolveOutputOwnerField(output.LockingScript));
 
-          if (output.LockingScript.ScriptType === ScriptType.p2stas30) {
+          if (output.LockingScript.ScriptType === ScriptType.dstas) {
             const secondFieldToken = output.LockingScript._tokens[1];
 
             if (secondFieldToken?.Data) {
@@ -102,7 +102,7 @@ export class InputBilder {
               script.addOpCode(secondFieldToken.OpCodeNum);
             } else {
               throw new Error(
-                "STAS30 output is missing second-field token in locking script",
+                "Divisible STAS output is missing second-field token in locking script",
               );
             }
           }
@@ -142,8 +142,8 @@ export class InputBilder {
 
       script.addData(preimage);
 
-      if (scriptType === ScriptType.p2stas30) {
-        script.addNumber(this.Stas30SpendingType);
+      if (scriptType === ScriptType.dstas) {
+        script.addNumber(this.DstasSpendingType);
       }
 
       script.addData(derWithSigHashType).addData(this.Owner.PublicKey);
@@ -249,7 +249,7 @@ export class InputBilder {
 
     if (
       this.OutPoint.ScriptType === ScriptType.p2stas ||
-      this.OutPoint.ScriptType === ScriptType.p2stas30
+      this.OutPoint.ScriptType === ScriptType.dstas
     ) {
       this.prepareMergeInfo();
 
@@ -266,7 +266,7 @@ export class InputBilder {
         const ownerField = this.resolveOutputOwnerField(x.LockingScript);
         a += getNumberSize(x.Satoshis) + estimateChunkSize(ownerField.length);
 
-        if (x.LockingScript.ScriptType === ScriptType.p2stas30) {
+        if (x.LockingScript.ScriptType === ScriptType.dstas) {
           a += estimateChunkSize(x.LockingScript._tokens[1].DataLength);
         }
 
@@ -296,11 +296,11 @@ export class InputBilder {
         size += this._mergeSegments.reduce((a, x) => getChunkSize(x) + a, 0);
       }
 
-      if (this.OutPoint.ScriptType === ScriptType.p2stas30) {
-        size += getNumberSize(this.Stas30SpendingType);
+      if (this.OutPoint.ScriptType === ScriptType.dstas) {
+        size += getNumberSize(this.DstasSpendingType);
       }
 
-      if (this.OutPoint.ScriptType === ScriptType.p2stas30) {
+      if (this.OutPoint.ScriptType === ScriptType.dstas) {
         size += authorityTailSize();
       } else {
         size += singleSigTailSize;
@@ -428,7 +428,7 @@ export class InputBilder {
     }
 
     this._mergeVout = mergeUtxo.OutPoint.Vout;
-    if (this.OutPoint.ScriptType === ScriptType.p2stas30) {
+    if (this.OutPoint.ScriptType === ScriptType.dstas) {
       this._mergeSegments = [mergeRaw];
       return;
     }

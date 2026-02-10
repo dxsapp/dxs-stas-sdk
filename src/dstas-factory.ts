@@ -14,16 +14,16 @@ import { TransactionReader } from "./transaction/read/transaction-reader";
 import { FeeRate } from "./transaction-factory";
 import { hash160 } from "./hashes";
 
-export type TStas3Payment = TPayment & {
+export type TDstasPayment = TPayment & {
   UnlockingScript?: Bytes;
 };
 
-export type TStas3DestinationByLockingParams = {
+export type TDstasDestinationByLockingParams = {
   Satoshis: number;
   LockingParams: Stas3FreezeMultisigParams;
 };
 
-export type TStas3DestinationByScheme = {
+export type TDstasDestinationByScheme = {
   Satoshis: number;
   To?: Address;
   ToOwner?: Bytes;
@@ -36,14 +36,14 @@ export type TStas3DestinationByScheme = {
   OptionalData?: Bytes[];
 };
 
-export type TStas3Destination =
-  | TStas3DestinationByLockingParams
-  | TStas3DestinationByScheme;
+export type TDstasDestination =
+  | TDstasDestinationByLockingParams
+  | TDstasDestinationByScheme;
 
-export type TBuildStas3BaseTxRequest = {
-  stasPayments: TStas3Payment[];
+export type TBuildDstasBaseTxRequest = {
+  stasPayments: TDstasPayment[];
   feePayment: TPayment;
-  destinations: TStas3Destination[];
+  destinations: TDstasDestination[];
   Scheme?: TokenScheme;
   spendingType?: number;
   note?: Bytes[];
@@ -51,24 +51,24 @@ export type TBuildStas3BaseTxRequest = {
   omitChangeOutput?: boolean;
 };
 
-export type TBuildStas3IssueTxsRequest = {
+export type TBuildDstasIssueTxsRequest = {
   fundingPayment: TPayment;
   scheme: TokenScheme;
-  destinations: TStas3DestinationByScheme[];
+  destinations: TDstasDestinationByScheme[];
   feeRate?: number;
 };
 
-export type TBuildStas3IssueTxsResult = {
+export type TBuildDstasIssueTxsResult = {
   contractTxHex: string;
   issueTxHex: string;
 };
 
-const resolveUnlockingScript = (payment: TStas3Payment): Bytes | undefined =>
+const resolveUnlockingScript = (payment: TDstasPayment): Bytes | undefined =>
   payment.UnlockingScript;
 
 const buildStas3LockingScriptBuilder = (params: Stas3FreezeMultisigParams) => {
   const tokens = buildStas3FreezeMultisigTokens(params);
-  return ScriptBuilder.fromTokens(tokens, ScriptType.p2stas30);
+  return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
 };
 
 const deriveFlagsFromScheme = (scheme: TokenScheme): Bytes =>
@@ -119,7 +119,7 @@ const deriveServiceFieldsFromScheme = (scheme: TokenScheme): Bytes[] => {
 };
 
 const resolveLockingParams = (
-  dest: TStas3Destination,
+  dest: TDstasDestination,
   schemeFromRequest?: TokenScheme,
 ): Stas3FreezeMultisigParams => {
   if ("LockingParams" in dest) return dest.LockingParams;
@@ -180,8 +180,8 @@ const resolveLockingParams = (
 };
 
 const validateStas3Amounts = (
-  stasPayments: TStas3Payment[],
-  destinations: TStas3Destination[],
+  stasPayments: TDstasPayment[],
+  destinations: TDstasDestination[],
 ) => {
   const inputTotal = stasPayments.reduce(
     (sum, p) => sum + p.OutPoint.Satoshis,
@@ -205,7 +205,7 @@ const validateFundingAgainstScheme = (
   }
 };
 
-export const BuildStas3BaseTx = ({
+export const BuildDstasBaseTx = ({
   stasPayments,
   feePayment,
   destinations,
@@ -214,7 +214,7 @@ export const BuildStas3BaseTx = ({
   note,
   feeRate = FeeRate,
   omitChangeOutput = false,
-}: TBuildStas3BaseTxRequest) => {
+}: TBuildDstasBaseTxRequest) => {
   if (stasPayments.length === 0)
     throw new Error("At least one STAS input is required");
   if (destinations.length === 0)
@@ -258,7 +258,7 @@ export const BuildStas3BaseTx = ({
 
   stasInputIdxs.forEach((idx, i) => {
     const payment = stasPayments[i];
-    txBuilder.Inputs[idx].Stas30SpendingType = spendingType ?? 1;
+    txBuilder.Inputs[idx].DstasSpendingType = spendingType ?? 1;
     const unlocking = resolveUnlockingScript(payment);
     if (unlocking) txBuilder.Inputs[idx].UnlockingScript = unlocking;
   });
@@ -266,12 +266,12 @@ export const BuildStas3BaseTx = ({
   return txBuilder.sign().toHex();
 };
 
-export const BuildStas3IssueTxs = ({
+export const BuildDstasIssueTxs = ({
   fundingPayment,
   scheme,
   destinations,
   feeRate = FeeRate,
-}: TBuildStas3IssueTxsRequest): TBuildStas3IssueTxsResult => {
+}: TBuildDstasIssueTxsRequest): TBuildDstasIssueTxsResult => {
   if (destinations.length === 0)
     throw new Error("At least one destination is required");
 
@@ -352,31 +352,31 @@ export const BuildStas3IssueTxs = ({
 };
 
 // Explicit semantic wrappers for readability
-export type TBuildStas3FreezeTxRequest = TBuildStas3BaseTxRequest;
+export type TBuildDstasFreezeTxRequest = TBuildDstasBaseTxRequest;
 /**
  * Freeze: provide STAS3 unlocking scripts that encode spending-type=2
  * and authority/signature fields as required by the template.
  */
-export const BuildStas3FreezeTx = (request: TBuildStas3FreezeTxRequest) =>
-  BuildStas3BaseTx({ ...request, spendingType: 2 });
+export const BuildDstasFreezeTx = (request: TBuildDstasFreezeTxRequest) =>
+  BuildDstasBaseTx({ ...request, spendingType: 2 });
 
-export type TBuildStas3UnfreezeTxRequest = TBuildStas3BaseTxRequest;
+export type TBuildDstasUnfreezeTxRequest = TBuildDstasBaseTxRequest;
 /**
  * Unfreeze: provide STAS3 unlocking scripts that encode spending-type=2
  * and authority/signature fields as required by the template.
  */
-export const BuildStas3UnfreezeTx = (request: TBuildStas3UnfreezeTxRequest) =>
-  BuildStas3BaseTx({ ...request, spendingType: 2 });
+export const BuildDstasUnfreezeTx = (request: TBuildDstasUnfreezeTxRequest) =>
+  BuildDstasBaseTx({ ...request, spendingType: 2 });
 
-export type TBuildStas3SwapTxRequest = TBuildStas3BaseTxRequest;
+export type TBuildDstasSwapTxRequest = TBuildDstasBaseTxRequest;
 /**
  * Swap/cancel: provide STAS3 unlocking scripts that encode spending-type=4
  * (or the issuer-defined swap variant).
  */
-export const BuildStas3SwapTx = (request: TBuildStas3SwapTxRequest) =>
-  BuildStas3BaseTx({ ...request, spendingType: 4 });
+export const BuildDstasSwapTx = (request: TBuildDstasSwapTxRequest) =>
+  BuildDstasBaseTx({ ...request, spendingType: 4 });
 
-export type TStas3SwapDestination = {
+export type TDstasSwapDestination = {
   Satoshis: number;
   Owner: Bytes;
   TokenIdHex: string;
@@ -386,18 +386,18 @@ export type TStas3SwapDestination = {
   OptionalData?: Bytes[];
 };
 
-export type TBuildStas3SwapFlowTxRequest = {
-  stasPayments: [TStas3Payment, TStas3Payment];
+export type TBuildDstasSwapFlowTxRequest = {
+  stasPayments: [TDstasPayment, TDstasPayment];
   feePayment: TPayment;
-  destinations: TStas3SwapDestination[];
+  destinations: TDstasSwapDestination[];
   note?: Bytes[];
   feeRate?: number;
   omitChangeOutput?: boolean;
 };
 
 const toSwapFlowDestination = (
-  value: TStas3SwapDestination,
-): TStas3DestinationByLockingParams => ({
+  value: TDstasSwapDestination,
+): TDstasDestinationByLockingParams => ({
   Satoshis: value.Satoshis,
   LockingParams: {
     owner: value.Owner,
@@ -413,15 +413,15 @@ const toSwapFlowDestination = (
  * Build swap flow where one side performs a transfer path (spending-type=1)
  * and the other side is consumed via swap request matching.
  */
-export const BuildStas3TransferSwapTx = ({
+export const BuildDstasTransferSwapTx = ({
   stasPayments,
   feePayment,
   destinations,
   note,
   feeRate,
   omitChangeOutput,
-}: TBuildStas3SwapFlowTxRequest) =>
-  BuildStas3BaseTx({
+}: TBuildDstasSwapFlowTxRequest) =>
+  BuildDstasBaseTx({
     stasPayments,
     feePayment,
     destinations: destinations.map(toSwapFlowDestination),
@@ -434,15 +434,15 @@ export const BuildStas3TransferSwapTx = ({
 /**
  * Build swap flow where both sides are interpreted as swap path (spending-type=4).
  */
-export const BuildStas3SwapSwapTx = ({
+export const BuildDstasSwapSwapTx = ({
   stasPayments,
   feePayment,
   destinations,
   note,
   feeRate,
   omitChangeOutput,
-}: TBuildStas3SwapFlowTxRequest) =>
-  BuildStas3BaseTx({
+}: TBuildDstasSwapFlowTxRequest) =>
+  BuildDstasBaseTx({
     stasPayments,
     feePayment,
     destinations: destinations.map(toSwapFlowDestination),
@@ -452,25 +452,25 @@ export const BuildStas3SwapSwapTx = ({
     spendingType: 4,
   });
 
-export type TBuildStas3MultisigTxRequest = TBuildStas3BaseTxRequest;
+export type TBuildDstasMultisigTxRequest = TBuildDstasBaseTxRequest;
 /**
  * Multisig: provide STAS3 unlocking scripts that include the required
  * M-of-N signatures and any protocol-specific fields.
  */
-export const BuildStas3MultisigTx = (request: TBuildStas3MultisigTxRequest) =>
-  BuildStas3BaseTx(request);
+export const BuildDstasMultisigTx = (request: TBuildDstasMultisigTxRequest) =>
+  BuildDstasBaseTx(request);
 
-export type TBuildStas3TransferTxRequest = {
-  stasPayment: TStas3Payment;
+export type TBuildDstasTransferTxRequest = {
+  stasPayment: TDstasPayment;
   feePayment: TPayment;
-  destination: TStas3Destination;
+  destination: TDstasDestination;
   Scheme?: TokenScheme;
   note?: Bytes[];
   feeRate?: number;
   omitChangeOutput?: boolean;
 };
 
-export const BuildStas3TransferTx = ({
+export const BuildDstasTransferTx = ({
   stasPayment,
   feePayment,
   destination,
@@ -478,8 +478,8 @@ export const BuildStas3TransferTx = ({
   note,
   feeRate,
   omitChangeOutput,
-}: TBuildStas3TransferTxRequest) =>
-  BuildStas3BaseTx({
+}: TBuildDstasTransferTxRequest) =>
+  BuildDstasBaseTx({
     stasPayments: [stasPayment],
     feePayment,
     destinations: [destination],
@@ -489,24 +489,24 @@ export const BuildStas3TransferTx = ({
     omitChangeOutput,
   });
 
-export type TBuildStas3SplitTxRequest = {
-  stasPayment: TStas3Payment;
+export type TBuildDstasSplitTxRequest = {
+  stasPayment: TDstasPayment;
   feePayment: TPayment;
-  destinations: TStas3Destination[];
+  destinations: TDstasDestination[];
   Scheme?: TokenScheme;
   note?: Bytes[];
   feeRate?: number;
 };
 
-export const BuildStas3SplitTx = ({
+export const BuildDstasSplitTx = ({
   stasPayment,
   feePayment,
   destinations,
   Scheme,
   note,
   feeRate,
-}: TBuildStas3SplitTxRequest) =>
-  BuildStas3BaseTx({
+}: TBuildDstasSplitTxRequest) =>
+  BuildDstasBaseTx({
     stasPayments: [stasPayment],
     feePayment,
     destinations,
@@ -515,24 +515,24 @@ export const BuildStas3SplitTx = ({
     feeRate,
   });
 
-export type TBuildStas3MergeTxRequest = {
-  stasPayments: TStas3Payment[];
+export type TBuildDstasMergeTxRequest = {
+  stasPayments: TDstasPayment[];
   feePayment: TPayment;
-  destinations: TStas3Destination[];
+  destinations: TDstasDestination[];
   Scheme?: TokenScheme;
   note?: Bytes[];
   feeRate?: number;
 };
 
-export const BuildStas3MergeTx = ({
+export const BuildDstasMergeTx = ({
   stasPayments,
   feePayment,
   destinations,
   Scheme,
   note,
   feeRate,
-}: TBuildStas3MergeTxRequest) =>
-  BuildStas3BaseTx({
+}: TBuildDstasMergeTxRequest) =>
+  BuildDstasBaseTx({
     stasPayments,
     feePayment,
     destinations,

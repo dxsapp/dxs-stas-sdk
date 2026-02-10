@@ -5,11 +5,11 @@ import { TransactionReader } from "../../src/transaction/read/transaction-reader
 import {
   buildTransferFromFixture,
   createRealFundingFlowFixture,
-} from "../helpers/stas30-flow-helpers";
+} from "../helpers/dstas-flow-helpers";
 
 const toHex = (b?: Uint8Array) => (b ? Buffer.from(b).toString("hex") : "");
 
-describe("stas30 with-change probe", () => {
+describe("dstas with-change probe", () => {
   test("probe unlocking variants", () => {
     const f = createRealFundingFlowFixture();
     const txHex = buildTransferFromFixture(f, false);

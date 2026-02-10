@@ -1,4 +1,4 @@
-# STAS30 Script Invariants
+# Divisible STAS Script Invariants
 
 This document captures the baseline protocol invariants used by SDK builders and tests.
 

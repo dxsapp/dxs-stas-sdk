@@ -24,24 +24,24 @@ import { fromHex, toHex } from "../src/bytes";
 import { OutPoint, ScriptType } from "../src/bitcoin";
 import { TokenScheme } from "../src/bitcoin/token-scheme";
 import {
-  BuildStas3BaseTx,
-  BuildStas3IssueTxs,
-  BuildStas3SwapSwapTx,
-  BuildStas3SwapTx,
-  BuildStas3TransferSwapTx,
-  BuildStas3TransferTx,
-  BuildStas3UnfreezeTx,
-} from "../src/stas30-factory";
+  BuildDstasBaseTx,
+  BuildDstasIssueTxs,
+  BuildDstasSwapSwapTx,
+  BuildDstasSwapTx,
+  BuildDstasTransferSwapTx,
+  BuildDstasTransferTx,
+  BuildDstasUnfreezeTx,
+} from "../src/dstas-factory";
 import { FeeRate } from "../src/transaction-factory";
 import {
   buildFreezeFromFixture,
   buildTransferFromFixture,
-  createDefaultStas30Scheme,
+  createDefaultDstasScheme,
   createRealFundingOutPoint,
   createRealFundingFlowFixture,
-} from "./helpers/stas30-flow-helpers";
+} from "./helpers/dstas-flow-helpers";
 import { assertFeeInRange } from "./helpers/fee-assertions";
-import { dumpTransferDebug } from "./debug/stas30-transfer-debug";
+import { dumpTransferDebug } from "./debug/dstas-transfer-debug";
 import { hash160, hash256, sha256 } from "../src/hashes";
 import { reverseBytes } from "../src/buffer/buffer-utils";
 
@@ -69,7 +69,7 @@ const buildMlpkhPreimage = (m: number, pubKeys: Uint8Array[]): Uint8Array => {
   return result;
 };
 
-const buildStas30LockingScriptForOwnerField = ({
+const buildDstasLockingScriptForOwnerField = ({
   ownerField,
   tokenIdHex,
   freezable,
@@ -91,7 +91,7 @@ const buildStas30LockingScriptForOwnerField = ({
     serviceFields: freezable ? [authorityServiceField] : [],
     optionalData: [],
   });
-  return ScriptBuilder.fromTokens(tokens, ScriptType.p2stas30);
+  return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
 };
 
 const computeStas30RequestedScriptHash = (
@@ -99,7 +99,7 @@ const computeStas30RequestedScriptHash = (
 ): Uint8Array => {
   const tokens = lockingScript._tokens;
   if (tokens.length < 3) {
-    throw new Error("STAS30 locking script must include owner + second field");
+    throw new Error("Divisible STAS locking script must include owner + second field");
   }
   const tail = ScriptBuilder.fromTokens(tokens.slice(2), ScriptType.unknown);
   return sha256(tail.toBytes());
@@ -162,11 +162,11 @@ const buildOwnerMultisigUnlockingScript = ({
 
     script.addNumber(output.Satoshis).addData(ownerField);
 
-    if (output.LockingScript.ScriptType === ScriptType.p2stas30) {
+    if (output.LockingScript.ScriptType === ScriptType.dstas) {
       const secondFieldToken = output.LockingScript._tokens[1];
       if (secondFieldToken?.Data) script.addData(secondFieldToken.Data);
       else if (secondFieldToken) script.addOpCode(secondFieldToken.OpCodeNum);
-      else throw new Error("STAS30 output missing second field");
+      else throw new Error("Divisible STAS output missing second field");
     }
 
     if (output.LockingScript.ScriptType === ScriptType.p2pkh) hasChange = true;
@@ -225,7 +225,7 @@ const buildRedeemTx = ({
     .addP2MpkhOutput(stasOutPoint.Satoshis, redeemAddress);
 
   const feeOutputIdx = txBuilder.Outputs.length;
-  txBuilder.Inputs[0].Stas30SpendingType = spendingType;
+  txBuilder.Inputs[0].DstasSpendingType = spendingType;
 
   return txBuilder
     .addChangeOutputWithFee(
@@ -238,7 +238,7 @@ const buildRedeemTx = ({
     .toHex();
 };
 
-describe("stas30 flow", () => {
+describe("dstas flow", () => {
   const createSwapContext = ({
     satoshisA = 100,
     satoshisB = 100,
@@ -261,9 +261,9 @@ describe("stas30 flow", () => {
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
 
-    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeA = createDefaultDstasScheme(bob, cat);
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -278,7 +278,7 @@ describe("stas30 flow", () => {
     const fundingA = createRealFundingOutPoint(bob);
     const fundingB = createRealFundingOutPoint(cat);
 
-    const issueA = BuildStas3IssueTxs({
+    const issueA = BuildDstasIssueTxs({
       fundingPayment: { OutPoint: fundingA, Owner: bob },
       scheme: schemeA,
       destinations: [
@@ -291,7 +291,7 @@ describe("stas30 flow", () => {
       ],
       feeRate: FeeRate,
     });
-    const issueB = BuildStas3IssueTxs({
+    const issueB = BuildDstasIssueTxs({
       fundingPayment: { OutPoint: fundingB, Owner: cat },
       scheme: schemeB,
       destinations: [
@@ -313,7 +313,7 @@ describe("stas30 flow", () => {
       txIssueA.Outputs[0].LockignScript,
       txIssueA.Outputs[0].Satoshis,
       bob.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     stasA.Transaction = txIssueA;
 
@@ -323,7 +323,7 @@ describe("stas30 flow", () => {
       txIssueB.Outputs[0].LockignScript,
       txIssueB.Outputs[0].Satoshis,
       cat.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     stasB.Transaction = txIssueB;
 
@@ -472,7 +472,7 @@ describe("stas30 flow", () => {
       prevStasSatoshis: fixture.issueTx.Outputs[0].Satoshis,
       prevFeeLockingScript: fixture.issueTx.Outputs[1].LockignScript,
       prevFeeSatoshis: fixture.issueTx.Outputs[1].Satoshis,
-      outPath: ".temp/stas30-transfer-no-change-debug.json",
+      outPath: ".temp/dstas-transfer-no-change-debug.json",
     });
 
     expect(transferTx.Inputs.length).toBe(2);
@@ -497,7 +497,7 @@ describe("stas30 flow", () => {
       rateDenominator: 0,
     });
 
-    const { issueTxHex } = BuildStas3IssueTxs({
+    const { issueTxHex } = BuildDstasIssueTxs({
       fundingPayment: {
         OutPoint: fixture.sourceFunding,
         Owner: fixture.bob,
@@ -520,7 +520,7 @@ describe("stas30 flow", () => {
       issueTx.Outputs[0].LockignScript,
       issueTx.Outputs[0].Satoshis,
       fixture.bob.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     const feeOutPoint = new OutPoint(
       issueTx.Id,
@@ -531,7 +531,7 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const swapTxHex = BuildStas3SwapTx({
+    const swapTxHex = BuildDstasSwapTx({
       stasPayments: [
         {
           OutPoint: stasOutPoint,
@@ -577,9 +577,9 @@ describe("stas30 flow", () => {
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
 
-    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeA = createDefaultDstasScheme(bob, cat);
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -596,14 +596,14 @@ describe("stas30 flow", () => {
 
     const authorityA = hash160(cat.PublicKey);
     const authorityB = hash160(bob.PublicKey);
-    const sampleATail = buildStas30LockingScriptForOwnerField({
+    const sampleATail = buildDstasLockingScriptForOwnerField({
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
       authorityServiceField: authorityA,
       frozen: false,
     });
-    const sampleBTail = buildStas30LockingScriptForOwnerField({
+    const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
@@ -619,7 +619,7 @@ describe("stas30 flow", () => {
       rateDenominator: 1,
     });
 
-    const issueA = BuildStas3IssueTxs({
+    const issueA = BuildDstasIssueTxs({
       fundingPayment: { OutPoint: fundingA, Owner: bob },
       scheme: schemeA,
       destinations: [
@@ -627,7 +627,7 @@ describe("stas30 flow", () => {
       ],
       feeRate: FeeRate,
     });
-    const issueB = BuildStas3IssueTxs({
+    const issueB = BuildDstasIssueTxs({
       fundingPayment: { OutPoint: fundingB, Owner: cat },
       scheme: schemeB,
       destinations: [{ Satoshis: 100, To: cat.Address, SecondField: null }],
@@ -642,7 +642,7 @@ describe("stas30 flow", () => {
       txIssueA.Outputs[0].LockignScript,
       txIssueA.Outputs[0].Satoshis,
       bob.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     stasA.Transaction = txIssueA;
     const stasB = new OutPoint(
@@ -651,7 +651,7 @@ describe("stas30 flow", () => {
       txIssueB.Outputs[0].LockignScript,
       txIssueB.Outputs[0].Satoshis,
       cat.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     stasB.Transaction = txIssueB;
     const fee = new OutPoint(
@@ -663,7 +663,7 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const swapTxHex = BuildStas3TransferSwapTx({
+    const swapTxHex = BuildDstasTransferSwapTx({
       stasPayments: [
         { OutPoint: stasA, Owner: bob },
         { OutPoint: stasB, Owner: cat },
@@ -726,9 +726,9 @@ describe("stas30 flow", () => {
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
 
-    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeA = createDefaultDstasScheme(bob, cat);
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -746,14 +746,14 @@ describe("stas30 flow", () => {
     const authorityA = hash160(cat.PublicKey);
     const authorityB = hash160(bob.PublicKey);
 
-    const sampleATail = buildStas30LockingScriptForOwnerField({
+    const sampleATail = buildDstasLockingScriptForOwnerField({
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
       authorityServiceField: authorityA,
       frozen: false,
     });
-    const sampleBTail = buildStas30LockingScriptForOwnerField({
+    const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
@@ -777,7 +777,7 @@ describe("stas30 flow", () => {
       rateDenominator: 1,
     });
 
-    const issueA = BuildStas3IssueTxs({
+    const issueA = BuildDstasIssueTxs({
       fundingPayment: { OutPoint: fundingA, Owner: bob },
       scheme: schemeA,
       destinations: [
@@ -785,7 +785,7 @@ describe("stas30 flow", () => {
       ],
       feeRate: FeeRate,
     });
-    const issueB = BuildStas3IssueTxs({
+    const issueB = BuildDstasIssueTxs({
       fundingPayment: { OutPoint: fundingB, Owner: cat },
       scheme: schemeB,
       destinations: [
@@ -803,7 +803,7 @@ describe("stas30 flow", () => {
       txIssueA.Outputs[0].LockignScript,
       txIssueA.Outputs[0].Satoshis,
       bob.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     stasA.Transaction = txIssueA;
 
@@ -813,7 +813,7 @@ describe("stas30 flow", () => {
       txIssueB.Outputs[0].LockignScript,
       txIssueB.Outputs[0].Satoshis,
       cat.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     stasB.Transaction = txIssueB;
 
@@ -826,7 +826,7 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const swapTxHex = BuildStas3SwapSwapTx({
+    const swapTxHex = BuildDstasSwapSwapTx({
       stasPayments: [
         { OutPoint: stasA, Owner: bob },
         { OutPoint: stasB, Owner: cat },
@@ -890,9 +890,9 @@ describe("stas30 flow", () => {
     const cat = Wallet.fromMnemonic(
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
-    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeA = createDefaultDstasScheme(bob, cat);
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -903,7 +903,7 @@ describe("stas30 flow", () => {
         authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
-    const sampleBTail = buildStas30LockingScriptForOwnerField({
+    const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
@@ -924,7 +924,7 @@ describe("stas30 flow", () => {
       secondFieldB: null,
     });
 
-    const swapTxHex = BuildStas3TransferSwapTx({
+    const swapTxHex = BuildDstasTransferSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
@@ -973,9 +973,9 @@ describe("stas30 flow", () => {
     const cat = Wallet.fromMnemonic(
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
-    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeA = createDefaultDstasScheme(bob, cat);
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -986,14 +986,14 @@ describe("stas30 flow", () => {
         authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
-    const sampleATail = buildStas30LockingScriptForOwnerField({
+    const sampleATail = buildDstasLockingScriptForOwnerField({
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
       authorityServiceField: hash160(cat.PublicKey),
       frozen: false,
     });
-    const sampleBTail = buildStas30LockingScriptForOwnerField({
+    const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
@@ -1019,7 +1019,7 @@ describe("stas30 flow", () => {
       secondFieldB,
     });
 
-    const swapTxHex = BuildStas3SwapSwapTx({
+    const swapTxHex = BuildDstasSwapSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
@@ -1074,9 +1074,9 @@ describe("stas30 flow", () => {
     const cat = Wallet.fromMnemonic(
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
-    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeA = createDefaultDstasScheme(bob, cat);
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -1087,7 +1087,7 @@ describe("stas30 flow", () => {
         authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
-    const sampleBTail = buildStas30LockingScriptForOwnerField({
+    const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
@@ -1107,7 +1107,7 @@ describe("stas30 flow", () => {
       secondFieldB: null,
     });
 
-    const swapTxHex = BuildStas3TransferSwapTx({
+    const swapTxHex = BuildDstasTransferSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
@@ -1164,9 +1164,9 @@ describe("stas30 flow", () => {
     const cat = Wallet.fromMnemonic(
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
-    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeA = createDefaultDstasScheme(bob, cat);
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -1177,14 +1177,14 @@ describe("stas30 flow", () => {
         authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
-    const sampleATail = buildStas30LockingScriptForOwnerField({
+    const sampleATail = buildDstasLockingScriptForOwnerField({
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
       authorityServiceField: hash160(cat.PublicKey),
       frozen: false,
     });
-    const sampleBTail = buildStas30LockingScriptForOwnerField({
+    const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
@@ -1210,7 +1210,7 @@ describe("stas30 flow", () => {
       secondFieldB,
     });
 
-    const swapTxHex = BuildStas3SwapSwapTx({
+    const swapTxHex = BuildDstasSwapSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
@@ -1274,7 +1274,7 @@ describe("stas30 flow", () => {
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -1285,7 +1285,7 @@ describe("stas30 flow", () => {
         authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
-    const sampleBTail = buildStas30LockingScriptForOwnerField({
+    const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
@@ -1306,7 +1306,7 @@ describe("stas30 flow", () => {
       frozenA: true,
     });
 
-    const swapTxHex = BuildStas3TransferSwapTx({
+    const swapTxHex = BuildDstasTransferSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
@@ -1347,9 +1347,9 @@ describe("stas30 flow", () => {
     const cat = Wallet.fromMnemonic(
       "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
     ).deriveWallet("m/44'/236'/0'/0/1");
-    const schemeA = createDefaultStas30Scheme(bob, cat);
+    const schemeA = createDefaultDstasScheme(bob, cat);
     const schemeB = new TokenScheme(
-      "STAS30B",
+      "Divisible STASB",
       toHex(cat.Address.Hash160),
       "S30B",
       1,
@@ -1360,14 +1360,14 @@ describe("stas30 flow", () => {
         authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
-    const sampleATail = buildStas30LockingScriptForOwnerField({
+    const sampleATail = buildDstasLockingScriptForOwnerField({
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
       authorityServiceField: hash160(cat.PublicKey),
       frozen: false,
     });
-    const sampleBTail = buildStas30LockingScriptForOwnerField({
+    const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
@@ -1394,7 +1394,7 @@ describe("stas30 flow", () => {
       frozenB: true,
     });
 
-    const swapTxHex = BuildStas3SwapSwapTx({
+    const swapTxHex = BuildDstasSwapSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
@@ -1449,7 +1449,7 @@ describe("stas30 flow", () => {
       prevStasSatoshis: fixture.issueTx.Outputs[0].Satoshis,
       prevFeeLockingScript: fixture.issueTx.Outputs[1].LockignScript,
       prevFeeSatoshis: fixture.issueTx.Outputs[1].Satoshis,
-      outPath: ".temp/stas30-transfer-with-change-debug.json",
+      outPath: ".temp/dstas-transfer-with-change-debug.json",
     });
 
     expect(transferTx.Inputs.length).toBe(2);
@@ -1461,7 +1461,7 @@ describe("stas30 flow", () => {
 
   test("real funding: transfer to owner-multisig output is valid", () => {
     const fixture = createRealFundingFlowFixture();
-    const multisigTransferTxHex = BuildStas3TransferTx({
+    const multisigTransferTxHex = BuildDstasTransferTx({
       stasPayment: {
         OutPoint: fixture.stasOutPoint,
         Owner: fixture.alice,
@@ -1493,7 +1493,7 @@ describe("stas30 flow", () => {
     const tx = TransactionReader.readHex(multisigTransferTxHex);
 
     expect(evalResult.success).toBe(true);
-    expect(tx.Outputs[0].ScriptType).toBe(ScriptType.p2stas30);
+    expect(tx.Outputs[0].ScriptType).toBe(ScriptType.dstas);
     expect(tx.Outputs[0].Address).toBeDefined();
   });
 
@@ -1509,7 +1509,7 @@ describe("stas30 flow", () => {
       buildMlpkhPreimage(ownerThreshold, ownerPubKeys),
     );
 
-    const toOwnerMultisigTxHex = BuildStas3TransferTx({
+    const toOwnerMultisigTxHex = BuildDstasTransferTx({
       stasPayment: {
         OutPoint: fixture.stasOutPoint,
         Owner: fixture.alice,
@@ -1535,7 +1535,7 @@ describe("stas30 flow", () => {
       prevTx.Outputs[0].LockignScript,
       prevTx.Outputs[0].Satoshis,
       new Address(ownerMlpkh),
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     const feeOutPoint = new OutPoint(
       prevTx.Id,
@@ -1547,7 +1547,7 @@ describe("stas30 flow", () => {
     );
 
     const authorityServiceField = hash160(fixture.cat.PublicKey);
-    const transferOutLock = buildStas30LockingScriptForOwnerField({
+    const transferOutLock = buildDstasLockingScriptForOwnerField({
       ownerField: fixture.bob.Address.Hash160,
       tokenIdHex: fixture.scheme.TokenId,
       freezable: fixture.scheme.Freeze,
@@ -1585,7 +1585,7 @@ describe("stas30 flow", () => {
     );
   });
 
-  test("real funding: fee is within expected range for built STAS30 steps", () => {
+  test("real funding: fee is within expected range for built Divisible STAS steps", () => {
     const fixture = createRealFundingFlowFixture();
 
     assertFeeInRange(
@@ -1635,7 +1635,7 @@ describe("stas30 flow", () => {
       freezeTx.Outputs[0].LockignScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     const frozenFeeOutPoint = new OutPoint(
       freezeTx.Id,
@@ -1646,7 +1646,7 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const unfreezeTxHex = BuildStas3UnfreezeTx({
+    const unfreezeTxHex = BuildDstasUnfreezeTx({
       stasPayments: [
         {
           OutPoint: frozenStasOutPoint,
@@ -1704,7 +1704,7 @@ describe("stas30 flow", () => {
       freezeTx.Outputs[0].LockignScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
 
     const feeOutPoint = new OutPoint(
@@ -1716,7 +1716,7 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const spendFrozenTxHex = BuildStas3TransferTx({
+    const spendFrozenTxHex = BuildDstasTransferTx({
       stasPayment: {
         OutPoint: frozenStasOutPoint,
         Owner: fixture.alice,
@@ -1756,7 +1756,7 @@ describe("stas30 flow", () => {
       freezeTx.Outputs[0].LockignScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
 
     const feeOutPoint = new OutPoint(
@@ -1768,7 +1768,7 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const unfreezeTxHex = BuildStas3UnfreezeTx({
+    const unfreezeTxHex = BuildDstasUnfreezeTx({
       stasPayments: [
         {
           OutPoint: frozenStasOutPoint,
@@ -1819,7 +1819,7 @@ describe("stas30 flow", () => {
       freezeTx.Outputs[0].LockignScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
 
     const freezeFeeOutPoint = new OutPoint(
@@ -1831,7 +1831,7 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const unfreezeTxHex = BuildStas3UnfreezeTx({
+    const unfreezeTxHex = BuildDstasUnfreezeTx({
       stasPayments: [
         {
           OutPoint: frozenStasOutPoint,
@@ -1859,7 +1859,7 @@ describe("stas30 flow", () => {
       unfreezeTx.Outputs[0].LockignScript,
       unfreezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
-      ScriptType.p2stas30,
+      ScriptType.dstas,
     );
     const unfreezeFeeOutPoint = new OutPoint(
       unfreezeTx.Id,
@@ -1870,7 +1870,7 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const spendUnfrozenTxHex = BuildStas3TransferTx({
+    const spendUnfrozenTxHex = BuildDstasTransferTx({
       stasPayment: {
         OutPoint: unfrozenStasOutPoint,
         Owner: fixture.alice,
@@ -1927,7 +1927,7 @@ describe("stas30 flow", () => {
   });
 
   test.todo(
-    "real funding: issuer can redeem after receiving token (requires confirmed redeem unlocking format for STAS30)",
+    "real funding: issuer can redeem after receiving token (requires confirmed redeem unlocking format for Divisible STAS)",
   );
 
   test.todo(
