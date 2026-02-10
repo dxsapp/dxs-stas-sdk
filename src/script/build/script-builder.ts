@@ -38,10 +38,7 @@ export class ScriptBuilder {
       return fromToken(tokens.find((x) => x.IsReceiverId) ?? tokens[2]);
     }
 
-    if (
-      scriptType === ScriptType.p2stas ||
-      scriptType === ScriptType.dstas
-    ) {
+    if (scriptType === ScriptType.p2stas || scriptType === ScriptType.dstas) {
       return fromToken(tokens.find((x) => x.IsReceiverId) ?? tokens[0]);
     }
 

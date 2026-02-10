@@ -99,7 +99,9 @@ const computeStas30RequestedScriptHash = (
 ): Uint8Array => {
   const tokens = lockingScript._tokens;
   if (tokens.length < 3) {
-    throw new Error("Divisible STAS locking script must include owner + second field");
+    throw new Error(
+      "Divisible STAS locking script must include owner + second field",
+    );
   }
   const tail = ScriptBuilder.fromTokens(tokens.slice(2), ScriptType.unknown);
   return sha256(tail.toBytes());

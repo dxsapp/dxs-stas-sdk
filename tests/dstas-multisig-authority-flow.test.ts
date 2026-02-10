@@ -16,10 +16,7 @@ import {
   buildStas3FreezeMultisigTokens,
 } from "../src/script/build/stas3-freeze-multisig-builder";
 import { evaluateTransactionHex } from "../src/script";
-import {
-  BuildDstasIssueTxs,
-  BuildDstasTransferTx,
-} from "../src/dstas-factory";
+import { BuildDstasIssueTxs, BuildDstasTransferTx } from "../src/dstas-factory";
 import { FeeRate } from "../src/transaction-factory";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
 import { OutputBuilder } from "../src/transaction/build/output-builder";
