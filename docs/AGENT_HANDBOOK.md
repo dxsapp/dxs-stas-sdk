@@ -292,20 +292,20 @@ Bundle creation (StasBundleFactory.createBundle):
 
 - `Address` only supports mainnet P2PKH and throws if `hash160` is not 20 bytes or if a Base58 prefix is not mainnet. (see: src/bitcoin/address.ts:11-31)
 - `Networks` only defines `Mainnet`, so testnet prefixes are not supported in this module. (see: src/bitcoin/network.ts:6-10)
-- `OutPointFull` only accepts outputs of `ScriptType.p2pkh` or `ScriptType.p2stas` and throws otherwise. (see: src/bitcoin/out-point.ts:40-49)
+- `OutPointFull` accepts `p2pkh`, `p2mpkh`, `p2stas`, and `dstas` outputs, but requires that an output exposes an `Address`; DSTAS multisig-owner outputs without address must be wrapped as `OutPoint` manually. (see: src/bitcoin/out-point.ts:40-61)
 - `InputBilder.preimage` supports `SIGHASH_ALL`, `SIGHASH_SINGLE`, `SIGHASH_NONE` and `SIGHASH_ANYONECANPAY` variants with `FORKID`. (see: src/transaction/build/input-builder.ts:188-231)
 - `BuildSplitTx` enforces destination count (1-4) and exact satoshi conservation. (see: src/transaction-factory.ts:64-72)
 - `BuildMergeTx` requires both inputs to share an address and checks satoshi conservation. (see: src/transaction-factory.ts:121-128)
 - `BuildRedeemTx` requires the redeem address to equal `tokenScheme.TokenId`, enforces max 3 split destinations, and requires `redeemAmount > 0`. (see: src/transaction-factory.ts:177-193)
 - `TransactionBuilder.addChangeOutputWithFee` throws `TransactionBuilderError` when fee exceeds or equals the change amount. (see: src/transaction/build/transaction-builder.ts:91-98)
-- `TransactionOutput` script classification relies on sample tokens from `script-samples`, so misaligned scripts may classify as `unknown`. (see: src/bitcoin/transaction-output.ts:21-103, src/script/script-samples.ts:5-26)
+- `TransactionOutput` script classification relies on sample tokens from `script-samples` (`p2pkh`, `p2stas`, `dstas`, `nullData`), so misaligned scripts may classify as `unknown`. (see: src/bitcoin/transaction-output.ts:21-103, src/script/script-samples.ts:5-26)
 
 ## 8. Testing Guide (How to run / how to add tests)
 
 - Tests are run via `npm run test` using Jest + `ts-jest` ESM preset in the `node` environment. (see: package.json:11-13, jest.config.js:1-13)
 - Jest discovers tests under `/tests/` matching `*.test.ts` or `*.spec.ts` by regex. (see: jest.config.js:4)
 - Current test files include transaction/script build/read suites plus bytes utilities, script round-trips, transaction round-trips, private key signing, and address/outpoint coverage. (see: tests/transaction-build.test.ts:1-10, tests/script-build.test.ts:1-10, tests/transaction-reader.test.ts:1-10, tests/script-read.test.ts:1-10, tests/bytes-utils.test.ts:1-10, tests/script-roundtrip.test.ts:1-10, tests/transaction-roundtrip.test.ts:1-10, tests/private-key.test.ts:1-10, tests/address-outpoint.test.ts:1-10)
-- There is no `npm run lint` or `npm run typecheck` script configured. (see: package.json:11-16, docs/COMMAND_LOG.md -> npm run lint, docs/COMMAND_LOG.md -> npm run typecheck)
+- `npm run lint` is configured (`tslint`), but `npm run typecheck` is not configured as a separate script. (see: package.json:11-20)
 
 ## 9. Contribution Playbook (How to implement changes safely)
 
@@ -331,16 +331,15 @@ Bundle creation (StasBundleFactory.createBundle):
 - `npm install` succeeded. (see: docs/COMMAND_LOG.md -> npm install)
 - `npm run build` succeeded. (see: docs/COMMAND_LOG.md -> npm run build)
 - `npm run test` succeeded. (see: docs/COMMAND_LOG.md -> npm run test)
-- `npm run lint` was skipped because the script is not present. (see: docs/COMMAND_LOG.md -> npm run lint)
+- `npm run lint` succeeded. (see: docs/COMMAND_LOG.md -> npm run lint)
 - `npm run typecheck` was skipped because the script is not present. (see: docs/COMMAND_LOG.md -> npm run typecheck)
 - `npm pack` failed due to npm cache permissions. (see: docs/COMMAND_LOG.md -> npm pack (failed))
 - `npm pack --cache /tmp/npm-cache` succeeded. (see: docs/COMMAND_LOG.md -> npm pack (with temp cache))
 
 ## 12. Open Questions / Missing Pieces
 
-- Release/publish instructions are not present in the repo (no scripts or docs found). (see: package.json:11-16, docs/COMMAND_LOG.md -> Repo Tree (top-level + 2 depth))
-- Linting scripts are not present in `package.json`. (see: package.json:11-16)
-- Typecheck scripts are not present in `package.json`. (see: package.json:11-16)
+- Local publish/typecheck scripts are not present in `package.json`; release automation is maintained via GitHub workflows. (see: package.json:11-20, .github/workflows/release.yml)
+- Typecheck scripts are not present in `package.json`. (see: package.json:11-20)
 - ESLint configuration files are not present in the repo. (see: docs/COMMAND*LOG.md -> rg --files -g "\_eslint*")
 - Prettier configuration files are not present in the repo. (see: docs/COMMAND*LOG.md -> rg --files -g "\_prettier*")
 - Vitest/Mocha configurations are not present in the repo. (see: docs/COMMAND*LOG.md -> rg --files -g "\_vitest*", docs/COMMAND*LOG.md -> rg --files -g "\_mocha*")
