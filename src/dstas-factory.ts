@@ -218,6 +218,8 @@ export const BuildDstasBaseTx = ({
 }: TBuildDstasBaseTxRequest) => {
   if (stasPayments.length === 0)
     throw new Error("At least one STAS input is required");
+  if (stasPayments.length > 2)
+    throw new Error("At most 2 STAS inputs are supported");
   if (destinations.length === 0)
     throw new Error("At least one destination is required");
 
@@ -556,7 +558,7 @@ export const BuildDstasSplitTx = ({
   });
 
 export type TBuildDstasMergeTxRequest = {
-  stasPayments: TDstasPayment[];
+  stasPayments: [TDstasPayment, TDstasPayment];
   feePayment: TPayment;
   destinations: TDstasDestination[];
   Scheme?: TokenScheme;
@@ -571,8 +573,12 @@ export const BuildDstasMergeTx = ({
   Scheme,
   note,
   feeRate,
-}: TBuildDstasMergeTxRequest) =>
-  BuildDstasBaseTx({
+}: TBuildDstasMergeTxRequest) => {
+  if (stasPayments.length !== 2) {
+    throw new Error("DSTAS merge requires exactly 2 STAS inputs");
+  }
+
+  return BuildDstasBaseTx({
     stasPayments,
     feePayment,
     destinations,
@@ -580,3 +586,4 @@ export const BuildDstasMergeTx = ({
     note,
     feeRate,
   });
+};
