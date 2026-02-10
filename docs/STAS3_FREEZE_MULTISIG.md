@@ -81,7 +81,7 @@ const redemptionPkh = fromHex("b4ab0fffa02223a8a40d9e7f7823e61b38625382");
 const script = buildStas3FreezeMultisigScript({
   ownerPkh,
   redemptionPkh,
-  secondField: null, // empty
+  actionData: null, // empty
   frozen: true, // uses OP_2 in template
   flags: new Uint8Array([0x01]), // freezable bit
   serviceFields: [fromHex("00112233445566778899aabbccddeeff00112233")],

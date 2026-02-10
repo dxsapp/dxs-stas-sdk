@@ -6,7 +6,7 @@ import { P2stasBuilder } from "../src/script/build/p2stas-builder";
 import { buildStas3FreezeMultisigScript } from "../src/script/build/stas3-freeze-multisig-builder";
 import {
   LockingScriptReader,
-  buildStas3SwapSecondField,
+  buildSwapActionData,
   getData,
   getSymbol,
   getTokenId,
@@ -102,7 +102,7 @@ describe("locking script reader", () => {
     const optional = utf8ToBytes("hello-dstas");
     const script = buildStas3FreezeMultisigScript({
       ownerPkh: owner,
-      secondField: fromHex("00"),
+      actionData: fromHex("00"),
       redemptionPkh: redemption,
       flags: new Uint8Array([0x00]),
       serviceFields: [],
@@ -129,7 +129,7 @@ describe("locking script reader", () => {
 
     const script = buildStas3FreezeMultisigScript({
       ownerPkh: owner,
-      secondField: null,
+      actionData: null,
       redemptionPkh: redemption,
       flags: new Uint8Array([0x01]),
       serviceFields: [authority],
@@ -149,7 +149,7 @@ describe("locking script reader", () => {
   test("parses dstas swap second field", () => {
     const owner = fromHex("1111222233334444555566667777888899990000");
     const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-    const swapSecond = buildStas3SwapSecondField({
+    const swapSecond = buildSwapActionData({
       requestedScriptHash: fromHex("11".repeat(32)),
       requestedPkh: fromHex("22".repeat(20)),
       rateNumerator: 1,
@@ -158,16 +158,16 @@ describe("locking script reader", () => {
 
     const script = buildStas3FreezeMultisigScript({
       ownerPkh: owner,
-      secondField: swapSecond,
+      actionData: swapSecond,
       redemptionPkh: redemption,
       flags: new Uint8Array([0x00]),
     });
 
     const reader = LockingScriptReader.read(script);
     expect(reader.ScriptType).toBe(ScriptType.dstas);
-    expect(reader.Dstas?.SecondFieldParsed?.kind).toBe("swap");
-    if (reader.Dstas?.SecondFieldParsed?.kind !== "swap") return;
-    expect(reader.Dstas.SecondFieldParsed.rateNumerator).toBe(1);
-    expect(reader.Dstas.SecondFieldParsed.rateDenominator).toBe(100);
+    expect(reader.Dstas?.ActionDataParsed?.kind).toBe("swap");
+    if (reader.Dstas?.ActionDataParsed?.kind !== "swap") return;
+    expect(reader.Dstas.ActionDataParsed.rateNumerator).toBe(1);
+    expect(reader.Dstas.ActionDataParsed.rateDenominator).toBe(100);
   });
 });

@@ -13,8 +13,8 @@ import { ScriptToken } from "../script-token";
 import { BaseScriptReader } from "./base-script-reader";
 import { ScriptReadToken } from "./script-read-token";
 import {
-  Stas3ParsedSecondField,
-  decodeStas3SecondField,
+  ParsedActionData,
+  decodeActionData,
 } from "../stas3-second-field";
 
 type DetectContext = {
@@ -28,7 +28,7 @@ type ScriptSample = {
   ctx: DetectContext;
 };
 
-type Stas30Stage =
+type DstasStage =
   | "owner"
   | "second"
   | "base"
@@ -36,27 +36,27 @@ type Stas30Stage =
   | "flags"
   | "tail";
 
-type Stas30DetectContext = {
+type DstasDetectContext = {
   Result: boolean;
-  Stage: Stas30Stage;
+  Stage: DstasStage;
   BaseIdx: number;
   FreezeEnabled: boolean;
   HasAuthority: boolean;
   Owner?: Bytes;
-  SecondFieldData?: Bytes;
-  SecondFieldOpCode?: number;
+  ActionDataRaw?: Bytes;
+  ActionDataOpCode?: number;
   Redemption?: Bytes;
   Flags?: Bytes;
   ServiceFields: Bytes[];
   OptionalData: Bytes[];
 };
 
-const tryDecodeSecondField = (
+const tryDecodeActionData = (
   data: Bytes | undefined,
-): Stas3ParsedSecondField | undefined => {
+): ParsedActionData | undefined => {
   if (!data) return undefined;
   try {
-    return decodeStas3SecondField(data);
+    return decodeActionData(data);
   } catch {
     return {
       kind: "unknown",
@@ -90,9 +90,9 @@ export class LockingScriptReader extends BaseScriptReader {
     },
   ];
 
-  private stas30BaseTokens = buildStas3BaseTokens();
+  private dstasBaseTokens = buildStas3BaseTokens();
 
-  private stas30Ctx: Stas30DetectContext = {
+  private dstasCtx: DstasDetectContext = {
     Result: true,
     Stage: "owner",
     BaseIdx: 0,
@@ -106,9 +106,9 @@ export class LockingScriptReader extends BaseScriptReader {
   Data?: Bytes[];
   Dstas?: {
     Owner: Bytes;
-    SecondFieldData?: Bytes;
-    SecondFieldOpCode?: number;
-    SecondFieldParsed?: Stas3ParsedSecondField;
+    ActionDataRaw?: Bytes;
+    ActionDataOpCode?: number;
+    ActionDataParsed?: ParsedActionData;
     Redemption: Bytes;
     Flags: Bytes;
     FreezeEnabled: boolean;
@@ -172,8 +172,8 @@ export class LockingScriptReader extends BaseScriptReader {
       }
     }
 
-    this.handleStas30Token(token);
-    if (this.stas30Ctx.Result) activeDetectors++;
+    this.handleDstasToken(token);
+    if (this.dstasCtx.Result) activeDetectors++;
 
     return activeDetectors > 0;
   }
@@ -190,75 +190,75 @@ export class LockingScriptReader extends BaseScriptReader {
     this.Data.push(data);
   }
 
-  private handleStas30Token(token: ScriptReadToken): void {
-    if (!this.stas30Ctx.Result) return;
+  private handleDstasToken(token: ScriptReadToken): void {
+    if (!this.dstasCtx.Result) return;
 
-    switch (this.stas30Ctx.Stage) {
+    switch (this.dstasCtx.Stage) {
       case "owner": {
         if (!this.isPushData(token)) {
-          this.stas30Ctx.Result = false;
+          this.dstasCtx.Result = false;
           return;
         }
-        this.stas30Ctx.Owner = token.Data;
-        this.stas30Ctx.Stage = "second";
+        this.dstasCtx.Owner = token.Data;
+        this.dstasCtx.Stage = "second";
         return;
       }
 
       case "second": {
         if (this.isPushData(token)) {
-          this.stas30Ctx.SecondFieldData = token.Data;
+          this.dstasCtx.ActionDataRaw = token.Data;
         } else {
-          this.stas30Ctx.SecondFieldOpCode = token.OpCodeNum;
+          this.dstasCtx.ActionDataOpCode = token.OpCodeNum;
         }
-        this.stas30Ctx.Stage = "base";
+        this.dstasCtx.Stage = "base";
         return;
       }
 
       case "base": {
-        const expected = this.stas30BaseTokens[this.stas30Ctx.BaseIdx];
+        const expected = this.dstasBaseTokens[this.dstasCtx.BaseIdx];
         if (!expected || !this.sameToken(expected, token)) {
-          this.stas30Ctx.Result = false;
+          this.dstasCtx.Result = false;
           return;
         }
-        this.stas30Ctx.BaseIdx++;
-        if (this.stas30Ctx.BaseIdx === this.stas30BaseTokens.length) {
-          this.stas30Ctx.Stage = "redemption";
+        this.dstasCtx.BaseIdx++;
+        if (this.dstasCtx.BaseIdx === this.dstasBaseTokens.length) {
+          this.dstasCtx.Stage = "redemption";
         }
         return;
       }
 
       case "redemption": {
         if (!this.isPushData(token) || token.Data.length !== 20) {
-          this.stas30Ctx.Result = false;
+          this.dstasCtx.Result = false;
           return;
         }
-        this.stas30Ctx.Redemption = token.Data;
-        this.stas30Ctx.Stage = "flags";
+        this.dstasCtx.Redemption = token.Data;
+        this.dstasCtx.Stage = "flags";
         return;
       }
 
       case "flags": {
         if (!this.isPushData(token)) {
-          this.stas30Ctx.Result = false;
+          this.dstasCtx.Result = false;
           return;
         }
-        this.stas30Ctx.Flags = token.Data;
-        this.stas30Ctx.FreezeEnabled =
+        this.dstasCtx.Flags = token.Data;
+        this.dstasCtx.FreezeEnabled =
           token.Data.length > 0 && (token.Data[0] & 0x01) === 0x01;
-        this.stas30Ctx.Stage = "tail";
+        this.dstasCtx.Stage = "tail";
         return;
       }
 
       case "tail": {
         if (!this.isPushData(token)) {
-          this.stas30Ctx.Result = false;
+          this.dstasCtx.Result = false;
           return;
         }
-        if (this.stas30Ctx.FreezeEnabled && !this.stas30Ctx.HasAuthority) {
-          this.stas30Ctx.ServiceFields.push(token.Data);
-          this.stas30Ctx.HasAuthority = true;
+        if (this.dstasCtx.FreezeEnabled && !this.dstasCtx.HasAuthority) {
+          this.dstasCtx.ServiceFields.push(token.Data);
+          this.dstasCtx.HasAuthority = true;
         } else {
-          this.stas30Ctx.OptionalData.push(token.Data);
+          this.dstasCtx.OptionalData.push(token.Data);
         }
         return;
       }
@@ -266,38 +266,38 @@ export class LockingScriptReader extends BaseScriptReader {
   }
 
   private finalizeDstas(): void {
-    if (!this.stas30Ctx.Result) return;
-    if (this.stas30Ctx.Stage === "owner") return;
-    if (this.stas30Ctx.Stage === "second") return;
-    if (this.stas30Ctx.Stage === "base") return;
-    if (this.stas30Ctx.Stage === "redemption") return;
-    if (this.stas30Ctx.Stage === "flags") return;
+    if (!this.dstasCtx.Result) return;
+    if (this.dstasCtx.Stage === "owner") return;
+    if (this.dstasCtx.Stage === "second") return;
+    if (this.dstasCtx.Stage === "base") return;
+    if (this.dstasCtx.Stage === "redemption") return;
+    if (this.dstasCtx.Stage === "flags") return;
     if (
-      !this.stas30Ctx.Owner ||
-      !this.stas30Ctx.Redemption ||
-      !this.stas30Ctx.Flags
+      !this.dstasCtx.Owner ||
+      !this.dstasCtx.Redemption ||
+      !this.dstasCtx.Flags
     )
       return;
-    if (this.stas30Ctx.FreezeEnabled && !this.stas30Ctx.HasAuthority) return;
+    if (this.dstasCtx.FreezeEnabled && !this.dstasCtx.HasAuthority) return;
 
     this.ScriptTypeOverride = ScriptType.dstas;
-    if (this.stas30Ctx.Owner.length === 20) {
-      this.Address = new Address(this.stas30Ctx.Owner);
+    if (this.dstasCtx.Owner.length === 20) {
+      this.Address = new Address(this.dstasCtx.Owner);
     }
     this.Dstas = {
-      Owner: this.stas30Ctx.Owner,
-      SecondFieldData: this.stas30Ctx.SecondFieldData,
-      SecondFieldOpCode: this.stas30Ctx.SecondFieldOpCode,
-      SecondFieldParsed: tryDecodeSecondField(this.stas30Ctx.SecondFieldData),
-      Redemption: this.stas30Ctx.Redemption,
-      Flags: this.stas30Ctx.Flags,
-      FreezeEnabled: this.stas30Ctx.FreezeEnabled,
-      ServiceFields: this.stas30Ctx.ServiceFields,
-      OptionalData: this.stas30Ctx.OptionalData,
+      Owner: this.dstasCtx.Owner,
+      ActionDataRaw: this.dstasCtx.ActionDataRaw,
+      ActionDataOpCode: this.dstasCtx.ActionDataOpCode,
+      ActionDataParsed: tryDecodeActionData(this.dstasCtx.ActionDataRaw),
+      Redemption: this.dstasCtx.Redemption,
+      Flags: this.dstasCtx.Flags,
+      FreezeEnabled: this.dstasCtx.FreezeEnabled,
+      ServiceFields: this.dstasCtx.ServiceFields,
+      OptionalData: this.dstasCtx.OptionalData,
     };
 
-    if (this.stas30Ctx.Owner.length === 20) {
-      this.Address = new Address(this.stas30Ctx.Owner);
+    if (this.dstasCtx.Owner.length === 20) {
+      this.Address = new Address(this.dstasCtx.Owner);
     }
   }
 

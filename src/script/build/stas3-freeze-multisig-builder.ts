@@ -6,17 +6,17 @@ import { ScriptBuilder } from "./script-builder";
 import { ScriptToken } from "../script-token";
 import { buildStas3BaseTokens } from "../templates/stas3-freeze-multisig-base";
 import {
-  Stas3ActionSecondField,
-  Stas3SwapSecondField,
-  encodeStas3SecondField,
+  DstasActionData,
+  DstasSwapActionData,
+  encodeActionData,
 } from "../stas3-second-field";
 
-export type SecondFieldInput =
+export type ActionDataInput =
   | Bytes
   | number
   | null
-  | Stas3SwapSecondField
-  | Stas3ActionSecondField;
+  | DstasSwapActionData
+  | DstasActionData;
 export type Stas3FlagsInput = {
   freezable?: boolean;
 };
@@ -24,7 +24,7 @@ export type Stas3FlagsInput = {
 export type Stas3FreezeMultisigParams = {
   owner?: Bytes;
   ownerPkh?: Bytes;
-  secondField: SecondFieldInput;
+  actionData: ActionDataInput;
   redemptionPkh: Bytes;
   frozen?: boolean;
   flags?: Bytes | Stas3FlagsInput | null;
@@ -54,12 +54,12 @@ const resolveOwner = (params: Stas3FreezeMultisigParams): Bytes => {
 
 const buildOwnerToken = (value: Bytes) => ScriptToken.fromBytes(value);
 
-const buildSecondFieldToken = (
-  field: SecondFieldInput,
+const buildActionDataToken = (
+  field: ActionDataInput,
   frozen: boolean,
 ): ScriptToken => {
   if (typeof field === "object" && field && "kind" in field) {
-    return ScriptToken.fromBytes(encodeStas3SecondField(field));
+    return ScriptToken.fromBytes(encodeActionData(field));
   }
 
   if (field === null) {
@@ -121,7 +121,7 @@ export const buildStas3FreezeMultisigTokens = (
   ensureLength(params.redemptionPkh, 20, "redemptionPkh");
 
   const ownerToken = buildOwnerToken(resolveOwner(params));
-  const secondToken = buildSecondFieldToken(params.secondField, frozen);
+  const actionDataToken = buildActionDataToken(params.actionData, frozen);
   const redemptionToken = ScriptToken.fromBytes(params.redemptionPkh);
   const flagsToken = buildFlagsToken(params.flags);
   const serviceTokens = buildDataTokens(params.serviceFields);
@@ -136,7 +136,7 @@ export const buildStas3FreezeMultisigTokens = (
   }
 
   const baseTokens = buildStas3BaseTokens();
-  const tokens: ScriptToken[] = [ownerToken, secondToken, ...baseTokens];
+  const tokens: ScriptToken[] = [ownerToken, actionDataToken, ...baseTokens];
 
   tokens.push(redemptionToken, flagsToken, ...serviceTokens, ...optionalTokens);
 

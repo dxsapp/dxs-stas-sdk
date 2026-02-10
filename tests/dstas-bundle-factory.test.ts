@@ -77,7 +77,7 @@ const makeFactory = (stasSatoshis = 1000): TestFactory => {
 
   const buildLockingParams = createSpy(() => ({
     ownerPkh,
-    secondField: null,
+    actionData: null,
     redemptionPkh,
     frozen: false,
     flags: buildStas3Flags({ freezable: true }),

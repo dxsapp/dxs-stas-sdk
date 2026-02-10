@@ -86,7 +86,7 @@ describe("testing script building", () => {
     const owner = fromHex("0011223344556677889900112233445566778899");
     const tokens = buildStas3FreezeMultisigTokens({
       ownerPkh: owner,
-      secondField: fromHex("00"),
+      actionData: fromHex("00"),
       redemptionPkh: fromHex("e3b111de8fec527b41f4189e313638075d96ccd6"),
       flags: new Uint8Array([0x00]),
       serviceFields: [],

@@ -89,7 +89,7 @@ export const getP2Stas30Tokens = () => {
 
     const script = buildStas3FreezeMultisigScript({
       ownerPkh: fromHex(ownerHex),
-      secondField: null,
+      actionData: null,
       redemptionPkh: fromHex(redemptionHex),
       flags: fromHex(flagsHex),
       serviceFields: [],

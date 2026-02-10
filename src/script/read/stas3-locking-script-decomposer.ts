@@ -11,13 +11,13 @@ type RawChunk = {
   data?: Bytes;
 };
 
-export type Stas3SecondField =
+export type DstasActionDataField =
   | { kind: "opcode"; opcode: number }
   | { kind: "data"; hex: string };
 
 export type Stas3LockingScriptDecomposition = {
   ownerPkhHex?: string;
-  secondField?: Stas3SecondField;
+  actionData?: DstasActionDataField;
   baseMatched: boolean;
   redemptionPkhHex?: string;
   flagsHex?: string;
@@ -97,11 +97,11 @@ export const decomposeStas3LockingScript = (
 
   const second = readRawChunk(script, owner.end);
   if (!second) {
-    result.errors.push("second field was not found");
+    result.errors.push("action data was not found");
     return result;
   }
 
-  result.secondField = second.data
+  result.actionData = second.data
     ? { kind: "data", hex: toHex(second.data) }
     : { kind: "opcode", opcode: second.opcode };
 

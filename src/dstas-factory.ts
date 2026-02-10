@@ -2,7 +2,7 @@ import { Address, OutPoint, TPayment, TokenScheme } from "./bitcoin";
 import { ScriptType } from "./bitcoin/script-type";
 import { Bytes, fromHex, toHex } from "./bytes";
 import {
-  SecondFieldInput,
+  ActionDataInput,
   Stas3FreezeMultisigParams,
   buildStas3Flags,
   buildStas3FreezeMultisigTokens,
@@ -31,7 +31,7 @@ export type TDstasDestinationByScheme = {
     m: number;
     publicKeys: string[];
   };
-  SecondField?: SecondFieldInput;
+  ActionData?: ActionDataInput;
   Frozen?: boolean;
   OptionalData?: Bytes[];
 };
@@ -170,7 +170,7 @@ const resolveLockingParams = (
 
   return {
     owner,
-    secondField: dest.SecondField ?? null,
+    actionData: dest.ActionData ?? null,
     redemptionPkh: fromHex(scheme.TokenId),
     frozen: dest.Frozen === true,
     flags: deriveFlagsFromScheme(scheme),
@@ -382,7 +382,7 @@ export type TDstasSwapDestination = {
   TokenIdHex: string;
   Freezable: boolean;
   AuthorityServiceField: Bytes;
-  SecondField?: SecondFieldInput;
+  ActionData?: ActionDataInput;
   OptionalData?: Bytes[];
 };
 
@@ -401,7 +401,7 @@ const toSwapFlowDestination = (
   Satoshis: value.Satoshis,
   LockingParams: {
     owner: value.Owner,
-    secondField: value.SecondField !== undefined ? value.SecondField : null,
+    actionData: value.ActionData !== undefined ? value.ActionData : null,
     redemptionPkh: fromHex(value.TokenIdHex),
     flags: buildStas3Flags({ freezable: value.Freezable }),
     serviceFields: [value.AuthorityServiceField],

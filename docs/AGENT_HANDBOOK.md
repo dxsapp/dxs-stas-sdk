@@ -139,7 +139,7 @@ import { buildStas3FreezeMultisigScript, fromHex } from "dxs-stas-sdk";
 
 const stas3Script = buildStas3FreezeMultisigScript({
   ownerPkh: fromHex("<20-byte-owner-pkh>"),
-  secondField: null,
+  actionData: null,
   redemptionPkh: fromHex("<20-byte-redemption-pkh>"),
   frozen: false,
   flags: new Uint8Array([0x01]),

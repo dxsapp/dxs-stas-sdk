@@ -68,7 +68,7 @@ const buildDstasLockingScript = (
 ) => {
   const tokens = buildStas3FreezeMultisigTokens({
     ownerPkh: owner.Hash160,
-    secondField: null,
+    actionData: null,
     redemptionPkh: fromHex(scheme.TokenId),
     frozen,
     flags: buildStas3Flags({ freezable: scheme.Freeze }),

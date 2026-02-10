@@ -1,30 +1,30 @@
 import { Bytes } from "../bytes";
 
-export const enum Stas3SecondFieldAction {
+export const enum DstasActionKind {
   swap = 0x01,
   confiscation = 0x02,
   freeze = 0x03,
 }
 
-export type Stas3SwapSecondField = {
+export type DstasSwapActionData = {
   kind: "swap";
   requestedScriptHash: Bytes;
   requestedPkh: Bytes;
   rateNumerator: number;
   rateDenominator: number;
-  next?: Stas3SwapSecondField;
+  next?: DstasSwapActionData;
 };
 
-export type Stas3ActionSecondField = {
+export type DstasActionData = {
   kind: "action";
-  action: Stas3SecondFieldAction.confiscation | Stas3SecondFieldAction.freeze;
+  action: DstasActionKind.confiscation | DstasActionKind.freeze;
   payload?: Bytes;
 };
 
-export type Stas3ParsedSecondField =
+export type ParsedActionData =
   | { kind: "empty" }
-  | Stas3SwapSecondField
-  | Stas3ActionSecondField
+  | DstasSwapActionData
+  | DstasActionData
   | { kind: "unknown"; action: number; payload: Bytes };
 
 const ensureLength = (value: Bytes, expected: number, name: string) => {
@@ -53,7 +53,7 @@ const readU32Le = (bytes: Bytes, offset: number): number =>
     (bytes[offset + 3] << 24)) >>>
   0;
 
-const encodeSwapCore = (spec: Stas3SwapSecondField): Bytes => {
+const encodeSwapCore = (spec: DstasSwapActionData): Bytes => {
   ensureLength(spec.requestedScriptHash, 32, "requestedScriptHash");
   ensureLength(spec.requestedPkh, 20, "requestedPkh");
   ensureU32(spec.rateNumerator, "rateNumerator");
@@ -62,7 +62,7 @@ const encodeSwapCore = (spec: Stas3SwapSecondField): Bytes => {
   const next = spec.next ? encodeSwapCore(spec.next) : new Uint8Array(0);
   const out = new Uint8Array(1 + 32 + 20 + 8 + next.length);
   let offset = 0;
-  out[offset++] = Stas3SecondFieldAction.swap;
+  out[offset++] = DstasActionKind.swap;
   out.set(spec.requestedScriptHash, offset);
   offset += 32;
   out.set(spec.requestedPkh, offset);
@@ -78,12 +78,12 @@ const encodeSwapCore = (spec: Stas3SwapSecondField): Bytes => {
 const decodeSwapCore = (
   bytes: Bytes,
   offset: number,
-): { parsed: Stas3SwapSecondField; nextOffset: number } => {
+): { parsed: DstasSwapActionData; nextOffset: number } => {
   if (offset + 1 + 32 + 20 + 8 > bytes.length) {
     throw new Error("swap second field is truncated");
   }
 
-  if (bytes[offset] !== Stas3SecondFieldAction.swap) {
+  if (bytes[offset] !== DstasActionKind.swap) {
     throw new Error("swap second field must start with action=0x01");
   }
 
@@ -93,7 +93,7 @@ const decodeSwapCore = (
   const rateDenominator = readU32Le(bytes, offset + 57);
   let nextOffset = offset + 61;
 
-  const parsed: Stas3SwapSecondField = {
+  const parsed: DstasSwapActionData = {
     kind: "swap",
     requestedScriptHash,
     requestedPkh,
@@ -110,8 +110,8 @@ const decodeSwapCore = (
   return { parsed, nextOffset };
 };
 
-export const encodeStas3SecondField = (
-  value: Stas3SwapSecondField | Stas3ActionSecondField,
+export const encodeActionData = (
+  value: DstasSwapActionData | DstasActionData,
 ): Bytes => {
   if (value.kind === "swap") return encodeSwapCore(value);
 
@@ -122,13 +122,13 @@ export const encodeStas3SecondField = (
   return out;
 };
 
-export const decodeStas3SecondField = (
+export const decodeActionData = (
   bytes: Bytes,
-): Stas3ParsedSecondField => {
+): ParsedActionData => {
   if (bytes.length === 0) return { kind: "empty" };
 
   const action = bytes[0];
-  if (action === Stas3SecondFieldAction.swap) {
+  if (action === DstasActionKind.swap) {
     const decoded = decodeSwapCore(bytes, 0);
     if (decoded.nextOffset !== bytes.length) {
       throw new Error("swap second field has trailing bytes");
@@ -137,8 +137,8 @@ export const decodeStas3SecondField = (
   }
 
   if (
-    action === Stas3SecondFieldAction.confiscation ||
-    action === Stas3SecondFieldAction.freeze
+    action === DstasActionKind.confiscation ||
+    action === DstasActionKind.freeze
   ) {
     return {
       kind: "action",
@@ -154,10 +154,10 @@ export const decodeStas3SecondField = (
   };
 };
 
-export const buildStas3SwapSecondField = (
-  value: Omit<Stas3SwapSecondField, "kind">,
+export const buildSwapActionData = (
+  value: Omit<DstasSwapActionData, "kind">,
 ): Bytes =>
-  encodeStas3SecondField({
+  encodeActionData({
     kind: "swap",
     ...value,
   });

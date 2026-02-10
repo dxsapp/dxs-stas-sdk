@@ -1,9 +1,9 @@
 import { fromHex, toHex } from "../src/bytes";
 import {
-  Stas3SecondFieldAction,
-  buildStas3SwapSecondField,
-  decodeStas3SecondField,
-  encodeStas3SecondField,
+  DstasActionKind,
+  buildSwapActionData,
+  decodeActionData,
+  encodeActionData,
 } from "../src/script";
 
 describe("stas3 second field", () => {
@@ -11,7 +11,7 @@ describe("stas3 second field", () => {
     const requestedScriptHash = fromHex("11".repeat(32));
     const requestedPkh = fromHex("22".repeat(20));
 
-    const encoded = buildStas3SwapSecondField({
+    const encoded = buildSwapActionData({
       requestedScriptHash,
       requestedPkh,
       rateNumerator: 2,
@@ -19,9 +19,9 @@ describe("stas3 second field", () => {
     });
 
     expect(encoded.length).toBe(61);
-    expect(encoded[0]).toBe(Stas3SecondFieldAction.swap);
+    expect(encoded[0]).toBe(DstasActionKind.swap);
 
-    const parsed = decodeStas3SecondField(encoded);
+    const parsed = decodeActionData(encoded);
     expect(parsed.kind).toBe("swap");
     if (parsed.kind !== "swap") return;
 
@@ -33,7 +33,7 @@ describe("stas3 second field", () => {
   });
 
   test("encodes and decodes recursive swap legs", () => {
-    const encoded = buildStas3SwapSecondField({
+    const encoded = buildSwapActionData({
       requestedScriptHash: fromHex("33".repeat(32)),
       requestedPkh: fromHex("44".repeat(20)),
       rateNumerator: 7,
@@ -47,7 +47,7 @@ describe("stas3 second field", () => {
       },
     });
 
-    const parsed = decodeStas3SecondField(encoded);
+    const parsed = decodeActionData(encoded);
     expect(parsed.kind).toBe("swap");
     if (parsed.kind !== "swap") return;
     expect(parsed.next?.kind).toBe("swap");
@@ -57,17 +57,17 @@ describe("stas3 second field", () => {
   });
 
   test("encodes action second field", () => {
-    const encoded = encodeStas3SecondField({
+    const encoded = encodeActionData({
       kind: "action",
-      action: Stas3SecondFieldAction.freeze,
+      action: DstasActionKind.freeze,
       payload: fromHex("aa55"),
     });
 
     expect(toHex(encoded)).toBe("03aa55");
-    const parsed = decodeStas3SecondField(encoded);
+    const parsed = decodeActionData(encoded);
     expect(parsed.kind).toBe("action");
     if (parsed.kind !== "action") return;
-    expect(parsed.action).toBe(Stas3SecondFieldAction.freeze);
+    expect(parsed.action).toBe(DstasActionKind.freeze);
     expect(toHex(parsed.payload ?? new Uint8Array(0))).toBe("aa55");
   });
 });
