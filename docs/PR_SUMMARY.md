@@ -25,7 +25,7 @@
 - `src/script/read/stas3-unlocking-script-decomposer.ts`
 - `src/script/stas3-second-field.ts`
 - `tests/dstas-flow.test.ts`
-- `tests/stas30-multisig-authority-flow.test.ts`
+- `tests/dstas-multisig-authority-flow.test.ts`
 - `tests/dstas-bundle-factory.test.ts`
 - `tests/locking-script-reader.test.ts`
 

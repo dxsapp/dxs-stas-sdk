@@ -80,7 +80,7 @@ Script building/reading:
 - `buildUnlockingScript` assembles standard unlocking script layouts for tests and factory usage. (see: src/script/build/unlocking-script-builder.ts:1-118)
 - `ScriptReader` parses script bytes into `ScriptToken[]` with minimal op encoding. (see: src/script/read/script-reader.ts:5-78)
 - `ScriptToken` models opcodes and pushdata entries and can be created from raw bytes or sample tokens; STAS3-specific flags are carried in `IsSecondField`, `IsRedemptionId`, and `IsFlagsField`. (see: src/script/script-token.ts:4-91)
-- `script-samples` provides sample token arrays including STAS 3.0 helpers (`getP2Stas30Tokens`). (see: src/script/script-samples.ts:1-53)
+- `script-samples` provides sample token arrays including Divisible STAS helpers (`getP2Stas30Tokens`). (see: src/script/script-samples.ts:1-53)
 - `isOpCode` checks whether a numeric value is a valid opcode boundary. (see: src/script/script-utils.ts:3-12)
 - `ScriptEvaluator` executes scripts for tests with signature verification and optional OP_RETURN allowance. (see: src/script/eval/script-evaluator.ts:1-520)
 
@@ -96,7 +96,7 @@ High-level transaction factories:
 - `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, and `BuildRedeemTx` are helpers that build specific STAS workflows over `TransactionBuilder`. (see: src/transaction-factory.ts:22-221)
 - `FeeRate` is a constant used for transaction fee calculations in factory helpers. (see: src/transaction-factory.ts:12-13)
 - The request types `TBuildTransferTxRequest`, `TBuildSplitTxRequest`, `TBuildMergeTxRequest`, and `TBuildRedeemTxRequest` describe factory inputs. (see: src/transaction-factory.ts:14-168)
-- STAS 3.0 flows are implemented in `BuildStas3BaseTx` and wrapper helpers (`BuildStas3TransferTx`, `BuildStas3SplitTx`, `BuildStas3MergeTx`, `BuildStas3FreezeTx`, `BuildStas3UnfreezeTx`, `BuildStas3SwapTx`, `BuildStas3MultisigTx`). (see: src/dstas-factory.ts:1-167)
+- Divisible STAS flows are implemented in `BuildDstasBaseTx` and wrapper helpers (`BuildDstasTransferTx`, `BuildDstasSplitTx`, `BuildDstasMergeTx`, `BuildDstasFreezeTx`, `BuildDstasUnfreezeTx`, `BuildDstasSwapTx`, `BuildDstasMultisigTx`). (see: src/dstas-factory.ts:1-567)
 
 Bundle factory:
 
@@ -193,12 +193,12 @@ const bundle = await factory.createBundle(1000, {
 });
 ```
 
-- STAS 3.0 bundle factory uses a recipient object (M-of-N) and custom locking/unlocking builders. (see: src/dstas-bundle-factory.ts:1-365)
+- Divisible STAS bundle factory uses a recipient object (M-of-N) and custom locking/unlocking builders. (see: src/dstas-bundle-factory.ts:1-736)
 
 ```ts
-import { Stas30BundleFactory } from "dxs-stas-sdk";
+import { DstasBundleFactory } from "dxs-stas-sdk";
 
-const stas30Factory = new Stas30BundleFactory(
+const dstasFactory = new DstasBundleFactory(
   stasWallet,
   feeWallet,
   getFundingUtxo,
@@ -208,7 +208,7 @@ const stas30Factory = new Stas30BundleFactory(
   buildUnlockingScript,
 );
 
-const bundle30 = await stas30Factory.createBundle(
+const bundle30 = await dstasFactory.createBundle(
   1000,
   {
     m: 2,
@@ -222,11 +222,11 @@ const bundle30 = await stas30Factory.createBundle(
 
 - `src/bitcoin/*` holds address, key, transaction, script-type, and token scheme primitives used by builders and readers. (see: src/bitcoin/index.ts:1-15)
 - `src/buffer/*` re-exports `ByteReader`/`ByteWriter` and contains varint/byte helpers used throughout transaction and script code. (see: src/buffer/index.ts:1-3, src/buffer/buffer-utils.ts:4-116)
-- `src/script/*` implements script tokenization, parsing, STAS 3.0 templates/builders, and script evaluation. (see: src/script/index.ts:1-13, src/script/build/script-builder.ts:8-127, src/script/eval/script-evaluator.ts:1-520)
-- `src/script/templates/*` stores STAS 3.0 template references, including the ASM template and precompiled base token list. (see: src/script/templates/stas3-freeze-multisig.ts:1-2, src/script/templates/stas3-freeze-multisig-base.ts:1-120)
+- `src/script/*` implements script tokenization, parsing, Divisible STAS templates/builders, and script evaluation. (see: src/script/index.ts:1-13, src/script/build/script-builder.ts:8-127, src/script/eval/script-evaluator.ts:1-520)
+- `src/script/templates/*` stores Divisible STAS template references, including the ASM template and precompiled base token list. (see: src/script/templates/stas3-freeze-multisig.ts:1-2, src/script/templates/stas3-freeze-multisig-base.ts:1-120)
 - `src/transaction/*` implements transaction construction (`TransactionBuilder`) and parsing (`TransactionReader`). (see: src/transaction/index.ts:1-4, src/transaction/build/transaction-builder.ts:23-172)
 - `src/transaction-factory.ts` provides high-level STAS v1 transaction helper functions (transfer/split/merge/redeem). (see: src/transaction-factory.ts:12-221)
-- `src/dstas-factory.ts` provides STAS 3.0 transaction helpers and semantic wrappers for freeze/unfreeze/swap/multisig flows. (see: src/dstas-factory.ts:1-167)
+- `src/dstas-factory.ts` provides Divisible STAS transaction helpers and semantic wrappers for freeze/unfreeze/swap/multisig flows. (see: src/dstas-factory.ts:1-567)
 - `src/stas-bundle-factory.ts` provides multi-transaction bundling orchestration. (see: src/stas-bundle-factory.ts:40-374)
 - `src/hashes.ts` and `src/base.ts` supply hashing and Base58Check utilities used by address and signature logic. (see: src/hashes.ts:5-13, src/base.ts:1-4)
 
@@ -261,7 +261,7 @@ Redeem (BuildRedeemTx):
 3. Build a transaction with P2PKH redeem output plus optional split STAS outputs. (see: src/transaction-factory.ts:195-206)
 4. Optionally add note output, then add change with fee, sign, and serialize. (see: src/transaction-factory.ts:208-220)
 
-STAS 3.0 Base (BuildStas3BaseTx):
+Divisible STAS Base (BuildDstasBaseTx):
 
 1. Validate at least one STAS input and destination; enforce exact satoshi conservation across STAS inputs/outputs. (see: src/dstas-factory.ts:52-76)
 2. Add STAS inputs, fee input, and build locking scripts via `buildStas3FreezeMultisigScript`. (see: src/dstas-factory.ts:78-107)
