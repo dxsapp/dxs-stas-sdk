@@ -10,6 +10,10 @@
   - frozen-input rejection
 - Added owner multisig support for Divisible STAS locking path and tests for `3-of-5` owner spending.
 - Added second-field codec support and requested-script-hash integration from updated protocol notes.
+- Captured and verified `optionalData` continuity invariant:
+  - if an asset leg is issued with `optionalData`, descendant DSTAS outputs must preserve it byte-exact;
+  - dropping/changing it causes script validation failure;
+  - `requestedScriptHash` hash-domain includes optionalData (tail from after second field to script end).
 - Switched redemption path to updated P2MPKH-compatible handling and aligned issuer UTXO assumptions.
 - Refined unlocking layout handling for with-change/no-change and multi-input merge payload in evaluation path.
 - Hardened `unlockingScriptSize()` as deterministic upper-bound for multisig authority path (without signing iterations).

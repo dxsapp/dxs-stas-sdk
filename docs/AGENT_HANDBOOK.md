@@ -3,6 +3,7 @@
 Protocol invariants reference:
 
 - Divisible STAS operation invariants are maintained in `docs/DSTAS_SCRIPT_INVARIANTS.md`.
+- `optionalData` continuity and `requestedScriptHash` hash-domain rules are documented there and must be preserved by builders/factories.
 - STAS3 freeze/multisig template notes are in `docs/STAS3_FREEZE_MULTISIG.md`.
 
 ## 1. Repository Snapshot

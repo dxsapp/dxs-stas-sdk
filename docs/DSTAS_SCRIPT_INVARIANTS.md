@@ -82,8 +82,21 @@ Swap exchanges ownership across two independent assets.
 - Second-field rule:
   Principal swap outputs use neutral action marker (`OP_FALSE`).
   Remainder outputs inherit second-field context from their origin leg.
+- Requested-script-hash rule:
+  For swap action-data, `requestedScriptHash` is computed as `SHA256(lockingScriptTail)`,
+  where `lockingScriptTail` is all locking-script bytes starting immediately after the
+  second variable field and up to the end of the locking script.
+  This includes base template bytes, redemption field, flags, service fields, and optional data.
 
-## 6. Owner / Authority multisig
+## 6. OptionalData continuity
+
+- If a DSTAS output was issued with `optionalData`, descendant DSTAS outputs that continue
+  the same asset leg must preserve `optionalData` byte-exact.
+- Removing or mutating `optionalData` in descendant outputs can make spend/merge validation fail.
+- For swap flows, `optionalData` also participates indirectly through `requestedScriptHash`
+  because it is part of the locking-script tail hash domain.
+
+## 7. Owner / Authority multisig
 
 - Authority multisig controls policy actions (freeze/unfreeze).
 - Owner multisig controls spending ownership path.
