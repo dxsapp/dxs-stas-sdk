@@ -329,16 +329,14 @@ export class DstasBundleFactory {
       }
     }
 
-    const {
-      transactions: transferTransactions,
-      feeOutPoint: feeUtxoOutPoint,
-    } = this.buildTransferPlanTransactions(
-      stasUtxo,
-      mergeFeeUtxo,
-      outputs,
-      spendType,
-      note,
-    );
+    const { transactions: transferTransactions, feeOutPoint: feeUtxoOutPoint } =
+      this.buildTransferPlanTransactions(
+        stasUtxo,
+        mergeFeeUtxo,
+        outputs,
+        spendType,
+        note,
+      );
 
     for (const tx of transferTransactions) {
       transactions.push(tx);
@@ -379,7 +377,10 @@ export class DstasBundleFactory {
 
       const isFinal = queue.length <= 4;
       const transferOutputs = isFinal ? queue : queue.slice(0, 3);
-      const sentSatoshis = transferOutputs.reduce((sum, x) => sum + x.satoshis, 0);
+      const sentSatoshis = transferOutputs.reduce(
+        (sum, x) => sum + x.satoshis,
+        0,
+      );
 
       const txOutputs: {
         recipient: TDstasRecipient;
@@ -399,7 +400,11 @@ export class DstasBundleFactory {
         });
       }
 
-      const destinations = this.buildDestinations(currentStas, txOutputs, spendType);
+      const destinations = this.buildDestinations(
+        currentStas,
+        txOutputs,
+        spendType,
+      );
       const txRaw = this.buildStas30Tx({
         stasPayments: [{ OutPoint: currentStas, Owner: this.stasWallet }],
         feePayment: { OutPoint: currentFee, Owner: this.feeWallet },
@@ -792,5 +797,4 @@ export class DstasBundleFactory {
 
     return new Address(ownerToken.Data);
   };
-
 }

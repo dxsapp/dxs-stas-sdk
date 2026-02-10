@@ -42,7 +42,8 @@ const makeDstasOutPoint = (
 
 describe("ResolveDstasSwapMode", () => {
   test("returns transfer-swap when only one input has swap actionData", () => {
-    const owner = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
+    const owner =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
     const swapAction = buildSwapActionData({
       requestedScriptHash: new Uint8Array(32).fill(0x11),
       requestedPkh: owner.Address.Hash160,
@@ -64,7 +65,8 @@ describe("ResolveDstasSwapMode", () => {
   });
 
   test("returns swap-swap when both inputs have swap actionData", () => {
-    const owner = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
+    const owner =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
     const swapAction = buildSwapActionData({
       requestedScriptHash: new Uint8Array(32).fill(0x22),
       requestedPkh: owner.Address.Hash160,
@@ -85,4 +87,3 @@ describe("ResolveDstasSwapMode", () => {
     expect(mode).toBe("swap-swap");
   });
 });
-
