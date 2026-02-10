@@ -49,7 +49,7 @@ const makeOutPoint = (
   scriptBytes: Uint8Array,
 ) => new OutPoint(txId, 0, scriptBytes, satoshis, address, scriptType);
 
-const makeFactory = (stasSatoshis = 1000): TestFactory => {
+const makeFactory = (stasSatoshis = 1000, feeSatoshis = 100000): TestFactory => {
   const stasWallet =
     Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
   const feeWallet =
@@ -66,7 +66,7 @@ const makeFactory = (stasSatoshis = 1000): TestFactory => {
   const feeScript = new P2pkhBuilder(feeWallet.Address).toBytes();
   const feeOutPoint = makeOutPoint(
     "11".repeat(32),
-    100000,
+    feeSatoshis,
     feeWallet.Address,
     ScriptType.p2pkh,
     feeScript,
@@ -207,5 +207,58 @@ describe("DstasBundleFactory spendType flags", () => {
     expect(legacy.transactions).toBeDefined();
     expect(newApi.transactions).toBeDefined();
     expect(legacy.transactions!.length).toBe(newApi.transactions!.length);
+  });
+
+  test("transfer() supports large recipient bundle (~100 tx plan)", async () => {
+    const recipientsCount = 301;
+    const { factory, recipient } = makeFactory(recipientsCount, 1_000_000);
+    const outputs = Array.from({ length: recipientsCount }, () => ({
+      recipient,
+      satoshis: 1,
+    }));
+    const note = [new Uint8Array([0xde, 0xad, 0xbe, 0xef])];
+
+    const result = await factory.transfer({
+      outputs,
+      note,
+    });
+
+    expect(result.transactions).toBeDefined();
+    expect(result.transactions!.length).toBe(100);
+
+    const txs = result.transactions!.map((x) => TransactionReader.readHex(x));
+    for (let i = 0; i < txs.length; i++) {
+      const nullDataCount = txs[i].Outputs.filter(
+        (o) => o.ScriptType === ScriptType.nullData,
+      ).length;
+
+      if (i === txs.length - 1) {
+        expect(nullDataCount).toBe(1);
+      } else {
+        expect(nullDataCount).toBe(0);
+      }
+    }
+  });
+
+  test("transfer() rejects invalid output satoshis", async () => {
+    const { factory, recipient } = makeFactory(1000);
+
+    await expect(
+      factory.transfer({
+        outputs: [{ recipient, satoshis: 0 }],
+      }),
+    ).rejects.toThrow("Transfer output satoshis must be a positive integer");
+  });
+
+  test("transfer() returns insufficient message when STAS balance is not enough", async () => {
+    const { factory, recipient } = makeFactory(100);
+
+    const result = await factory.transfer({
+      outputs: [{ recipient, satoshis: 101 }],
+    });
+
+    expect(result.transactions).toBeUndefined();
+    expect(result.message).toBe("Insufficient STAS tokens balance");
+    expect(result.feeSatoshis).toBe(0);
   });
 });

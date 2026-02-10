@@ -1903,6 +1903,72 @@ describe("dstas flow", () => {
     ).toBe(true);
   });
 
+  test("real funding: theft attempt fails when non-owner signs STAS input", () => {
+    const fixture = createRealFundingFlowFixture();
+
+    const stolenStasTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        // Attacker tries to spend Alice-owned STAS.
+        Owner: fixture.bob,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.bob.Address,
+      },
+      omitChangeOutput: true,
+    });
+
+    const stolenEval = evaluateTransactionHex(
+      stolenStasTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(stolenEval.success).toBe(false);
+    expect(stolenEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
+    );
+  });
+
+  test("real funding: theft attempt fails when non-owner signs fee input", () => {
+    const fixture = createRealFundingFlowFixture();
+
+    const stolenFeeTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        // Attacker tries to spend Bob-owned fee UTXO.
+        Owner: fixture.cat,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.bob.Address,
+      },
+      omitChangeOutput: true,
+    });
+
+    const stolenEval = evaluateTransactionHex(
+      stolenFeeTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(stolenEval.success).toBe(false);
+    expect(stolenEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      false,
+    );
+  });
+
   test("real funding: redeem by non-issuer is rejected", () => {
     const fixture = createRealFundingFlowFixture();
     const stasOutPoint = fixture.stasOutPoint;
