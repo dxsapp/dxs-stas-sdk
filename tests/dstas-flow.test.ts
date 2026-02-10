@@ -371,69 +371,64 @@ describe("dstas flow", () => {
     };
   };
 
-  test(
-    "reference transfer (P2PKH): stas input validates with preimage-derived prevout",
-    () => {
-      const txHex = readFileSync(referenceTransferTxPath, "utf8").trim();
-      const tx = TransactionReader.readHex(txHex);
-      const unlock = decomposeStas3UnlockingScript(
-        tx.Inputs[0].UnlockingScript,
-      );
-      const lock = decomposeStas3LockingScript(tx.Outputs[0].LockignScript);
+  test("reference transfer (P2PKH): stas input validates with preimage-derived prevout", () => {
+    const txHex = readFileSync(referenceTransferTxPath, "utf8").trim();
+    const tx = TransactionReader.readHex(txHex);
+    const unlock = decomposeStas3UnlockingScript(tx.Inputs[0].UnlockingScript);
+    const lock = decomposeStas3LockingScript(tx.Outputs[0].LockignScript);
 
-      const preimage = fromHex(unlock.preimageHex!);
-      const reader = new ByteReader(preimage);
-      reader.readUInt32();
-      reader.readChunk(32);
-      reader.readChunk(32);
-      reader.readChunk(32);
-      reader.readUInt32();
-      const prevScript = reader.readVarChunk();
-      const prevSatoshis = reader.readUInt64();
+    const preimage = fromHex(unlock.preimageHex!);
+    const reader = new ByteReader(preimage);
+    reader.readUInt32();
+    reader.readChunk(32);
+    reader.readChunk(32);
+    reader.readChunk(32);
+    reader.readUInt32();
+    const prevScript = reader.readVarChunk();
+    const prevSatoshis = reader.readUInt64();
 
-      const dummyFeeLock = Uint8Array.from([
-        0x76,
-        0xa9,
-        0x14,
-        ...Array(20).fill(0),
-        0x88,
-        0xac,
-      ]);
+    const dummyFeeLock = Uint8Array.from([
+      0x76,
+      0xa9,
+      0x14,
+      ...Array(20).fill(0),
+      0x88,
+      0xac,
+    ]);
 
-      const evalInput0 = evaluateScripts(
-        tx.Inputs[0].UnlockingScript,
-        prevScript,
-        {
-          tx,
-          inputIndex: 0,
-          prevOutputs: [
-            { lockingScript: prevScript, satoshis: prevSatoshis },
-            { lockingScript: dummyFeeLock, satoshis: 1_000 },
-          ],
-        },
-        { allowOpReturn: true, trace: true, traceLimit: 1_200 },
-      );
+    const evalInput0 = evaluateScripts(
+      tx.Inputs[0].UnlockingScript,
+      prevScript,
+      {
+        tx,
+        inputIndex: 0,
+        prevOutputs: [
+          { lockingScript: prevScript, satoshis: prevSatoshis },
+          { lockingScript: dummyFeeLock, satoshis: 1_000 },
+        ],
+      },
+      { allowOpReturn: true, trace: true, traceLimit: 1_200 },
+    );
 
-      const decodedWif = bs58check.decode(
-        "cSApidrMXZzYHTTmHRRNjCksbXZ7jhed1zK8Fg28Vg8XNgKcRCpS",
-      );
-      const signer = new PrivateKey(decodedWif.subarray(1, 33));
+    const decodedWif = bs58check.decode(
+      "cSApidrMXZzYHTTmHRRNjCksbXZ7jhed1zK8Fg28Vg8XNgKcRCpS",
+    );
+    const signer = new PrivateKey(decodedWif.subarray(1, 33));
 
-      expect(tx.Inputs.length).toBe(2);
-      expect(tx.Outputs.length).toBe(1);
-      expect(unlock.parsed).toBe(true);
-      expect(unlock.spendingType).toBe(1);
-      expect(unlock.authPlaceholderOpcodes).toEqual([0, 0, 0]);
-      expect(unlock.signatureHex?.slice(-2)).toBe("41");
-      expect(lock.flagsHex).toBe("aabb00");
-      expect(lock.serviceFieldHexes.length).toBe(0);
-      expect(lock.errors.length).toBe(0);
-      expect(toHex(signer.PublicKey).toLowerCase()).toBe(
-        unlock.publicKeyHex?.toLowerCase(),
-      );
-      expect(evalInput0.success).toBe(true);
-    },
-  );
+    expect(tx.Inputs.length).toBe(2);
+    expect(tx.Outputs.length).toBe(1);
+    expect(unlock.parsed).toBe(true);
+    expect(unlock.spendingType).toBe(1);
+    expect(unlock.authPlaceholderOpcodes).toEqual([0, 0, 0]);
+    expect(unlock.signatureHex?.slice(-2)).toBe("41");
+    expect(lock.flagsHex).toBe("aabb00");
+    expect(lock.serviceFieldHexes.length).toBe(0);
+    expect(lock.errors.length).toBe(0);
+    expect(toHex(signer.PublicKey).toLowerCase()).toBe(
+      unlock.publicKeyHex?.toLowerCase(),
+    );
+    expect(evalInput0.success).toBe(true);
+  });
 
   test("real funding: build contract + issue are valid", () => {
     const fixture = createRealFundingFlowFixture();
