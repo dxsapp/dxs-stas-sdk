@@ -1,6 +1,6 @@
 # dxs-stas-sdk
 
-TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for STAS token scripts. It includes script builders/readers, transaction builders/parsers, STAS issue/transfer/split/merge helpers, and address/key utilities.
+TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS/STAS token scripts. It includes script builders/readers, transaction builders/parsers, DSTAS and STAS factories, and address/key utilities.
 
 ## Binary types
 
@@ -15,6 +15,60 @@ npm install dxs-stas-sdk
 ## Concepts
 
 An `OutPoint` represents a spendable UTXO: txid, vout, locking script, satoshis, and owner address.
+
+## Example: build a DSTAS issue + transfer flow
+
+```ts
+import {
+  BuildDstasIssueTxs,
+  BuildDstasTransferTx,
+  OutPoint,
+  PrivateKey,
+  TokenScheme,
+  TransactionReader,
+  toHex,
+  utf8ToBytes,
+  fromHex,
+} from "dxs-stas-sdk";
+
+const bob = new PrivateKey(
+  fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
+);
+const alice = new PrivateKey(
+  fromHex("77b1b7d5bfe1288d94f829baba86d503e1a06b571aaa5d36820be19ef2fe520e"),
+);
+
+const scheme = new TokenScheme(
+  "Divisible STAS",
+  toHex(bob.Address.Hash160), // issuer token id
+  "DSTAS",
+  1,
+  { isDivisible: true },
+);
+
+// Parse a funding transaction that belongs to issuer address (bob).
+const sourceTx = TransactionReader.readHex("<funding-tx-hex>");
+const fundingOut = OutPoint.fromTransaction(sourceTx, 0);
+
+const { issueTxHex } = BuildDstasIssueTxs({
+  fundingPayment: { OutPoint: fundingOut, Owner: bob },
+  scheme,
+  destinations: [{ Satoshis: 100, To: bob.Address }],
+  feeRate: 0.1,
+});
+
+const issueTx = TransactionReader.readHex(issueTxHex);
+const stasOut = OutPoint.fromTransaction(issueTx, 0);
+const feeOut = OutPoint.fromTransaction(issueTx, 1);
+
+const transferTxHex = BuildDstasTransferTx({
+  stasPayment: { OutPoint: stasOut, Owner: bob },
+  feePayment: { OutPoint: feeOut, Owner: bob },
+  destination: { Satoshis: 100, To: alice.Address },
+  Scheme: scheme,
+  note: [utf8ToBytes("DSTAS"), utf8ToBytes("transfer")],
+});
+```
 
 ## Example: build a simple P2PKH transaction
 
@@ -31,6 +85,7 @@ import {
 const pk = new PrivateKey(
   fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
 );
+const from = pk.Address;
 const to = Address.fromBase58("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
 const lockingScript = fromHex(
   "76a914e3b111de8fec527b41f4189e313638075d96ccd688ac",
@@ -79,7 +134,7 @@ const tokenScheme = new TokenScheme(
   "Token Name",
   "e3b111de8fec527b41f4189e313638075d96ccd6",
   "TokenSymbol",
-  satoshisPerToken, //
+  1,
 );
 
 // Parse a previous transaction that produced a STAS output + fee output.
@@ -119,7 +174,7 @@ const tokenScheme = new TokenScheme(
   "Token Name",
   "e3b111de8fec527b41f4189e313638075d96ccd6",
   "Token Symbol",
-  SatoshisPerToken,
+  1,
 );
 
 // Parse a funding transaction with two outputs:
@@ -140,8 +195,8 @@ const txHex = TransactionBuilder.init()
 ## What this library is for
 
 - Construct and parse raw Bitcoin SV transactions.
-- Build and read scripts (P2PKH, OP_RETURN, STAS).
-- Create STAS token transactions (issue, transfer, split, merge, redeem).
+- Build and read scripts (P2PKH, OP_RETURN, DSTAS, STAS).
+- Create DSTAS and STAS token transactions.
 - Work with keys, addresses, and standard hashing helpers.
 
 ## FAQ / common pitfalls
@@ -160,7 +215,7 @@ const txHex = TransactionBuilder.init()
 | Bitcoin primitives      | Keys, addresses, transactions        | `PrivateKey`, `Address`, `Transaction`, `OutPoint`                                  |
 | Script builders/readers | Build and parse scripts              | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader` |
 | Transaction building    | Assemble raw txs                     | `TransactionBuilder`, `TransactionReader`                                           |
-| STAS factories          | STAS workflows                       | `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, `BuildRedeemTx`                  |
+| Token factories         | DSTAS/STAS workflows                 | `BuildDstasIssueTxs`, `BuildDstasTransferTx`, `BuildTransferTx`, `BuildSplitTx`     |
 
 ## Author
 
