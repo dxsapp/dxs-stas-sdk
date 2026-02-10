@@ -401,8 +401,7 @@ const toSwapFlowDestination = (
   Satoshis: value.Satoshis,
   LockingParams: {
     owner: value.Owner,
-    secondField:
-      value.SecondField !== undefined ? value.SecondField : null,
+    secondField: value.SecondField !== undefined ? value.SecondField : null,
     redemptionPkh: fromHex(value.TokenIdHex),
     flags: buildStas3Flags({ freezable: value.Freezable }),
     serviceFields: [value.AuthorityServiceField],
