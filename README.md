@@ -1,6 +1,6 @@
 # dxs-stas-sdk
 
-TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for STAS token scripts. It includes script builders/readers, transaction builders/parsers, STAS issue/transfer/split/merge helpers, and address/key utilities.
+TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS/STAS token scripts. It includes script builders/readers, transaction builders/parsers, DSTAS and STAS factories, and address/key utilities.
 
 ## Binary types
 
@@ -15,6 +15,177 @@ npm install dxs-stas-sdk
 ## Concepts
 
 An `OutPoint` represents a spendable UTXO: txid, vout, locking script, satoshis, and owner address.
+
+## Example: build a DSTAS issue + transfer flow
+
+```ts
+import {
+  BuildDstasIssueTxs,
+  BuildDstasTransferTx,
+  OutPoint,
+  PrivateKey,
+  TokenScheme,
+  TransactionReader,
+  toHex,
+  utf8ToBytes,
+  fromHex,
+} from "dxs-stas-sdk";
+
+const bob = new PrivateKey(
+  fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
+);
+const alice = new PrivateKey(
+  fromHex("77b1b7d5bfe1288d94f829baba86d503e1a06b571aaa5d36820be19ef2fe520e"),
+);
+
+const scheme = new TokenScheme(
+  "Divisible STAS",
+  toHex(bob.Address.Hash160), // issuer token id
+  "DSTAS",
+  1,
+  { isDivisible: true },
+);
+
+// Parse a funding transaction that belongs to issuer address (bob).
+const sourceTx = TransactionReader.readHex("<funding-tx-hex>");
+const fundingOut = OutPoint.fromTransaction(sourceTx, 0);
+
+const { issueTxHex } = BuildDstasIssueTxs({
+  fundingPayment: { OutPoint: fundingOut, Owner: bob },
+  scheme,
+  destinations: [{ Satoshis: 100, To: bob.Address }],
+  feeRate: 0.1,
+});
+
+const issueTx = TransactionReader.readHex(issueTxHex);
+const stasOut = OutPoint.fromTransaction(issueTx, 0);
+const feeOut = OutPoint.fromTransaction(issueTx, 1);
+
+const transferTxHex = BuildDstasTransferTx({
+  stasPayment: { OutPoint: stasOut, Owner: bob },
+  feePayment: { OutPoint: feeOut, Owner: bob },
+  destination: { Satoshis: 100, To: alice.Address },
+  Scheme: scheme,
+  note: [utf8ToBytes("DSTAS"), utf8ToBytes("transfer")],
+});
+```
+
+## Example: high-level DSTAS payouts with `DstasBundleFactory`
+
+```ts
+import {
+  Address,
+  DstasBundleFactory,
+  DstasSpendType,
+  LockingScriptReader,
+  OutPoint,
+  ScriptType,
+  Transaction,
+  Wallet,
+  hash160,
+  toHex,
+  utf8ToBytes,
+} from "dxs-stas-sdk";
+
+const stasWallet =
+  Wallet.fromMnemonic("<mnemonic>").deriveWallet("m/44'/236'/0'/0/0");
+const feeWallet =
+  Wallet.fromMnemonic("<mnemonic>").deriveWallet("m/44'/236'/0'/0/1");
+
+// You provide these integrations from your indexer/wallet backend.
+const getStasUtxoSet = async (minSats = 0): Promise<OutPoint[]> => {
+  return await fetchDstasUtxosForAddress(stasWallet.Address, minSats);
+};
+
+const getFundingUtxo = async ({
+  estimatedFeeSatoshis,
+}: {
+  utxoIdsToSpend: string[];
+  estimatedFeeSatoshis: number;
+  transactionsCount: number;
+}): Promise<OutPoint> => {
+  return await fetchFeeUtxoForAddress(feeWallet.Address, estimatedFeeSatoshis);
+};
+
+const getTransactions = async (
+  ids: string[],
+): Promise<Record<string, Transaction>> => {
+  return await fetchTransactionsByIds(ids);
+};
+
+const mapSpendTypeToCode = (spendType: DstasSpendType): number => {
+  if (spendType === "swap") return 4;
+  if (spendType === "freeze" || spendType === "unfreeze") return 2;
+  return 1;
+};
+
+const factory = new DstasBundleFactory(
+  stasWallet,
+  feeWallet,
+  getFundingUtxo,
+  getStasUtxoSet,
+  getTransactions,
+  ({ fromOutPoint, recipient, spendType, isFreezeLike, isChange }) => {
+    const parsed = LockingScriptReader.read(fromOutPoint.LockignScript).Dstas;
+    if (!parsed) throw new Error("Expected DSTAS input locking script");
+    if (recipient.m !== 1 || recipient.addresses.length !== 1) {
+      throw new Error("README example supports only m=1 recipient");
+    }
+
+    return {
+      owner: recipient.addresses[0].Hash160,
+      actionData:
+        spendType === "swap" && !isChange ? parsed.ActionDataRaw : null,
+      redemptionPkh: parsed.Redemption,
+      frozen:
+        spendType === "freeze"
+          ? true
+          : spendType === "unfreeze"
+            ? false
+            : isFreezeLike,
+      flags: parsed.Flags,
+      serviceFields: parsed.ServiceFields,
+      optionalData: parsed.OptionalData,
+    };
+  },
+  ({ txBuilder, inputIndex, spendType, isMerge }) => {
+    const input = txBuilder.Inputs[inputIndex];
+    input.Merge = isMerge;
+    input.DstasSpendingType = mapSpendTypeToCode(spendType);
+    input.sign(true);
+    if (!input.UnlockingScript) {
+      throw new Error("Failed to build DSTAS unlocking script");
+    }
+    return input.UnlockingScript;
+  },
+);
+
+const recipients = [
+  {
+    recipient: { m: 1, addresses: [Address.fromBase58("<alice-address>")] },
+    satoshis: 150,
+  },
+  {
+    recipient: { m: 1, addresses: [Address.fromBase58("<bob-address>")] },
+    satoshis: 200,
+  },
+];
+
+const bundle = await factory.transfer({
+  outputs: recipients,
+  spendType: "transfer",
+  note: [utf8ToBytes("DSTAS"), utf8ToBytes("bundle transfer")],
+});
+
+console.log("transactions:", bundle.transactions?.length ?? 0);
+console.log("paid fee satoshis:", bundle.feeSatoshis);
+```
+
+Notes:
+
+- `DstasBundleFactory` plans merge/split/transfer service transactions automatically.
+- `note` is attached only to final transfer transaction(s), not to intermediate service transactions.
+- For recipient multisig (`m > 1`), replace the simple `owner` derivation with your protocol-specific owner preimage/hash strategy.
 
 ## Example: build a simple P2PKH transaction
 
@@ -31,6 +202,7 @@ import {
 const pk = new PrivateKey(
   fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
 );
+const from = pk.Address;
 const to = Address.fromBase58("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
 const lockingScript = fromHex(
   "76a914e3b111de8fec527b41f4189e313638075d96ccd688ac",
@@ -79,7 +251,7 @@ const tokenScheme = new TokenScheme(
   "Token Name",
   "e3b111de8fec527b41f4189e313638075d96ccd6",
   "TokenSymbol",
-  satoshisPerToken, //
+  1,
 );
 
 // Parse a previous transaction that produced a STAS output + fee output.
@@ -119,7 +291,7 @@ const tokenScheme = new TokenScheme(
   "Token Name",
   "e3b111de8fec527b41f4189e313638075d96ccd6",
   "Token Symbol",
-  SatoshisPerToken,
+  1,
 );
 
 // Parse a funding transaction with two outputs:
@@ -140,8 +312,8 @@ const txHex = TransactionBuilder.init()
 ## What this library is for
 
 - Construct and parse raw Bitcoin SV transactions.
-- Build and read scripts (P2PKH, OP_RETURN, STAS).
-- Create STAS token transactions (issue, transfer, split, merge, redeem).
+- Build and read scripts (P2PKH, OP_RETURN, DSTAS, STAS).
+- Create DSTAS and STAS token transactions.
 - Work with keys, addresses, and standard hashing helpers.
 
 ## FAQ / common pitfalls
@@ -154,13 +326,13 @@ const txHex = TransactionBuilder.init()
 
 ## API overview (high level)
 
-| Area                    | Purpose                              | Key exports                                                                         |
-| ----------------------- | ------------------------------------ | ----------------------------------------------------------------------------------- |
-| Bytes                   | Hex/UTF-8 helpers and byte utilities | `fromHex`, `toHex`, `utf8ToBytes`, `bytesToUtf8`, `concat`, `equal`                 |
-| Bitcoin primitives      | Keys, addresses, transactions        | `PrivateKey`, `Address`, `Transaction`, `OutPoint`                                  |
-| Script builders/readers | Build and parse scripts              | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader` |
-| Transaction building    | Assemble raw txs                     | `TransactionBuilder`, `TransactionReader`                                           |
-| STAS factories          | STAS workflows                       | `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, `BuildRedeemTx`                  |
+| Area                    | Purpose                              | Key exports                                                                                           |
+| ----------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Bytes                   | Hex/UTF-8 helpers and byte utilities | `fromHex`, `toHex`, `utf8ToBytes`, `bytesToUtf8`, `concat`, `equal`                                   |
+| Bitcoin primitives      | Keys, addresses, transactions        | `PrivateKey`, `Address`, `Transaction`, `OutPoint`                                                    |
+| Script builders/readers | Build and parse scripts              | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader`                   |
+| Transaction building    | Assemble raw txs                     | `TransactionBuilder`, `TransactionReader`                                                             |
+| Token factories         | DSTAS/STAS workflows                 | `DstasBundleFactory`, `BuildDstasIssueTxs`, `BuildDstasTransferTx`, `BuildTransferTx`, `BuildSplitTx` |
 
 ## Author
 

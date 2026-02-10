@@ -44,16 +44,24 @@ export class OutPointFull extends OutPoint {
 
     if (
       output.ScriptType !== ScriptType.p2pkh &&
-      output.ScriptType !== ScriptType.p2stas
+      output.ScriptType !== ScriptType.p2mpkh &&
+      output.ScriptType !== ScriptType.p2stas &&
+      output.ScriptType !== ScriptType.dstas
     )
-      throw new Error("p2pkh or p2stat output must be provided");
+      throw new Error("p2pkh, p2mpkh, p2stas or dstas output must be provided");
+
+    if (!output.Address) {
+      throw new Error(
+        "Output does not expose address (for example, DSTAS multisig owner). Build OutPoint manually.",
+      );
+    }
 
     super(
       transaction.Id,
       vout,
       output.LockignScript,
       output.Satoshis,
-      output.Address!,
+      output.Address,
       output.ScriptType,
     );
 

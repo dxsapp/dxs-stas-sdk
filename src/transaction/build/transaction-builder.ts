@@ -7,6 +7,7 @@ import { PrivateKey } from "../../bitcoin/private-key";
 import { SignatureHashType } from "../../bitcoin/sig-hash-type";
 import { TokenScheme } from "../../bitcoin/token-scheme";
 import { NullDataBuilder } from "../../script/build/null-data-builder";
+import { P2mpkhBuilder } from "../../script/build/p2mpkh-builder";
 import { P2pkhBuilder } from "../../script/build/p2pkh-builder";
 import { P2stasBuilder } from "../../script/build/p2stas-builder";
 import { ScriptReader } from "../../script/read/script-reader";
@@ -69,6 +70,12 @@ export class TransactionBuilder {
 
     this.Outputs.push(new OutputBuilder(script, value));
 
+    return this;
+  };
+
+  addP2MpkhOutput = (value: number, to: Address) => {
+    const script = new P2mpkhBuilder(to);
+    this.Outputs.push(new OutputBuilder(script, value));
     return this;
   };
 
@@ -147,9 +154,9 @@ export class TransactionBuilder {
     return this;
   };
 
-  sign = () => {
+  sign = (force = false) => {
     for (const input of this.Inputs) {
-      input.sign();
+      input.sign(force);
     }
 
     return this;

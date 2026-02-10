@@ -263,6 +263,7 @@ export class StasBundleFactory {
             stasPayment,
             feePayment,
             to: this.stasWallet.Address,
+            feeRate: FeeRate,
           });
           const tx = TransactionReader.readHex(txRaw);
 
@@ -314,6 +315,7 @@ export class StasBundleFactory {
             feePayment,
             destination,
             splitDestination,
+            feeRate: FeeRate,
           });
           const tx = TransactionReader.readHex(txRaw);
 
@@ -346,6 +348,7 @@ export class StasBundleFactory {
       feePayment: { OutPoint: feeUtxo, Owner: this.feeWallet },
       to,
       note,
+      feeRate: FeeRate,
     });
 
   private buildSplitTransaction = (
@@ -367,5 +370,6 @@ export class StasBundleFactory {
         },
       ],
       note,
+      feeRate: FeeRate,
     });
 }

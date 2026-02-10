@@ -31,7 +31,7 @@ export class ScriptReader {
         const op = asMinimalOP(data);
 
         if (op !== undefined) {
-          result.push(new ScriptToken(byte, op));
+          result.push(new ScriptToken(op, op));
         } else {
           result.push(ScriptToken.fromBytes(data));
         }

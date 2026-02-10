@@ -14,6 +14,7 @@ import { ScriptType } from "../../bitcoin/script-type";
 import { SignatureHashType } from "../../bitcoin/sig-hash-type";
 import { hash256 } from "../../hashes";
 import { ScriptBuilder } from "../../script/build/script-builder";
+import { ScriptReader } from "../../script/read/script-reader";
 import { TransactionBuilder } from "./transaction-builder";
 import { Wallet } from "../../bitcoin";
 import { Bytes, fromHex } from "../../bytes";
@@ -26,6 +27,9 @@ export class InputBilder {
   OutPoint: OutPoint;
   Merge: boolean;
   UnlockingScript?: Bytes;
+  AuthoritySignaturesCount?: number;
+  AuthorityPubKeysCount?: number;
+  DstasSpendingType = 1;
   Sequence = TransactionBuilder.DefaultSequence;
 
   private _mergeVout: number = 0;
@@ -44,7 +48,10 @@ export class InputBilder {
     this.Merge = merge;
   }
 
-  sign = () => {
+  sign = (force = false) => {
+    if (!force && this.UnlockingScript !== undefined) return;
+
+    const scriptType = this.OutPoint.ScriptType;
     const preimage = this.preimage(TransactionBuilder.DefaultSighashType);
     const hashedPreimage = hash256(preimage);
     const der = this.Owner.sign(hashedPreimage);
@@ -52,7 +59,7 @@ export class InputBilder {
     derWithSigHashType.set(der);
     derWithSigHashType[der.length] = TransactionBuilder.DefaultSighashType;
 
-    if (this.OutPoint.ScriptType === ScriptType.p2pkh) {
+    if (scriptType === ScriptType.p2pkh || scriptType === ScriptType.p2mpkh) {
       const size =
         getChunkSize(derWithSigHashType) + getChunkSize(this.Owner.PublicKey);
       const buffer = new Uint8Array(size);
@@ -62,30 +69,61 @@ export class InputBilder {
       bufferWriter.writeVarChunk(this.Owner.PublicKey);
 
       this.UnlockingScript = buffer;
-    } else if (this.OutPoint.ScriptType === ScriptType.p2stas) {
+    } else if (
+      scriptType === ScriptType.p2stas ||
+      scriptType === ScriptType.dstas
+    ) {
       this.prepareMergeInfo();
 
       const script = new ScriptBuilder(ScriptType.p2stas);
+
       let hasNote = false;
+      let hasChangeOutput = false;
 
       for (const output of this.TxBuilder.Outputs) {
         if (output.LockingScript.ScriptType === ScriptType.nullData) {
           const nulldata = output.LockingScript.toBytes();
           const payload = nulldata.subarray(2);
+
           script.addData(payload);
 
           hasNote = true;
         } else {
           script
             .addNumber(output.Satoshis)
-            .addData(output.LockingScript.ToAddress!.Hash160);
+            .addData(this.resolveOutputOwnerField(output.LockingScript));
+
+          if (output.LockingScript.ScriptType === ScriptType.dstas) {
+            const secondFieldToken = output.LockingScript._tokens[1];
+
+            if (secondFieldToken?.Data) {
+              script.addData(secondFieldToken.Data);
+            } else if (secondFieldToken) {
+              script.addOpCode(secondFieldToken.OpCodeNum);
+            } else {
+              throw new Error(
+                "Divisible STAS output is missing second-field token in locking script",
+              );
+            }
+          }
+
+          if (
+            output.LockingScript.ScriptType === ScriptType.p2pkh ||
+            output.LockingScript.ScriptType === ScriptType.p2mpkh
+          ) {
+            hasChangeOutput = true;
+          }
         }
+      }
+
+      if (!hasChangeOutput) {
+        script.addOpCode(OpCode.OP_0);
+        script.addOpCode(OpCode.OP_0);
       }
 
       if (!hasNote) script.addOpCode(OpCode.OP_0);
 
-      const fundingInput =
-        this.TxBuilder.Inputs[this.TxBuilder.Inputs.length - 1];
+      const fundingInput = this.resolveFundingInput();
 
       script
         .addNumber(fundingInput.OutPoint.Vout)
@@ -100,10 +138,13 @@ export class InputBilder {
         script.addOpCode(OpCode.OP_0);
       }
 
-      script
-        .addData(preimage)
-        .addData(derWithSigHashType)
-        .addData(this.Owner.PublicKey);
+      script.addData(preimage);
+
+      if (scriptType === ScriptType.dstas) {
+        script.addNumber(this.DstasSpendingType);
+      }
+
+      script.addData(derWithSigHashType).addData(this.Owner.PublicKey);
 
       this.UnlockingScript = script.toBytes();
     }
@@ -145,31 +186,124 @@ export class InputBilder {
     return estimateChunkSize(nullDataOutput.LockingScript.size() - 2);
   };
 
+  private resolveOutputOwnerField = (script: ScriptBuilder): Bytes => {
+    if (script.ToAddress) return script.ToAddress.Hash160;
+
+    const ownerToken = script._tokens[0];
+    if (!ownerToken?.Data || ownerToken.Data.length === 0) {
+      throw new Error("Output locking script is missing owner field");
+    }
+
+    return ownerToken.Data;
+  };
+
+  private isStasScriptType = (scriptType: ScriptType): boolean =>
+    scriptType === ScriptType.p2stas || scriptType === ScriptType.dstas;
+
+  private resolveFundingInput = (): InputBilder => {
+    const candidates = this.TxBuilder.Inputs.filter(
+      (input, idx) =>
+        idx !== this.Idx && !this.isStasScriptType(input.OutPoint.ScriptType),
+    );
+
+    if (candidates.length === 0) {
+      throw new Error(
+        "Unable to resolve funding input: expected one non-STAS input",
+      );
+    }
+
+    if (candidates.length > 1) {
+      throw new Error(
+        "Unable to resolve funding input: multiple non-STAS inputs are present",
+      );
+    }
+
+    return candidates[0];
+  };
+
   prevoutHashLength = () => (32 + 4) * this.TxBuilder.Inputs.length;
 
   unlockingScriptSize = (): number => {
     if (this.UnlockingScript !== undefined) {
       return estimateChunkSize(this.UnlockingScript.length);
     }
-
-    let size =
+    const singleSigTailSize =
       1 + // OP_PUSH
       73 + // DER-encoded signature (70-73 bytes)
       1 + // OP_PUSH
       33; // Public Key
 
-    if (this.OutPoint.ScriptType === ScriptType.p2stas) {
+    const authorityTailSize = () => {
+      if (
+        this.AuthoritySignaturesCount === undefined ||
+        this.AuthorityPubKeysCount === undefined
+      ) {
+        return singleSigTailSize;
+      }
+
+      const sigCount = this.AuthoritySignaturesCount;
+      const pubKeyCount = this.AuthorityPubKeysCount;
+
+      if (sigCount <= 0 || pubKeyCount <= 0) {
+        throw new Error("Authority signature/public-key counts must be > 0");
+      }
+
+      const mlpkhPreimageSize =
+        1 + // m
+        pubKeyCount * (1 + 33) + // push(33)+pubKey for each key
+        1; // n
+
+      return (
+        1 + // OP_0 dummy for CHECKMULTISIG
+        sigCount * (1 + 73) + // worst-case signatures
+        estimateChunkSize(mlpkhPreimageSize)
+      );
+    };
+
+    if (
+      this.OutPoint.ScriptType === ScriptType.p2pkh ||
+      this.OutPoint.ScriptType === ScriptType.p2mpkh
+    ) {
+      return estimateChunkSize(singleSigTailSize);
+    }
+
+    let size = 0;
+
+    if (
+      this.OutPoint.ScriptType === ScriptType.p2stas ||
+      this.OutPoint.ScriptType === ScriptType.dstas
+    ) {
       this.prepareMergeInfo();
 
-      const fundingIdx = this.TxBuilder.Inputs.length - 1;
-      const fundingOutpoint = this.TxBuilder.Inputs[fundingIdx].OutPoint;
+      const fundingOutpoint = this.resolveFundingInput().OutPoint;
 
       size += this.stasNullDataLength();
+
+      let hasChangeOutput = false;
+
       size += this.TxBuilder.Outputs.reduce((a, x) => {
         if (x.LockingScript.ScriptType === ScriptType.nullData) return a;
 
-        return a + getNumberSize(x.Satoshis) + 21;
+        const ownerField = this.resolveOutputOwnerField(x.LockingScript);
+        a += getNumberSize(x.Satoshis) + estimateChunkSize(ownerField.length);
+
+        if (x.LockingScript.ScriptType === ScriptType.dstas) {
+          a += estimateChunkSize(x.LockingScript._tokens[1].DataLength);
+        }
+
+        if (
+          x.LockingScript.ScriptType === ScriptType.p2pkh ||
+          x.LockingScript.ScriptType === ScriptType.p2mpkh
+        ) {
+          hasChangeOutput = true;
+        }
+
+        return a;
       }, 0);
+
+      if (!hasChangeOutput) {
+        size += 2; // op_false op_false instead of pkh and satoshis
+      }
 
       size += getNumberSize(fundingOutpoint.Vout);
       size += estimateChunkSize(32); // Funding Tx vout
@@ -182,28 +316,68 @@ export class InputBilder {
         size += getNumberSize(this._mergeSegments.length);
         size += this._mergeSegments.reduce((a, x) => getChunkSize(x) + a, 0);
       }
+
+      if (this.OutPoint.ScriptType === ScriptType.dstas) {
+        size += getNumberSize(this.DstasSpendingType);
+      }
+
+      if (this.OutPoint.ScriptType === ScriptType.dstas) {
+        size += authorityTailSize();
+      } else {
+        size += singleSigTailSize;
+      }
+    }
+
+    if (size === 0) {
+      size = singleSigTailSize;
     }
 
     return estimateChunkSize(size);
   };
 
   /// <summary>
-  /// Only SIGHASH_ALL|FORK_ID implemented
+  /// SIGHASH_ALL/SINGLE/NONE with FORKID and ANYONECANPAY variants
   /// </summary>
   preimage = (signatureHashType: SignatureHashType) => {
     const size = this.preimageLength();
     const buffer = new Uint8Array(size);
     const writer = new ByteWriter(buffer);
+    const baseType = signatureHashType & 0x1f;
+    const anyoneCanPay =
+      (signatureHashType & SignatureHashType.SIGHASH_ANYONECANPAY) !== 0;
 
     writer.writeUInt32(this.TxBuilder.Version); // 4
-    this.writePrevoutHash(writer); // 32
-    this.writeSequenceHash(writer); // 32
+
+    if (anyoneCanPay) {
+      this.writeZeroHash(writer);
+    } else {
+      this.writePrevoutHash(writer); // 32
+    }
+
+    if (
+      anyoneCanPay ||
+      baseType === SignatureHashType.SIGHASH_NONE ||
+      baseType === SignatureHashType.SIGHASH_SINGLE
+    ) {
+      this.writeZeroHash(writer);
+    } else {
+      this.writeSequenceHash(writer); // 32
+    }
+
     writer.writeChunk(reverseBytes(fromHex(this.OutPoint.TxId))); // 32
     writer.writeUInt32(this.OutPoint.Vout); // 4
     writer.writeVarChunk(this.OutPoint.LockignScript);
     writer.writeUInt64(this.OutPoint.Satoshis); // 8
     writer.writeUInt32(this.Sequence); // 4
-    this.writeOutputsHash(writer); // 32
+
+    if (baseType === SignatureHashType.SIGHASH_ALL) {
+      this.writeOutputsHash(writer);
+    } else if (baseType === SignatureHashType.SIGHASH_SINGLE) {
+      this.writeSingleOutputHash(writer);
+    } else {
+      this.writeZeroHash(writer);
+    }
+
     writer.writeUInt32(this.TxBuilder.LockTime); // 4
     writer.writeUInt32(signatureHashType); // 4
 
@@ -247,17 +421,41 @@ export class InputBilder {
     writer.writeChunk(hash256(buffer));
   };
 
+  private writeSingleOutputHash = (writer: ByteWriter) => {
+    if (this.Idx >= this.TxBuilder.Outputs.length) {
+      this.writeZeroHash(writer);
+      return;
+    }
+
+    const output = this.TxBuilder.Outputs[this.Idx];
+    const buffer = new Uint8Array(output.size());
+    const bufferWriter = new ByteWriter(buffer);
+
+    output.writeTo(bufferWriter);
+    writer.writeChunk(hash256(buffer));
+  };
+
+  private writeZeroHash = (writer: ByteWriter) => {
+    writer.writeChunk(new Uint8Array(32));
+  };
+
   private prepareMergeInfo = () => {
     if (!this.Merge || this._mergeSegments.length > 0) return;
 
-    const lockingScript = this.TxBuilder.Inputs[0].OutPoint.LockignScript;
-    const scriptToCut = cloneBytes(lockingScript, 0, 23);
     const mergeUtxo = this.TxBuilder.Inputs[this.Idx === 0 ? 1 : 0];
+    const mergeRaw = mergeUtxo.OutPoint.Transaction?.Raw;
+    if (!mergeRaw) {
+      throw new Error("Merge input requires source transaction raw bytes");
+    }
 
     this._mergeVout = mergeUtxo.OutPoint.Vout;
-    this._mergeSegments = splitBytes(
-      mergeUtxo.OutPoint.Transaction!.Raw,
-      scriptToCut,
-    ).reverse();
+    if (this.OutPoint.ScriptType === ScriptType.dstas) {
+      this._mergeSegments = [mergeRaw];
+      return;
+    }
+
+    const lockingScript = this.TxBuilder.Inputs[0].OutPoint.LockignScript;
+    const scriptToCut = cloneBytes(lockingScript, 0, 23);
+    this._mergeSegments = splitBytes(mergeRaw, scriptToCut).reverse();
   };
 }

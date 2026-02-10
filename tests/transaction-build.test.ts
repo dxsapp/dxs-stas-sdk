@@ -6,6 +6,7 @@ import { TokenScheme } from "../src/bitcoin/token-scheme";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
 import {
   BuildMergeTx,
+  BuildRedeemTx,
   BuildSplitTx,
   BuildTransferTx,
 } from "../src/transaction-factory";
@@ -104,6 +105,7 @@ describe("testing transaction builder", () => {
       stasPayment: { OutPoint: stasOutPoint, Owner: alicePrivateKey },
       feePayment: { OutPoint: fundingOutPoint, Owner: issuerPrivateKey },
       to: aliceAddress,
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(TransferNoNoteRaw);
@@ -119,6 +121,7 @@ describe("testing transaction builder", () => {
       feePayment: { OutPoint: fundingOutPoint, Owner: issuerPrivateKey },
       to: aliceAddress,
       note: [utf8ToBytes("DXS"), utf8ToBytes("Transfer test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(TransferWithNoteRaw);
@@ -136,6 +139,7 @@ describe("testing transaction builder", () => {
         { Satoshis: 25, Address: aliceAddress },
         { Satoshis: 25, Address: aliceAddress },
       ],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(SplitNoNoteRaw);
@@ -156,6 +160,7 @@ describe("testing transaction builder", () => {
         Satoshis: stasOutPoint1.Satoshis + stasOutPoint2.Satoshis,
         Address: aliceAddress,
       },
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(MergeNoNoteRaw);
@@ -174,6 +179,7 @@ describe("testing transaction builder", () => {
         { Satoshis: 25, Address: aliceAddress },
       ],
       note: [utf8ToBytes("DXS"), utf8ToBytes("Split test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(SplitWithNoteRaw);
@@ -195,6 +201,7 @@ describe("testing transaction builder", () => {
       },
       destination: { Satoshis: 50, Address: aliceAddress },
       note: [utf8ToBytes("DXS"), utf8ToBytes("Merge test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(MergeWithNoteRaw);
@@ -212,6 +219,7 @@ describe("testing transaction builder", () => {
         { Satoshis: 25, Address: aliceAddress },
         { Satoshis: 25, Address: aliceAddress },
       ],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(SplitWithNote2Raw);
@@ -234,6 +242,7 @@ describe("testing transaction builder", () => {
       destination: { Satoshis: 25, Address: aliceAddress },
       splitDestination: { Satoshis: 25, Address: aliceAddress },
       note: [utf8ToBytes("DXS"), utf8ToBytes("Merge split test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(MergeSplitWithNoteRaw);
@@ -255,6 +264,7 @@ describe("testing transaction builder", () => {
       },
       destination: { Satoshis: 50, Address: aliceAddress },
       note: [utf8ToBytes("DXS"), utf8ToBytes("Merge test 2")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(MergeWithNote2Raw);
@@ -273,9 +283,52 @@ describe("testing transaction builder", () => {
       },
       to: issuerAddress,
       note: [utf8ToBytes("DXS"), utf8ToBytes("Transfer to issuer test")],
+      feeRate: 0.05,
     });
 
     expect(tx).toBe(TransferToIssuerRaw);
+  });
+
+  test("build STAS redeem uses STAS input amount for redeem output", () => {
+    const sourceTx = TransactionReader.readHex(TransferToIssuerRaw);
+    const stasOutPoint = OutPoint.fromTransaction(sourceTx, 0);
+    const fundingOutPoint = OutPoint.fromTransaction(sourceTx, 1);
+
+    const txRaw = BuildRedeemTx({
+      tokenScheme,
+      stasPayment: { OutPoint: stasOutPoint, Owner: issuerPrivateKey },
+      feePayment: { OutPoint: fundingOutPoint, Owner: issuerPrivateKey },
+      feeRate: 0.05,
+    });
+    const tx = TransactionReader.readHex(txRaw);
+
+    expect(tx.Outputs[0].Satoshis).toBe(stasOutPoint.Satoshis);
+    expect(tx.Outputs[0].Address?.Value).toBe(issuerAddress.Value);
+  });
+
+  test("build STAS transfer when fee input is not last", () => {
+    const sourceTx = TransactionReader.readHex(IssueTxRaw);
+    const stasOutPoint = OutPoint.fromTransaction(sourceTx, 0);
+    const fundingOutPoint = OutPoint.fromTransaction(sourceTx, 1);
+
+    const txRaw = TransactionBuilder.init()
+      .addInput(fundingOutPoint, issuerPrivateKey)
+      .addInput(stasOutPoint, alicePrivateKey)
+      .addStasOutputByScheme(tokenScheme, stasOutPoint.Satoshis, aliceAddress)
+      .addChangeOutputWithFee(
+        fundingOutPoint.Address,
+        fundingOutPoint.Satoshis,
+        0.05,
+      )
+      .sign()
+      .toHex();
+    const tx = TransactionReader.readHex(txRaw);
+
+    // This used to depend on "fee input is the last input".
+    // The transfer must be buildable and signed with fee input at index 0.
+    expect(tx.Inputs.length).toBe(2);
+    expect(tx.Inputs[0].UnlockingScript.length).toBeGreaterThan(0);
+    expect(tx.Inputs[1].UnlockingScript.length).toBeGreaterThan(0);
   });
 
   test("build STAS RedeemSplit with note transaction", () => {
