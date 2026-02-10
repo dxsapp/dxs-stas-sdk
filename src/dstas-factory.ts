@@ -13,6 +13,7 @@ import { OutputBuilder } from "./transaction/build/output-builder";
 import { TransactionReader } from "./transaction/read/transaction-reader";
 import { FeeRate } from "./transaction-factory";
 import { hash160 } from "./hashes";
+import { LockingScriptReader } from "./script/read/locking-script-reader";
 
 export type TDstasPayment = TPayment & {
   UnlockingScript?: Bytes;
@@ -395,6 +396,23 @@ export type TBuildDstasSwapFlowTxRequest = {
   omitChangeOutput?: boolean;
 };
 
+export type TDstasSwapMode = "auto" | "transfer-swap" | "swap-swap";
+
+const hasSwapActionData = (payment: TDstasPayment): boolean => {
+  const reader = LockingScriptReader.read(payment.OutPoint.LockignScript);
+  if (reader.ScriptType !== ScriptType.dstas) return false;
+  return reader.Dstas?.ActionDataParsed?.kind === "swap";
+};
+
+export const ResolveDstasSwapMode = (
+  stasPayments: [TDstasPayment, TDstasPayment],
+): Exclude<TDstasSwapMode, "auto"> => {
+  const [left, right] = stasPayments;
+  const leftIsSwap = hasSwapActionData(left);
+  const rightIsSwap = hasSwapActionData(right);
+  return leftIsSwap && rightIsSwap ? "swap-swap" : "transfer-swap";
+};
+
 const toSwapFlowDestination = (
   value: TDstasSwapDestination,
 ): TDstasDestinationByLockingParams => ({
@@ -451,6 +469,28 @@ export const BuildDstasSwapSwapTx = ({
     omitChangeOutput,
     spendingType: 4,
   });
+
+export type TBuildDstasSwapFlowAutoTxRequest = TBuildDstasSwapFlowTxRequest & {
+  mode?: TDstasSwapMode;
+};
+
+/**
+ * Build swap flow with mode auto-detection.
+ * auto: both inputs with swap actionData => swap+swap, otherwise transfer+swap.
+ */
+export const BuildDstasSwapFlowTx = ({
+  mode = "auto",
+  ...request
+}: TBuildDstasSwapFlowAutoTxRequest) => {
+  const resolvedMode =
+    mode === "auto" ? ResolveDstasSwapMode(request.stasPayments) : mode;
+
+  if (resolvedMode === "swap-swap") {
+    return BuildDstasSwapSwapTx(request);
+  }
+
+  return BuildDstasTransferSwapTx(request);
+};
 
 export type TBuildDstasMultisigTxRequest = TBuildDstasBaseTxRequest;
 /**

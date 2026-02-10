@@ -10,7 +10,6 @@ import { Bytes } from "./bytes";
 import { TransactionBuilder, TransactionReader } from "./transaction";
 import { OutputBuilder } from "./transaction/build/output-builder";
 import { FeeRate } from "./transaction-factory";
-import { P2pkhBuilder } from "./script/build/p2pkh-builder";
 import {
   Stas3FreezeMultisigParams,
   buildStas3FreezeMultisigScript,
@@ -54,6 +53,17 @@ export type TDstasRecipient = {
   addresses: Address[];
 };
 
+export type TDstasTransferOutput = {
+  recipient: TDstasRecipient;
+  satoshis: number;
+};
+
+export type TDstasTransferRequest = {
+  outputs: TDstasTransferOutput[];
+  spendType?: "transfer" | "freeze" | "unfreeze";
+  note?: Bytes[];
+};
+
 export type TDstasLockingParamsBuilder = (args: {
   fromOutPoint: OutPoint;
   recipient: TDstasRecipient;
@@ -82,9 +92,6 @@ export type TDstasDestination = {
   LockingParams: Stas3FreezeMultisigParams;
 };
 
-const DummyTxId =
-  "0000000000000000000000000000000000000000000000000000000000000000";
-
 export class DstasBundleFactory {
   constructor(
     private readonly stasWallet: Wallet,
@@ -96,23 +103,78 @@ export class DstasBundleFactory {
     private readonly buildUnlockingScript: TDstasUnlockingScriptBuilder,
   ) {}
 
+  public transfer = async ({
+    outputs,
+    spendType = "transfer",
+    note,
+  }: TDstasTransferRequest): Promise<TDstasPayoutBundle> => {
+    if (outputs.length === 0) {
+      throw new Error("At least one transfer output is required");
+    }
+
+    for (const output of outputs) {
+      if (!Number.isInteger(output.satoshis) || output.satoshis <= 0) {
+        throw new Error(
+          `Transfer output satoshis must be a positive integer, got ${output.satoshis}`,
+        );
+      }
+    }
+
+    const amountSatoshis = outputs.reduce((sum, x) => sum + x.satoshis, 0);
+    const stasUtxoSet = (await this.getStasUtxoSet(amountSatoshis)).sort(
+      (a, b) => a.Satoshis - b.Satoshis,
+    );
+    const availableSatoshis = stasUtxoSet.reduce((a, x) => a + x.Satoshis, 0);
+
+    if (availableSatoshis < amountSatoshis) {
+      return {
+        message: "Insufficient STAS tokens balance",
+        feeSatoshis: 0,
+      };
+    }
+
+    const stasUtxos = this.getStasUtxo(stasUtxoSet, amountSatoshis);
+    return this.buildBundleWithResolvedFunding(
+      stasUtxos,
+      amountSatoshis,
+      outputs,
+      spendType,
+      note,
+    );
+  };
+
   public createTransferBundle = async (
     amountSatoshis: number,
     recipient: TDstasRecipient,
     note?: Bytes[],
-  ) => this.createBundle(amountSatoshis, recipient, "transfer", note);
+  ) =>
+    this.transfer({
+      outputs: [{ recipient, satoshis: amountSatoshis }],
+      spendType: "transfer",
+      note,
+    });
 
   public createFreezeBundle = async (
     amountSatoshis: number,
     recipient: TDstasRecipient,
     note?: Bytes[],
-  ) => this.createBundle(amountSatoshis, recipient, "freeze", note);
+  ) =>
+    this.transfer({
+      outputs: [{ recipient, satoshis: amountSatoshis }],
+      spendType: "freeze",
+      note,
+    });
 
   public createUnfreezeBundle = async (
     amountSatoshis: number,
     recipient: TDstasRecipient,
     note?: Bytes[],
-  ) => this.createBundle(amountSatoshis, recipient, "unfreeze", note);
+  ) =>
+    this.transfer({
+      outputs: [{ recipient, satoshis: amountSatoshis }],
+      spendType: "unfreeze",
+      note,
+    });
 
   public createSwapBundle = async (
     amountSatoshis: number,
@@ -138,46 +200,123 @@ export class DstasBundleFactory {
       };
 
     const stasUtxos = this.getStasUtxo(stasUtxoSet, amountSatoshis);
-    const {
-      feeSatoshis: estimatedFee,
-      transactions: { length: transactionsCount },
-    } = await this._createBundle(
-      [],
+    return this.buildBundleWithResolvedFunding(
       stasUtxos,
       amountSatoshis,
-      this.getDummyFeeUtxo(),
-      recipient,
-      spendType,
-      note,
-    );
-
-    const adjustedEstimatedFee =
-      estimatedFee + stasUtxos.length * 9 + 1; /* Fee for fee transaction */
-    const fundingUtxo = await this.getFundingUtxo({
-      utxoIdsToSpend: stasUtxos.map((x) => `${x.TxId}:${x.Vout}`),
-      estimatedFeeSatoshis: adjustedEstimatedFee + 1,
-      transactionsCount,
-    });
-
-    const transactions: string[] = [];
-
-    return this._createBundle(
-      transactions,
-      stasUtxos,
-      amountSatoshis,
-      fundingUtxo,
-      recipient,
+      [{ recipient, satoshis: amountSatoshis }],
       spendType,
       note,
     );
   };
 
-  private _createBundle = async (
+  private buildBundleWithResolvedFunding = async (
+    stasUtxos: OutPoint[],
+    amountSatoshis: number,
+    outputs: TDstasTransferOutput[],
+    spendType: DstasSpendType,
+    note?: Bytes[],
+  ): Promise<TDstasPayoutBundle> => {
+    const utxoIdsToSpend = stasUtxos.map((x) => `${x.TxId}:${x.Vout}`);
+    const transactionsCount = this.estimateTransactionsCount(
+      stasUtxos.length,
+      outputs.length,
+    );
+    const initialEstimatedFeeSatoshis = this.estimateBundleFeeUpperBound(
+      transactionsCount,
+      stasUtxos.length,
+    );
+    const firstFundingUtxo = await this.getFundingUtxo({
+      utxoIdsToSpend,
+      estimatedFeeSatoshis: initialEstimatedFeeSatoshis,
+      transactionsCount,
+    });
+
+    try {
+      return this._createTransferBundle(
+        [],
+        stasUtxos,
+        amountSatoshis,
+        firstFundingUtxo,
+        outputs,
+        spendType,
+        note,
+      );
+    } catch (error) {
+      if (!this.isInsufficientFeeError(error)) throw error;
+
+      // Rare fallback: request more funding once; avoids N retries + full rebuild loops.
+      const fallbackEstimatedFeeSatoshis =
+        Math.ceil(initialEstimatedFeeSatoshis * 1.5) + 200;
+      const secondFundingUtxo = await this.getFundingUtxo({
+        utxoIdsToSpend,
+        estimatedFeeSatoshis: fallbackEstimatedFeeSatoshis,
+        transactionsCount,
+      });
+
+      return this._createTransferBundle(
+        [],
+        stasUtxos,
+        amountSatoshis,
+        secondFundingUtxo,
+        outputs,
+        spendType,
+        note,
+      );
+    }
+  };
+
+  private estimateTransactionsCount = (
+    stasInputCount: number,
+    outputsCount: number,
+  ): number =>
+    this.estimateMergeTransactionsCount(stasInputCount) +
+    this.estimateFinalTransferTransactionsCount(outputsCount);
+
+  private estimateMergeTransactionsCount = (stasInputCount: number): number => {
+    if (stasInputCount <= 1) return 0;
+
+    let currentLevelCount = stasInputCount;
+    let levelsBeforeTransfer = 0;
+    let transactionCount = 0;
+
+    while (currentLevelCount !== 1) {
+      if (levelsBeforeTransfer === 3) {
+        levelsBeforeTransfer = 0;
+        transactionCount += currentLevelCount;
+      } else {
+        levelsBeforeTransfer++;
+        const merges = Math.floor(currentLevelCount / 2);
+        const remainder = currentLevelCount % 2;
+        transactionCount += merges;
+        currentLevelCount = merges + remainder;
+      }
+    }
+
+    return transactionCount;
+  };
+
+  private estimateFinalTransferTransactionsCount = (
+    outputsCount: number,
+  ): number => Math.max(1, Math.ceil((outputsCount - 1) / 3));
+
+  private estimateBundleFeeUpperBound = (
+    transactionsCount: number,
+    stasInputCount: number,
+  ): number =>
+    Math.max(1200, transactionsCount * 3000 + stasInputCount * 500 + 300);
+
+  private isInsufficientFeeError = (error: unknown): boolean => {
+    if (!(error instanceof Error)) return false;
+    const message = `${error.message}${error.stack ?? ""}`;
+    return message.includes("Insufficient satoshis to pay fee");
+  };
+
+  private _createTransferBundle = async (
     transactions: string[],
     stasUtxos: OutPoint[],
     satoshisToSend: number,
     feeUtxo: OutPoint,
-    recipient: TDstasRecipient,
+    outputs: TDstasTransferOutput[],
     spendType: DstasSpendType,
     note?: Bytes[],
   ) => {
@@ -190,36 +329,114 @@ export class DstasBundleFactory {
       }
     }
 
-    if (stasUtxo.Satoshis === satoshisToSend) {
-      transactions.push(
-        this.buildTransferTransaction(
-          stasUtxo,
-          mergeFeeUtxo,
-          recipient,
-          spendType,
-          note,
-        ),
-      );
-    } else {
-      transactions.push(
-        this.buildSplitTransaction(
-          stasUtxo,
-          satoshisToSend,
-          recipient,
-          mergeFeeUtxo,
-          spendType,
-          note,
-        ),
-      );
+    const {
+      transactions: transferTransactions,
+      feeOutPoint: feeUtxoOutPoint,
+    } = this.buildTransferPlanTransactions(
+      stasUtxo,
+      mergeFeeUtxo,
+      outputs,
+      spendType,
+      note,
+    );
+
+    for (const tx of transferTransactions) {
+      transactions.push(tx);
     }
 
-    const transferTx = TransactionReader.readHex(
-      transactions[transactions.length - 1],
-    );
-    const feeUtxoOutPoint = this.getFeeOutPoint(transferTx);
     const paidFee = feeUtxo.Satoshis - feeUtxoOutPoint.Satoshis;
 
     return { transactions, feeSatoshis: paidFee };
+  };
+
+  private buildTransferPlanTransactions = (
+    stasUtxo: OutPoint,
+    feeUtxo: OutPoint,
+    outputs: TDstasTransferOutput[],
+    spendType: DstasSpendType,
+    note?: Bytes[],
+  ): {
+    transactions: string[];
+    feeOutPoint: OutPoint;
+  } => {
+    const queue = outputs.slice();
+    const transactions: string[] = [];
+    const selfRecipient: TDstasRecipient = {
+      m: 1,
+      addresses: [this.stasWallet.Address],
+    };
+
+    let currentStas = stasUtxo;
+    let currentFee = feeUtxo;
+
+    while (queue.length > 0) {
+      const remainingTotal = queue.reduce((sum, x) => sum + x.satoshis, 0);
+      if (remainingTotal !== currentStas.Satoshis) {
+        throw new Error(
+          "Transfer planner invariant failed: remaining outputs must match current STAS input",
+        );
+      }
+
+      const isFinal = queue.length <= 4;
+      const transferOutputs = isFinal ? queue : queue.slice(0, 3);
+      const sentSatoshis = transferOutputs.reduce((sum, x) => sum + x.satoshis, 0);
+
+      const txOutputs: {
+        recipient: TDstasRecipient;
+        satoshis: number;
+        isChange: boolean;
+      }[] = transferOutputs.map((x) => ({
+        recipient: x.recipient,
+        satoshis: x.satoshis,
+        isChange: false,
+      }));
+
+      if (!isFinal) {
+        txOutputs.push({
+          recipient: selfRecipient,
+          satoshis: currentStas.Satoshis - sentSatoshis,
+          isChange: true,
+        });
+      }
+
+      const destinations = this.buildDestinations(currentStas, txOutputs, spendType);
+      const txRaw = this.buildStas30Tx({
+        stasPayments: [{ OutPoint: currentStas, Owner: this.stasWallet }],
+        feePayment: { OutPoint: currentFee, Owner: this.feeWallet },
+        destinations,
+        note: isFinal ? note : undefined,
+        spendType,
+        isMerge: false,
+      });
+
+      const tx = TransactionReader.readHex(txRaw);
+      transactions.push(txRaw);
+      currentFee = this.getFeeOutPoint(tx);
+
+      if (isFinal) break;
+
+      const changeOutputIndex = txOutputs.length - 1;
+      const changeOutput = tx.Outputs[changeOutputIndex];
+      if (!changeOutput) {
+        throw new Error("Transfer planner failed to locate STAS change output");
+      }
+
+      currentStas = new OutPoint(
+        tx.Id,
+        changeOutputIndex,
+        changeOutput.LockignScript,
+        changeOutput.Satoshis,
+        this.stasWallet.Address,
+        changeOutput.ScriptType,
+      );
+
+      queue.splice(0, transferOutputs.length);
+    }
+
+    return {
+      transactions,
+      feeOutPoint: currentFee,
+    };
   };
 
   private getStasUtxo = (utxos: OutPoint[], satoshis: number): OutPoint[] => {
@@ -396,63 +613,6 @@ export class DstasBundleFactory {
     }
 
     return { mergeTransactions, mergeFeeUtxo: feePayment.OutPoint, stasUtxo };
-  };
-
-  private buildTransferTransaction = (
-    stasUtxo: OutPoint,
-    feeUtxo: OutPoint,
-    recipient: TDstasRecipient,
-    spendType: DstasSpendType,
-    note?: Bytes[],
-  ): string => {
-    const destinations = this.buildDestinations(
-      stasUtxo,
-      [{ recipient, satoshis: stasUtxo.Satoshis, isChange: false }],
-      spendType,
-    );
-
-    return this.buildStas30Tx({
-      stasPayments: [{ OutPoint: stasUtxo, Owner: this.stasWallet }],
-      feePayment: { OutPoint: feeUtxo, Owner: this.feeWallet },
-      destinations,
-      note,
-      spendType,
-      isMerge: false,
-    });
-  };
-
-  private buildSplitTransaction = (
-    stasUtxo: OutPoint,
-    satoshis: number,
-    recipient: TDstasRecipient,
-    feeUtxo: OutPoint,
-    spendType: DstasSpendType,
-    note?: Bytes[],
-  ): string => {
-    const destinations = this.buildDestinations(
-      stasUtxo,
-      [
-        { recipient, satoshis, isChange: false },
-        {
-          recipient: {
-            m: 1,
-            addresses: [this.stasWallet.Address],
-          },
-          satoshis: stasUtxo.Satoshis - satoshis,
-          isChange: true,
-        },
-      ],
-      spendType,
-    );
-
-    return this.buildStas30Tx({
-      stasPayments: [{ OutPoint: stasUtxo, Owner: this.stasWallet }],
-      feePayment: { OutPoint: feeUtxo, Owner: this.feeWallet },
-      destinations,
-      note,
-      spendType,
-      isMerge: false,
-    });
   };
 
   private buildStas30Tx = (params: {
@@ -633,16 +793,4 @@ export class DstasBundleFactory {
     return new Address(ownerToken.Data);
   };
 
-  private getDummyFeeUtxo = (): OutPoint => {
-    const script = new P2pkhBuilder(this.feeWallet.Address).toBytes();
-
-    return new OutPoint(
-      DummyTxId,
-      0,
-      script,
-      5000000000,
-      this.feeWallet.Address,
-      ScriptType.p2pkh,
-    );
-  };
 }

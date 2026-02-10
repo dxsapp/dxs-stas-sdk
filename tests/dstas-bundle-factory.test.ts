@@ -10,6 +10,7 @@ import { ScriptType } from "../src/bitcoin/script-type";
 import { Address } from "../src/bitcoin/address";
 import { fromHex } from "../src/bytes";
 import { buildStas3Flags } from "../src/script/build/stas3-freeze-multisig-builder";
+import { TransactionReader } from "../src/transaction/read/transaction-reader";
 
 const mnemonic =
   "group spy extend supreme monkey judge avocado cancel exit educate modify bubble";
@@ -108,6 +109,39 @@ const makeFactory = (stasSatoshis = 1000): TestFactory => {
 };
 
 describe("DstasBundleFactory spendType flags", () => {
+  test("transfer() plans multi-recipient flow and puts note only in final tx", async () => {
+    const { factory, recipient } = makeFactory(1000);
+    const outputs = [
+      { recipient, satoshis: 200 },
+      { recipient, satoshis: 200 },
+      { recipient, satoshis: 200 },
+      { recipient, satoshis: 200 },
+      { recipient, satoshis: 200 },
+    ];
+    const note = [new Uint8Array([0xaa, 0xbb, 0xcc])];
+
+    const result = await factory.transfer({
+      outputs,
+      note,
+    });
+
+    expect(result.transactions).toBeDefined();
+    expect(result.transactions!.length).toBeGreaterThan(1);
+
+    const txs = result.transactions!.map((x) => TransactionReader.readHex(x));
+    for (let i = 0; i < txs.length; i++) {
+      const nullDataCount = txs[i].Outputs.filter(
+        (o) => o.ScriptType === ScriptType.nullData,
+      ).length;
+
+      if (i === txs.length - 1) {
+        expect(nullDataCount).toBe(1);
+      } else {
+        expect(nullDataCount).toBe(0);
+      }
+    }
+  });
+
   test("freeze/unfreeze set isFreezeLike=true", async () => {
     const { factory, buildUnlockingScript, recipient } = makeFactory(1000);
 
@@ -160,5 +194,18 @@ describe("DstasBundleFactory spendType flags", () => {
     for (const call of swapCalls) {
       expect(call.isFreezeLike).toBe(false);
     }
+  });
+
+  test("createTransferBundle remains compatible with transfer()", async () => {
+    const { factory, recipient } = makeFactory(1000);
+
+    const legacy = await factory.createTransferBundle(1000, recipient);
+    const newApi = await factory.transfer({
+      outputs: [{ recipient, satoshis: 1000 }],
+    });
+
+    expect(legacy.transactions).toBeDefined();
+    expect(newApi.transactions).toBeDefined();
+    expect(legacy.transactions!.length).toBe(newApi.transactions!.length);
   });
 });
