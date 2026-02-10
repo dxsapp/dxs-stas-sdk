@@ -122,9 +122,7 @@ export const encodeActionData = (
   return out;
 };
 
-export const decodeActionData = (
-  bytes: Bytes,
-): ParsedActionData => {
+export const decodeActionData = (bytes: Bytes): ParsedActionData => {
   if (bytes.length === 0) return { kind: "empty" };
 
   const action = bytes[0];

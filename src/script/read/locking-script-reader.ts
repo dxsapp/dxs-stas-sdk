@@ -12,10 +12,7 @@ import {
 import { ScriptToken } from "../script-token";
 import { BaseScriptReader } from "./base-script-reader";
 import { ScriptReadToken } from "./script-read-token";
-import {
-  ParsedActionData,
-  decodeActionData,
-} from "../stas3-second-field";
+import { ParsedActionData, decodeActionData } from "../stas3-second-field";
 
 type DetectContext = {
   Result: boolean;
@@ -28,13 +25,7 @@ type ScriptSample = {
   ctx: DetectContext;
 };
 
-type DstasStage =
-  | "owner"
-  | "second"
-  | "base"
-  | "redemption"
-  | "flags"
-  | "tail";
+type DstasStage = "owner" | "second" | "base" | "redemption" | "flags" | "tail";
 
 type DstasDetectContext = {
   Result: boolean;
