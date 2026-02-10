@@ -376,6 +376,83 @@ export type TBuildStas3SwapTxRequest = TBuildStas3BaseTxRequest;
 export const BuildStas3SwapTx = (request: TBuildStas3SwapTxRequest) =>
   BuildStas3BaseTx({ ...request, spendingType: 4 });
 
+export type TStas3SwapDestination = {
+  Satoshis: number;
+  Owner: Bytes;
+  TokenIdHex: string;
+  Freezable: boolean;
+  AuthorityServiceField: Bytes;
+  SecondField?: SecondFieldInput;
+  OptionalData?: Bytes[];
+};
+
+export type TBuildStas3SwapFlowTxRequest = {
+  stasPayments: [TStas3Payment, TStas3Payment];
+  feePayment: TPayment;
+  destinations: TStas3SwapDestination[];
+  note?: Bytes[];
+  feeRate?: number;
+  omitChangeOutput?: boolean;
+};
+
+const toSwapFlowDestination = (
+  value: TStas3SwapDestination,
+): TStas3DestinationByLockingParams => ({
+  Satoshis: value.Satoshis,
+  LockingParams: {
+    owner: value.Owner,
+    secondField:
+      value.SecondField !== undefined ? value.SecondField : null,
+    redemptionPkh: fromHex(value.TokenIdHex),
+    flags: buildStas3Flags({ freezable: value.Freezable }),
+    serviceFields: [value.AuthorityServiceField],
+    optionalData: value.OptionalData ?? [],
+  },
+});
+
+/**
+ * Build swap flow where one side performs a transfer path (spending-type=1)
+ * and the other side is consumed via swap request matching.
+ */
+export const BuildStas3TransferSwapTx = ({
+  stasPayments,
+  feePayment,
+  destinations,
+  note,
+  feeRate,
+  omitChangeOutput,
+}: TBuildStas3SwapFlowTxRequest) =>
+  BuildStas3BaseTx({
+    stasPayments,
+    feePayment,
+    destinations: destinations.map(toSwapFlowDestination),
+    note,
+    feeRate,
+    omitChangeOutput,
+    spendingType: 1,
+  });
+
+/**
+ * Build swap flow where both sides are interpreted as swap path (spending-type=4).
+ */
+export const BuildStas3SwapSwapTx = ({
+  stasPayments,
+  feePayment,
+  destinations,
+  note,
+  feeRate,
+  omitChangeOutput,
+}: TBuildStas3SwapFlowTxRequest) =>
+  BuildStas3BaseTx({
+    stasPayments,
+    feePayment,
+    destinations: destinations.map(toSwapFlowDestination),
+    note,
+    feeRate,
+    omitChangeOutput,
+    spendingType: 4,
+  });
+
 export type TBuildStas3MultisigTxRequest = TBuildStas3BaseTxRequest;
 /**
  * Multisig: provide STAS3 unlocking scripts that include the required

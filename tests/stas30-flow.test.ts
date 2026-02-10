@@ -26,7 +26,9 @@ import { TokenScheme } from "../src/bitcoin/token-scheme";
 import {
   BuildStas3BaseTx,
   BuildStas3IssueTxs,
+  BuildStas3SwapSwapTx,
   BuildStas3SwapTx,
+  BuildStas3TransferSwapTx,
   BuildStas3TransferTx,
   BuildStas3UnfreezeTx,
 } from "../src/stas30-factory";
@@ -102,6 +104,29 @@ const computeStas30RequestedScriptHash = (
   const tail = ScriptBuilder.fromTokens(tokens.slice(2), ScriptType.unknown);
   return sha256(tail.toBytes());
 };
+
+const swapDestination = ({
+  satoshis,
+  owner,
+  tokenIdHex,
+  freezable,
+  authorityServiceField,
+  secondField,
+}: {
+  satoshis: number;
+  owner: Uint8Array;
+  tokenIdHex: string;
+  freezable: boolean;
+  authorityServiceField: Uint8Array;
+  secondField?: ReturnType<typeof buildStas3SwapSecondField> | null;
+}) => ({
+  Satoshis: satoshis,
+  Owner: owner,
+  TokenIdHex: tokenIdHex,
+  Freezable: freezable,
+  AuthorityServiceField: authorityServiceField,
+  SecondField: secondField ?? null,
+});
 
 const buildOwnerMultisigUnlockingScript = ({
   txBuilder,
@@ -638,39 +663,32 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const swapTxHex = BuildStas3BaseTx({
+    const swapTxHex = BuildStas3TransferSwapTx({
       stasPayments: [
         { OutPoint: stasA, Owner: bob },
         { OutPoint: stasB, Owner: cat },
       ],
       feePayment: { OutPoint: fee, Owner: bob },
       destinations: [
-        {
-          Satoshis: stasB.Satoshis,
-          LockingParams: {
-            owner: bob.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: schemeB.Freeze }),
-            serviceFields: [authorityB],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: stasA.Satoshis,
-          LockingParams: {
-            owner: cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: schemeA.Freeze }),
-            serviceFields: [authorityA],
-            optionalData: [],
-          },
-        },
+        swapDestination({
+          satoshis: stasB.Satoshis,
+          owner: bob.Address.Hash160,
+          tokenIdHex: schemeB.TokenId,
+          freezable: schemeB.Freeze,
+          authorityServiceField: authorityB,
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: stasA.Satoshis,
+          owner: cat.Address.Hash160,
+          tokenIdHex: schemeA.TokenId,
+          freezable: schemeA.Freeze,
+          authorityServiceField: authorityA,
+          secondField: null,
+        }),
       ],
       feeRate: FeeRate,
       omitChangeOutput: true,
-      spendingType: 1,
     });
 
     const swapEval = evaluateTransactionHex(
@@ -808,39 +826,32 @@ describe("stas30 flow", () => {
       ScriptType.p2pkh,
     );
 
-    const swapTxHex = BuildStas3BaseTx({
+    const swapTxHex = BuildStas3SwapSwapTx({
       stasPayments: [
         { OutPoint: stasA, Owner: bob },
         { OutPoint: stasB, Owner: cat },
       ],
       feePayment: { OutPoint: fee, Owner: bob },
       destinations: [
-        {
-          Satoshis: stasB.Satoshis,
-          LockingParams: {
-            owner: bob.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: schemeB.Freeze }),
-            serviceFields: [authorityB],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: stasA.Satoshis,
-          LockingParams: {
-            owner: cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: schemeA.Freeze }),
-            serviceFields: [authorityA],
-            optionalData: [],
-          },
-        },
+        swapDestination({
+          satoshis: stasB.Satoshis,
+          owner: bob.Address.Hash160,
+          tokenIdHex: schemeB.TokenId,
+          freezable: schemeB.Freeze,
+          authorityServiceField: authorityB,
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: stasA.Satoshis,
+          owner: cat.Address.Hash160,
+          tokenIdHex: schemeA.TokenId,
+          freezable: schemeA.Freeze,
+          authorityServiceField: authorityA,
+          secondField: null,
+        }),
       ],
       feeRate: FeeRate,
       omitChangeOutput: true,
-      spendingType: 4,
     });
 
     const swapEval = evaluateTransactionHex(
@@ -913,50 +924,40 @@ describe("stas30 flow", () => {
       secondFieldB: null,
     });
 
-    const swapTxHex = BuildStas3BaseTx({
+    const swapTxHex = BuildStas3TransferSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
       ],
       feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
       destinations: [
-        {
-          Satoshis: 50,
-          LockingParams: {
-            owner: ctx.bob.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 100,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
-            serviceFields: [hash160(ctx.cat.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 50,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
+        swapDestination({
+          satoshis: 50,
+          owner: ctx.bob.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 100,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeA.TokenId,
+          freezable: ctx.schemeA.Freeze,
+          authorityServiceField: hash160(ctx.cat.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 50,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: null,
+        }),
       ],
       feeRate: FeeRate,
       omitChangeOutput: true,
-      spendingType: 1,
     });
 
     const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
@@ -1018,50 +1019,40 @@ describe("stas30 flow", () => {
       secondFieldB,
     });
 
-    const swapTxHex = BuildStas3BaseTx({
+    const swapTxHex = BuildStas3SwapSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
       ],
       feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
       destinations: [
-        {
-          Satoshis: 50,
-          LockingParams: {
-            owner: ctx.bob.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 100,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
-            serviceFields: [hash160(ctx.cat.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 50,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: secondFieldB,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
+        swapDestination({
+          satoshis: 50,
+          owner: ctx.bob.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 100,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeA.TokenId,
+          freezable: ctx.schemeA.Freeze,
+          authorityServiceField: hash160(ctx.cat.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 50,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: secondFieldB,
+        }),
       ],
       feeRate: FeeRate,
       omitChangeOutput: true,
-      spendingType: 4,
     });
 
     const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
@@ -1116,61 +1107,48 @@ describe("stas30 flow", () => {
       secondFieldB: null,
     });
 
-    const swapTxHex = BuildStas3BaseTx({
+    const swapTxHex = BuildStas3TransferSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
       ],
       feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
       destinations: [
-        {
-          Satoshis: 40,
-          LockingParams: {
-            owner: ctx.bob.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 80,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
-            serviceFields: [hash160(ctx.cat.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 20,
-          LockingParams: {
-            owner: ctx.bob.Address.Hash160,
-            secondField: secondFieldA,
-            redemptionPkh: fromHex(ctx.schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
-            serviceFields: [hash160(ctx.cat.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 60,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
+        swapDestination({
+          satoshis: 40,
+          owner: ctx.bob.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 80,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeA.TokenId,
+          freezable: ctx.schemeA.Freeze,
+          authorityServiceField: hash160(ctx.cat.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 20,
+          owner: ctx.bob.Address.Hash160,
+          tokenIdHex: ctx.schemeA.TokenId,
+          freezable: ctx.schemeA.Freeze,
+          authorityServiceField: hash160(ctx.cat.PublicKey),
+          secondField: secondFieldA,
+        }),
+        swapDestination({
+          satoshis: 60,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: null,
+        }),
       ],
       feeRate: FeeRate,
       omitChangeOutput: true,
-      spendingType: 1,
     });
 
     const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
@@ -1232,61 +1210,48 @@ describe("stas30 flow", () => {
       secondFieldB,
     });
 
-    const swapTxHex = BuildStas3BaseTx({
+    const swapTxHex = BuildStas3SwapSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
       ],
       feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
       destinations: [
-        {
-          Satoshis: 40,
-          LockingParams: {
-            owner: ctx.bob.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 80,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
-            serviceFields: [hash160(ctx.cat.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 20,
-          LockingParams: {
-            owner: ctx.bob.Address.Hash160,
-            secondField: secondFieldA,
-            redemptionPkh: fromHex(ctx.schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
-            serviceFields: [hash160(ctx.cat.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 60,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: secondFieldB,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
+        swapDestination({
+          satoshis: 40,
+          owner: ctx.bob.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 80,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeA.TokenId,
+          freezable: ctx.schemeA.Freeze,
+          authorityServiceField: hash160(ctx.cat.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 20,
+          owner: ctx.bob.Address.Hash160,
+          tokenIdHex: ctx.schemeA.TokenId,
+          freezable: ctx.schemeA.Freeze,
+          authorityServiceField: hash160(ctx.cat.PublicKey),
+          secondField: secondFieldA,
+        }),
+        swapDestination({
+          satoshis: 60,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: secondFieldB,
+        }),
       ],
       feeRate: FeeRate,
       omitChangeOutput: true,
-      spendingType: 4,
     });
 
     const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
@@ -1341,39 +1306,32 @@ describe("stas30 flow", () => {
       frozenA: true,
     });
 
-    const swapTxHex = BuildStas3BaseTx({
+    const swapTxHex = BuildStas3TransferSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
       ],
       feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
       destinations: [
-        {
-          Satoshis: 100,
-          LockingParams: {
-            owner: ctx.bob.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 100,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
-            serviceFields: [hash160(ctx.cat.PublicKey)],
-            optionalData: [],
-          },
-        },
+        swapDestination({
+          satoshis: 100,
+          owner: ctx.bob.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 100,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeA.TokenId,
+          freezable: ctx.schemeA.Freeze,
+          authorityServiceField: hash160(ctx.cat.PublicKey),
+          secondField: null,
+        }),
       ],
       feeRate: FeeRate,
       omitChangeOutput: true,
-      spendingType: 1,
     });
 
     const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
@@ -1436,39 +1394,32 @@ describe("stas30 flow", () => {
       frozenB: true,
     });
 
-    const swapTxHex = BuildStas3BaseTx({
+    const swapTxHex = BuildStas3SwapSwapTx({
       stasPayments: [
         { OutPoint: ctx.stasA, Owner: ctx.bob },
         { OutPoint: ctx.stasB, Owner: ctx.cat },
       ],
       feePayment: { OutPoint: ctx.fee, Owner: ctx.bob },
       destinations: [
-        {
-          Satoshis: 100,
-          LockingParams: {
-            owner: ctx.bob.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeB.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeB.Freeze }),
-            serviceFields: [hash160(ctx.bob.PublicKey)],
-            optionalData: [],
-          },
-        },
-        {
-          Satoshis: 100,
-          LockingParams: {
-            owner: ctx.cat.Address.Hash160,
-            secondField: null,
-            redemptionPkh: fromHex(ctx.schemeA.TokenId),
-            flags: buildStas3Flags({ freezable: ctx.schemeA.Freeze }),
-            serviceFields: [hash160(ctx.cat.PublicKey)],
-            optionalData: [],
-          },
-        },
+        swapDestination({
+          satoshis: 100,
+          owner: ctx.bob.Address.Hash160,
+          tokenIdHex: ctx.schemeB.TokenId,
+          freezable: ctx.schemeB.Freeze,
+          authorityServiceField: hash160(ctx.bob.PublicKey),
+          secondField: null,
+        }),
+        swapDestination({
+          satoshis: 100,
+          owner: ctx.cat.Address.Hash160,
+          tokenIdHex: ctx.schemeA.TokenId,
+          freezable: ctx.schemeA.Freeze,
+          authorityServiceField: hash160(ctx.cat.PublicKey),
+          secondField: null,
+        }),
       ],
       feeRate: FeeRate,
       omitChangeOutput: true,
-      spendingType: 4,
     });
 
     const evalResult = evaluateTransactionHex(swapTxHex, ctx.resolvePrev, {
