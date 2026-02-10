@@ -1,25 +1,41 @@
-Summary
+# Summary
 
-- Added a Script evaluator for test-time execution, including signature checking and optional OP_RETURN allowance.
-- Added STAS 3.0 freeze+multisig template support with token-based builders (no ASM dependency) and precompiled base tokens.
-- Split STAS 3.0 transaction building into `stas30-factory.ts` while keeping legacy STAS v1 logic in `transaction-factory.ts`.
-- Added STAS 3.0 script samples and expanded `ScriptToken` flags metadata.
-- Added unlocking-script builder helpers and refreshed documentation.
+- Added STAS30 flow coverage for `mint -> transfer -> freeze/unfreeze -> redeem`.
+- Added swap flow coverage for:
+  - swap cancel
+  - swap+transfer
+  - swap+swap
+  - fractional rates
+  - one/two remainders
+  - frozen-input rejection
+- Added owner multisig support for STAS30 locking path and tests for `3-of-5` owner spending.
+- Added second-field codec support and requested-script-hash integration from updated protocol notes.
+- Switched redemption path to updated P2MPKH-compatible handling and aligned issuer UTXO assumptions.
+- Refined unlocking layout handling for with-change/no-change and multi-input merge payload in evaluation path.
+- Hardened `unlockingScriptSize()` as deterministic upper-bound for multisig authority path (without signing iterations).
+- Updated parser/decomposer usage and `ToAddress` recovery through `LockingScriptReader` where script type is known.
 
-Key files
+# Key Files
 
-- `src/script/eval/script-evaluator.ts`, `tests/script-eval.test.ts`
-- `src/script/build/stas3-freeze-multisig-builder.ts`
-- `src/script/templates/stas3-freeze-multisig-base.ts`, `src/script/templates/stas3-freeze-multisig.ts`
-- `src/script/build/unlocking-script-builder.ts`, `src/script/script-samples.ts`, `src/script/script-token.ts`
-- `src/stas30-factory.ts`, `src/transaction-factory.ts`, `src/index.ts`
-- `docs/STAS3_FREEZE_MULTISIG.md`, `docs/AGENT_HANDBOOK.md`, `docs/COMMAND_LOG.md`
+- `src/stas30-factory.ts`
+- `src/stas30-bundle-factory.ts`
+- `src/transaction/build/input-builder.ts`
+- `src/script/read/locking-script-reader.ts`
+- `src/script/read/stas3-locking-script-decomposer.ts`
+- `src/script/read/stas3-unlocking-script-decomposer.ts`
+- `src/script/stas3-second-field.ts`
+- `tests/stas30-flow.test.ts`
+- `tests/stas30-multisig-authority-flow.test.ts`
+- `tests/stas30-bundle-factory.test.ts`
+- `tests/locking-script-reader.test.ts`
 
-Notes
+# Validation
 
-- STAS 3.0 scripts are now assembled from `ScriptToken[]` and serialized to bytes; ASM is still available via `toAsm()` for inspection.
-- Script evaluation requires `ScriptEvalContext` with the spending transaction and previous outputs.
+- `lint` passes.
+- Full test suite passes in pre-push hook.
+- Swap and multisig scenarios are covered by dedicated regression tests.
 
-Commands (recent)
+# Notes
 
-- `node scripts/check-no-buffer.mjs` -- ok
+- Debug probe tests intentionally keep `console.log` traces for unlocking-layout diagnostics.
+- Swap invariants currently modeled in tests: principal swap legs + optional remainders + per-leg conservation.

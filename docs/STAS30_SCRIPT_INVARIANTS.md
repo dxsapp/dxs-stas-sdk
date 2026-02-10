@@ -62,6 +62,33 @@ Mint is a two-step flow.
   `STAS satoshis in == redeem satoshis + sum(optional STAS outputs)`.
   Change output is excluded from STAS conservation.
 
+## 5. Swap
+
+Swap exchanges ownership across two independent assets.
+
+- Inputs:
+  `2 STAS inputs` + `1 funding input`
+- Outputs:
+  `2..4 STAS outputs` + `0..1 change output` + `0..1 null-data output`
+- Base rule:
+  Output #0 and #1 are swapped principal legs.
+- Remainder rule:
+  Output #2/#3 are optional remainders for leg-1 / leg-2.
+- Conservation:
+  Per-asset conservation must hold independently.
+  `assetA in == assetA out`, `assetB in == assetB out`.
+- Freeze rule:
+  Frozen STAS inputs are not swappable.
+- Second-field rule:
+  Principal swap outputs use neutral action marker (`OP_FALSE`).
+  Remainder outputs inherit second-field context from their origin leg.
+
+## 6. Owner / Authority multisig
+
+- Authority multisig controls policy actions (freeze/unfreeze).
+- Owner multisig controls spending ownership path.
+- These roles are independent and must not be conflated in tests or factories.
+
 ## Notes
 
 - Optional `null-data` output is message/service payload and does not affect STAS satoshi conservation.
