@@ -9,8 +9,14 @@ import { OutPoint } from "../src/bitcoin/out-point";
 import { ScriptType } from "../src/bitcoin/script-type";
 import { Address } from "../src/bitcoin/address";
 import { fromHex } from "../src/bytes";
-import { buildStas3Flags } from "../src/script/build/stas3-freeze-multisig-builder";
+import {
+  buildStas3Flags,
+  buildStas3FreezeMultisigTokens,
+} from "../src/script/build/stas3-freeze-multisig-builder";
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
+import { ScriptBuilder } from "../src/script/build/script-builder";
+import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
+import { OutputBuilder } from "../src/transaction/build/output-builder";
 
 const mnemonic =
   "group spy extend supreme monkey judge avocado cancel exit educate modify bubble";
@@ -263,5 +269,135 @@ describe("DstasBundleFactory spendType flags", () => {
     expect(result.transactions).toBeUndefined();
     expect(result.message).toBe("Insufficient STAS tokens balance");
     expect(result.feeSatoshis).toBe(0);
+  });
+
+  test("merge source reconstruction supports multisig-owner DSTAS outputs", async () => {
+    const stasWallet =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
+    const feeWallet =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/1");
+
+    const buildOwnerMultisigField = (m: number, keys: Uint8Array[]) => {
+      const n = keys.length;
+      const bytes = new Uint8Array(1 + n * (1 + 33) + 1);
+      let off = 0;
+      bytes[off++] = m & 0xff;
+      for (const key of keys) {
+        bytes[off++] = 0x21;
+        bytes.set(key, off);
+        off += key.length;
+      }
+      bytes[off] = n & 0xff;
+      return bytes;
+    };
+
+    const createSourceTx = (
+      txIdSeed: string,
+      satoshis: number,
+      ownerFieldBytes: Uint8Array,
+    ) => {
+      const fundingScript = new P2pkhBuilder(feeWallet.Address).toBytes();
+      const fundingOutPoint = makeOutPoint(
+        txIdSeed,
+        satoshis,
+        feeWallet.Address,
+        ScriptType.p2pkh,
+        fundingScript,
+      );
+
+      const lockingScript = ScriptBuilder.fromTokens(
+        buildStas3FreezeMultisigTokens({
+          owner: ownerFieldBytes,
+          actionData: null,
+          redemptionPkh,
+          frozen: false,
+          flags: buildStas3Flags({ freezable: true }),
+          serviceFields: [],
+          optionalData: [],
+        }),
+        ScriptType.dstas,
+      );
+
+      const txBuilder = TransactionBuilder.init().addInput(
+        fundingOutPoint,
+        feeWallet,
+      );
+      txBuilder.Outputs.push(new OutputBuilder(lockingScript, satoshis));
+      return TransactionReader.readHex(txBuilder.sign().toHex());
+    };
+
+    const ownerField = buildOwnerMultisigField(2, [
+      stasWallet.PublicKey,
+      feeWallet.PublicKey,
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/2").PublicKey,
+    ]);
+
+    const tx1 = createSourceTx("22".repeat(32), 600, ownerField);
+    const tx2 = createSourceTx("33".repeat(32), 400, ownerField);
+
+    const feeScript = new P2pkhBuilder(feeWallet.Address).toBytes();
+    const feeOutPoint = makeOutPoint(
+      "44".repeat(32),
+      100000,
+      feeWallet.Address,
+      ScriptType.p2pkh,
+      feeScript,
+    );
+
+    const getStasUtxoSet = async () => [
+      new OutPoint(
+        tx1.Id,
+        0,
+        tx1.Outputs[0].LockignScript,
+        tx1.Outputs[0].Satoshis,
+        stasWallet.Address,
+        ScriptType.dstas,
+      ),
+      new OutPoint(
+        tx2.Id,
+        0,
+        tx2.Outputs[0].LockignScript,
+        tx2.Outputs[0].Satoshis,
+        stasWallet.Address,
+        ScriptType.dstas,
+      ),
+    ];
+    const getFundingUtxo = async () => feeOutPoint;
+    const getTransactions = async () => {
+      const sources: Record<
+        string,
+        ReturnType<typeof TransactionReader.readHex>
+      > = {
+        [tx1.Id]: tx1,
+        [tx2.Id]: tx2,
+      };
+      return sources;
+    };
+
+    const factory = new DstasBundleFactory(
+      stasWallet,
+      feeWallet,
+      getFundingUtxo,
+      getStasUtxoSet,
+      getTransactions,
+      () => ({
+        owner: ownerPkh,
+        actionData: null,
+        redemptionPkh,
+        frozen: false,
+        flags: buildStas3Flags({ freezable: true }),
+        serviceFields: [],
+        optionalData: [],
+      }),
+      () => new Uint8Array(),
+    );
+
+    const result = await factory.createTransferBundle(1000, {
+      m: 1,
+      addresses: [stasWallet.Address],
+    });
+
+    expect(result.transactions).toBeDefined();
+    expect(result.transactions!.length).toBeGreaterThan(0);
   });
 });
