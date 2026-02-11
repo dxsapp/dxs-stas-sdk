@@ -230,7 +230,10 @@ export class InputBilder {
     return this.isP2PkLike(this.TxBuilder.Outputs[0].LockingScript.ScriptType);
   };
 
-  private shouldEncodeOutput = (output: OutputBuilder, idx: number): boolean => {
+  private shouldEncodeOutput = (
+    output: OutputBuilder,
+    idx: number,
+  ): boolean => {
     if (output.LockingScript.ScriptType === ScriptType.nullData) return true;
     return true;
   };
