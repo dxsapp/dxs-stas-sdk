@@ -2001,9 +2001,67 @@ describe("dstas flow", () => {
     );
   });
 
-  test.todo(
-    "real funding: issuer can redeem after receiving token (requires confirmed redeem unlocking format for Divisible STAS)",
-  );
+  test("real funding: issuer can redeem after receiving token", () => {
+    const fixture = createRealFundingFlowFixture();
+
+    const transferToIssuerTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.bob.Address,
+      },
+    });
+
+    const transferToIssuerTx = TransactionReader.readHex(transferToIssuerTxHex);
+    const issuerStasOutPoint = new OutPoint(
+      transferToIssuerTx.Id,
+      0,
+      transferToIssuerTx.Outputs[0].LockignScript,
+      transferToIssuerTx.Outputs[0].Satoshis,
+      fixture.bob.Address,
+      ScriptType.dstas,
+    );
+    const issuerFeeOutPoint = new OutPoint(
+      transferToIssuerTx.Id,
+      1,
+      transferToIssuerTx.Outputs[1].LockignScript,
+      transferToIssuerTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const redeemTxHex = buildRedeemTx({
+      stasOutPoint: issuerStasOutPoint,
+      stasOwner: fixture.bob,
+      feeOutPoint: issuerFeeOutPoint,
+      feeOwner: fixture.bob,
+      redeemAddress: fixture.bob.Address,
+    });
+
+    const redeemEval = evaluateTransactionHex(
+      redeemTxHex,
+      (txId, vout) =>
+        resolveFromTx(transferToIssuerTxHex)(txId, vout) ??
+        resolveFromTx(fixture.issueTxHex)(txId, vout),
+      { allowOpReturn: true },
+    );
+
+    expect(redeemEval.success).toBe(true);
+    expect(redeemEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      true,
+    );
+    expect(redeemEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      true,
+    );
+  });
 
   test.todo(
     "real funding flow continuation: issue -> transfer -> freeze -> unfreeze -> redeem with on-chain fixtures",

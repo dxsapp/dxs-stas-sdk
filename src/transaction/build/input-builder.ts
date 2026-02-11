@@ -16,6 +16,7 @@ import { hash256 } from "../../hashes";
 import { ScriptBuilder } from "../../script/build/script-builder";
 import { ScriptReader } from "../../script/read/script-reader";
 import { TransactionBuilder } from "./transaction-builder";
+import { OutputBuilder } from "./output-builder";
 import { Wallet } from "../../bitcoin";
 import { Bytes, fromHex } from "../../bytes";
 
@@ -80,7 +81,8 @@ export class InputBilder {
       let hasNote = false;
       let hasChangeOutput = false;
 
-      for (const output of this.TxBuilder.Outputs) {
+      for (let outIdx = 0; outIdx < this.TxBuilder.Outputs.length; outIdx++) {
+        const output = this.TxBuilder.Outputs[outIdx];
         if (output.LockingScript.ScriptType === ScriptType.nullData) {
           const nulldata = output.LockingScript.toBytes();
           const payload = nulldata.subarray(2);
@@ -89,6 +91,8 @@ export class InputBilder {
 
           hasNote = true;
         } else {
+          if (!this.shouldEncodeOutput(output, outIdx)) continue;
+
           script
             .addNumber(output.Satoshis)
             .addData(this.resolveOutputOwnerField(output.LockingScript));
@@ -105,12 +109,15 @@ export class InputBilder {
                 "Divisible STAS output is missing second-field token in locking script",
               );
             }
+          } else if (
+            this.isDstasRedeemLike() &&
+            outIdx === 0 &&
+            this.isP2PkLike(output.LockingScript.ScriptType)
+          ) {
+            script.addOpCode(OpCode.OP_0);
           }
 
-          if (
-            output.LockingScript.ScriptType === ScriptType.p2pkh ||
-            output.LockingScript.ScriptType === ScriptType.p2mpkh
-          ) {
+          if (this.isP2PkLike(output.LockingScript.ScriptType)) {
             hasChangeOutput = true;
           }
         }
@@ -200,6 +207,34 @@ export class InputBilder {
   private isStasScriptType = (scriptType: ScriptType): boolean =>
     scriptType === ScriptType.p2stas || scriptType === ScriptType.dstas;
 
+  private isP2PkLike = (scriptType: ScriptType): boolean =>
+    scriptType === ScriptType.p2pkh || scriptType === ScriptType.p2mpkh;
+
+  /**
+   * DSTAS full-redeem shape:
+   * - no DSTAS outputs
+   * - first output is redeem P2PKH/P2MPKH
+   *
+   * In this mode, the first redeem output is validated by dedicated path in the
+   * locking script and must not be encoded into generic token/change output tuple stream.
+   */
+  private isDstasRedeemLike = (): boolean => {
+    if (this.OutPoint.ScriptType !== ScriptType.dstas) return false;
+    if (this.TxBuilder.Outputs.length === 0) return false;
+
+    const hasDstasOutput = this.TxBuilder.Outputs.some(
+      (x) => x.LockingScript.ScriptType === ScriptType.dstas,
+    );
+    if (hasDstasOutput) return false;
+
+    return this.isP2PkLike(this.TxBuilder.Outputs[0].LockingScript.ScriptType);
+  };
+
+  private shouldEncodeOutput = (output: OutputBuilder, idx: number): boolean => {
+    if (output.LockingScript.ScriptType === ScriptType.nullData) return true;
+    return true;
+  };
+
   private resolveFundingInput = (): InputBilder => {
     const candidates = this.TxBuilder.Inputs.filter(
       (input, idx) =>
@@ -281,20 +316,24 @@ export class InputBilder {
 
       let hasChangeOutput = false;
 
-      size += this.TxBuilder.Outputs.reduce((a, x) => {
+      size += this.TxBuilder.Outputs.reduce((a, x, outIdx) => {
         if (x.LockingScript.ScriptType === ScriptType.nullData) return a;
+        if (!this.shouldEncodeOutput(x, outIdx)) return a;
 
         const ownerField = this.resolveOutputOwnerField(x.LockingScript);
         a += getNumberSize(x.Satoshis) + estimateChunkSize(ownerField.length);
 
         if (x.LockingScript.ScriptType === ScriptType.dstas) {
           a += estimateChunkSize(x.LockingScript._tokens[1].DataLength);
+        } else if (
+          this.isDstasRedeemLike() &&
+          outIdx === 0 &&
+          this.isP2PkLike(x.LockingScript.ScriptType)
+        ) {
+          a += 1;
         }
 
-        if (
-          x.LockingScript.ScriptType === ScriptType.p2pkh ||
-          x.LockingScript.ScriptType === ScriptType.p2mpkh
-        ) {
+        if (this.isP2PkLike(x.LockingScript.ScriptType)) {
           hasChangeOutput = true;
         }
 
