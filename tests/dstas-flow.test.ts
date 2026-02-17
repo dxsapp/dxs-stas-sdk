@@ -2738,7 +2738,130 @@ describe("dstas flow", () => {
     );
   });
 
-  test.todo(
-    "real funding flow continuation: issue -> transfer -> freeze -> unfreeze -> redeem with on-chain fixtures",
-  );
+  test("real funding: issue -> transfer -> freeze -> unfreeze -> redeem is valid", () => {
+    const fixture = createRealFundingFlowFixture();
+
+    const transferTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.bob.Address,
+      },
+    });
+    const transferTx = TransactionReader.readHex(transferTxHex);
+    const transferredStasOutPoint = new OutPoint(
+      transferTx.Id,
+      0,
+      transferTx.Outputs[0].LockignScript,
+      transferTx.Outputs[0].Satoshis,
+      fixture.bob.Address,
+      ScriptType.dstas,
+    );
+    const transferEval = evaluateTransactionHex(
+      transferTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    const freezeTxHex = BuildDstasFreezeTx({
+      stasPayments: [
+        {
+          OutPoint: transferredStasOutPoint,
+          Owner: fixture.cat,
+        },
+      ],
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: transferredStasOutPoint.Satoshis,
+          To: fixture.bob.Address,
+          Frozen: true,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+    const frozenStasOutPoint = new OutPoint(
+      freezeTx.Id,
+      0,
+      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].Satoshis,
+      fixture.bob.Address,
+      ScriptType.dstas,
+    );
+    const freezeEval = evaluateTransactionHex(
+      freezeTxHex,
+      strictResolverFromTxHexes(transferTxHex, fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    const unfreezeTxHex = BuildDstasUnfreezeTx({
+      stasPayments: [
+        {
+          OutPoint: frozenStasOutPoint,
+          Owner: fixture.cat,
+        },
+      ],
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: frozenStasOutPoint.Satoshis,
+          To: fixture.bob.Address,
+          Frozen: false,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+    const unfreezeTx = TransactionReader.readHex(unfreezeTxHex);
+    const unfrozenStasOutPoint = new OutPoint(
+      unfreezeTx.Id,
+      0,
+      unfreezeTx.Outputs[0].LockignScript,
+      unfreezeTx.Outputs[0].Satoshis,
+      fixture.bob.Address,
+      ScriptType.dstas,
+    );
+    const unfreezeEval = evaluateTransactionHex(
+      unfreezeTxHex,
+      strictResolverFromTxHexes(freezeTxHex, transferTxHex, fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    const redeemTxHex = buildRedeemTx({
+      stasOutPoint: unfrozenStasOutPoint,
+      stasOwner: fixture.bob,
+      feeOutPoint: fixture.feeOutPoint,
+      feeOwner: fixture.bob,
+      redeemAddress: fixture.bob.Address,
+    });
+    const redeemEval = evaluateTransactionHex(
+      redeemTxHex,
+      strictResolverFromTxHexes(
+        unfreezeTxHex,
+        freezeTxHex,
+        transferTxHex,
+        fixture.issueTxHex,
+      ),
+      { allowOpReturn: true },
+    );
+
+    expect(transferEval.success).toBe(true);
+    expect(freezeEval.success).toBe(true);
+    expect(unfreezeEval.success).toBe(true);
+    expect(redeemEval.success).toBe(true);
+  });
 });
