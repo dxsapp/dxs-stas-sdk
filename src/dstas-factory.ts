@@ -20,7 +20,6 @@ import { TransactionReader } from "./transaction/read/transaction-reader";
 import { FeeRate } from "./transaction-factory";
 import { hash160 } from "./hashes";
 import { LockingScriptReader } from "./script/read/locking-script-reader";
-import { getStrictModeConfig } from "./security/strict-mode";
 
 export type TDstasPayment = TPayment & {
   UnlockingScript?: Bytes;
@@ -88,10 +87,24 @@ const deriveFlagsFromScheme = (scheme: TokenScheme): Bytes =>
 const isCompressedPubKey = (key: Bytes): boolean =>
   key.length === 33 && (key[0] === 0x02 || key[0] === 0x03);
 
+const validateMultisigPolicy = (m: number, n: number, role: string) => {
+  if (n <= 0) {
+    throw new Error(`${role} must define at least one public key`);
+  }
+
+  // STAS template supports up to 5 keys in MPKH decomposition logic.
+  if (n > 5) {
+    throw new Error(`${role} supports at most 5 public keys, got ${n}`);
+  }
+
+  if (m <= 0 || m > n) {
+    throw new Error(`${role} has invalid threshold m=${m}, n=${n}`);
+  }
+};
+
 const validateMultisigPublicKeys = (
   keys: string[],
   role: string,
-  strict: boolean,
 ) => {
   const seen = new Set<string>();
 
@@ -103,12 +116,11 @@ const validateMultisigPublicKeys = (
       throw new Error(`${role} public key must be a compressed SEC key`);
     }
 
-    if (strict) {
-      if (seen.has(normalized)) {
-        throw new Error(`${role} contains duplicate public keys`);
-      }
-      seen.add(normalized);
+    if (seen.has(normalized)) {
+      throw new Error(`${role} contains duplicate public keys`);
     }
+
+    seen.add(normalized);
   }
 };
 
@@ -125,15 +137,9 @@ const buildAuthorityServiceField = (
 
   const m = authority?.m ?? 1;
   const n = keys.length;
-  if (m <= 0 || m > n) {
-    throw new Error(`${role} authority has invalid threshold m=${m}, n=${n}`);
-  }
+  validateMultisigPolicy(m, n, `${role} authority`);
 
-  validateMultisigPublicKeys(
-    keys,
-    `${role} authority`,
-    getStrictModeConfig().strictMultisigKeys,
-  );
+  validateMultisigPublicKeys(keys, `${role} authority`);
 
   if (m === 1 && n === 1) {
     return hash160(fromHex(keys[0]));
@@ -193,17 +199,9 @@ const resolveLockingParams = (
     if (publicKeys.length === 0) {
       throw new Error("ToOwnerMultisig.publicKeys must not be empty");
     }
-    if (m <= 0 || m > publicKeys.length) {
-      throw new Error(
-        `ToOwnerMultisig has invalid threshold m=${m}, n=${publicKeys.length}`,
-      );
-    }
+    validateMultisigPolicy(m, publicKeys.length, "ToOwnerMultisig");
 
-    validateMultisigPublicKeys(
-      publicKeys,
-      "ToOwnerMultisig",
-      getStrictModeConfig().strictMultisigKeys,
-    );
+    validateMultisigPublicKeys(publicKeys, "ToOwnerMultisig");
 
     const preimage = new Uint8Array(1 + publicKeys.length * (1 + 33) + 1);
     let off = 0;

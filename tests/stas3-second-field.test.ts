@@ -1,6 +1,7 @@
 import { fromHex, toHex } from "../src/bytes";
 import {
   DstasActionKind,
+  DstasSwapActionData,
   buildSwapActionData,
   decodeActionData,
   encodeActionData,
@@ -54,6 +55,59 @@ describe("stas3 second field", () => {
     if (!parsed.next || parsed.next.kind !== "swap") return;
     expect(parsed.next.rateNumerator).toBe(11);
     expect(parsed.next.rateDenominator).toBe(13);
+  });
+
+  test("encodes and decodes long swap chain without recursion overflow", () => {
+    const legsCount = 250;
+    let chain: DstasSwapActionData = {
+      kind: "swap",
+      requestedScriptHash: fromHex("aa".repeat(32)),
+      requestedPkh: fromHex("bb".repeat(20)),
+      rateNumerator: 1,
+      rateDenominator: 2,
+    };
+
+    for (let i = legsCount; i >= 2; i--) {
+      chain = {
+        kind: "swap",
+        requestedScriptHash: fromHex((i % 2 === 0 ? "cc" : "dd").repeat(32)),
+        requestedPkh: fromHex((i % 2 === 0 ? "ee" : "ff").repeat(20)),
+        rateNumerator: i,
+        rateDenominator: i + 1,
+        next: chain,
+      };
+    }
+
+    const encoded = buildSwapActionData(chain);
+    expect(encoded.length).toBe(61 * legsCount);
+
+    const parsed = decodeActionData(encoded);
+    expect(parsed.kind).toBe("swap");
+    if (parsed.kind !== "swap") return;
+
+    let count = 0;
+    let cursor: DstasSwapActionData | undefined = parsed;
+    while (cursor) {
+      count++;
+      cursor = cursor.next;
+    }
+
+    expect(count).toBe(legsCount);
+  });
+
+  test("rejects cyclic swap chain", () => {
+    const cyclic: DstasSwapActionData = {
+      kind: "swap",
+      requestedScriptHash: fromHex("11".repeat(32)),
+      requestedPkh: fromHex("22".repeat(20)),
+      rateNumerator: 1,
+      rateDenominator: 1,
+    };
+    cyclic.next = cyclic;
+
+    expect(() => buildSwapActionData(cyclic)).toThrow(
+      "cyclic next reference",
+    );
   });
 
   test("encodes action second field", () => {

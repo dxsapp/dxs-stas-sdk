@@ -37,5 +37,6 @@ describe("bytes utilities", () => {
 
   test("fromHex rejects invalid input", () => {
     expect(() => fromHex("zz")).toThrow("Invalid hex string");
+    expect(() => fromHex("0g")).toThrow("Invalid hex string");
   });
 });

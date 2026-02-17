@@ -53,25 +53,42 @@ const readU32Le = (bytes: Bytes, offset: number): number =>
     (bytes[offset + 3] << 24)) >>>
   0;
 
-const encodeSwapCore = (spec: DstasSwapActionData): Bytes => {
-  ensureLength(spec.requestedScriptHash, 32, "requestedScriptHash");
-  ensureLength(spec.requestedPkh, 20, "requestedPkh");
-  ensureU32(spec.rateNumerator, "rateNumerator");
-  ensureU32(spec.rateDenominator, "rateDenominator");
+const SWAP_LEG_SIZE = 1 + 32 + 20 + 8;
 
-  const next = spec.next ? encodeSwapCore(spec.next) : new Uint8Array(0);
-  const out = new Uint8Array(1 + 32 + 20 + 8 + next.length);
+const encodeSwapCore = (spec: DstasSwapActionData): Bytes => {
+  const legs: DstasSwapActionData[] = [];
+  const seen = new Set<DstasSwapActionData>();
+  let current: DstasSwapActionData | undefined = spec;
+  while (current) {
+    if (seen.has(current)) {
+      throw new Error("swap second field has cyclic next reference");
+    }
+    seen.add(current);
+
+    ensureLength(current.requestedScriptHash, 32, "requestedScriptHash");
+    ensureLength(current.requestedPkh, 20, "requestedPkh");
+    ensureU32(current.rateNumerator, "rateNumerator");
+    ensureU32(current.rateDenominator, "rateDenominator");
+
+    legs.push(current);
+    current = current.next;
+  }
+
+  const out = new Uint8Array(legs.length * SWAP_LEG_SIZE);
   let offset = 0;
-  out[offset++] = DstasActionKind.swap;
-  out.set(spec.requestedScriptHash, offset);
-  offset += 32;
-  out.set(spec.requestedPkh, offset);
-  offset += 20;
-  writeU32Le(spec.rateNumerator, out, offset);
-  offset += 4;
-  writeU32Le(spec.rateDenominator, out, offset);
-  offset += 4;
-  out.set(next, offset);
+
+  for (const leg of legs) {
+    out[offset++] = DstasActionKind.swap;
+    out.set(leg.requestedScriptHash, offset);
+    offset += 32;
+    out.set(leg.requestedPkh, offset);
+    offset += 20;
+    writeU32Le(leg.rateNumerator, out, offset);
+    offset += 4;
+    writeU32Le(leg.rateDenominator, out, offset);
+    offset += 4;
+  }
+
   return out;
 };
 
@@ -79,35 +96,42 @@ const decodeSwapCore = (
   bytes: Bytes,
   offset: number,
 ): { parsed: DstasSwapActionData; nextOffset: number } => {
-  if (offset + 1 + 32 + 20 + 8 > bytes.length) {
+  let nextOffset = offset;
+  let first: DstasSwapActionData | undefined;
+  let tail: DstasSwapActionData | undefined;
+
+  while (nextOffset < bytes.length) {
+    if (nextOffset + SWAP_LEG_SIZE > bytes.length) {
+      throw new Error("swap second field is truncated");
+    }
+    if (bytes[nextOffset] !== DstasActionKind.swap) {
+      throw new Error("swap second field must start with action=0x01");
+    }
+
+    const parsed: DstasSwapActionData = {
+      kind: "swap",
+      requestedScriptHash: bytes.subarray(nextOffset + 1, nextOffset + 33),
+      requestedPkh: bytes.subarray(nextOffset + 33, nextOffset + 53),
+      rateNumerator: readU32Le(bytes, nextOffset + 53),
+      rateDenominator: readU32Le(bytes, nextOffset + 57),
+    };
+
+    if (!first) {
+      first = parsed;
+      tail = parsed;
+    } else {
+      tail!.next = parsed;
+      tail = parsed;
+    }
+
+    nextOffset += SWAP_LEG_SIZE;
+  }
+
+  if (!first) {
     throw new Error("swap second field is truncated");
   }
 
-  if (bytes[offset] !== DstasActionKind.swap) {
-    throw new Error("swap second field must start with action=0x01");
-  }
-
-  const requestedScriptHash = bytes.subarray(offset + 1, offset + 33);
-  const requestedPkh = bytes.subarray(offset + 33, offset + 53);
-  const rateNumerator = readU32Le(bytes, offset + 53);
-  const rateDenominator = readU32Le(bytes, offset + 57);
-  let nextOffset = offset + 61;
-
-  const parsed: DstasSwapActionData = {
-    kind: "swap",
-    requestedScriptHash,
-    requestedPkh,
-    rateNumerator,
-    rateDenominator,
-  };
-
-  if (nextOffset < bytes.length) {
-    const next = decodeSwapCore(bytes, nextOffset);
-    parsed.next = next.parsed;
-    nextOffset = next.nextOffset;
-  }
-
-  return { parsed, nextOffset };
+  return { parsed: first, nextOffset };
 };
 
 export const encodeActionData = (

@@ -28,15 +28,18 @@ export const utf8ToBytes = (value: string): Bytes => encoder.encode(value);
 export const bytesToUtf8 = (value: Bytes): string => decoder.decode(value);
 
 export const fromHex = (value: string): Bytes => {
+  if (!/^[0-9a-fA-F]*$/.test(value)) {
+    throw new Error("Invalid hex string");
+  }
+
   const normalized = value.length % 2 === 0 ? value : `0${value}`;
   const length = normalized.length / 2;
   const out = new Uint8Array(length);
 
   for (let i = 0; i < length; i++) {
-    const byte = Number.parseInt(normalized.slice(i * 2, i * 2 + 2), 16);
-    if (Number.isNaN(byte)) {
-      throw new Error("Invalid hex string");
-    }
+    const hi = Number.parseInt(normalized[i * 2], 16);
+    const lo = Number.parseInt(normalized[i * 2 + 1], 16);
+    const byte = (hi << 4) | lo;
     out[i] = byte;
   }
 

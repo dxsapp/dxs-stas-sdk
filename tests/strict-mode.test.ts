@@ -31,12 +31,12 @@ describe("strict mode hardening", () => {
   test("strictTxParse rejects trailing bytes after locktime", () => {
     const txWithTail = `${TransferNoNoteRaw}00`;
 
-    expect(() => TransactionReader.readHex(txWithTail)).not.toThrow();
-
-    configureStrictMode({ strictTxParse: true });
     expect(() => TransactionReader.readHex(txWithTail)).toThrow(
       "Unexpected trailing bytes after locktime",
     );
+
+    configureStrictMode({ strictTxParse: false });
+    expect(() => TransactionReader.readHex(txWithTail)).not.toThrow();
   });
 
   test("strictFeeRateValidation rejects invalid fee rates", () => {

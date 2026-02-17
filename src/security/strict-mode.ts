@@ -18,7 +18,7 @@ export type StrictModeConfig = {
 };
 
 const defaultStrictModeConfig: StrictModeConfig = {
-  strictTxParse: false,
+  strictTxParse: true,
   strictOutPointValidation: false,
   strictFeeRateValidation: false,
   maxFeeRateSatsPerByte: 1000,
