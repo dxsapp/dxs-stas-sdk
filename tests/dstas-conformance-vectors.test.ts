@@ -423,7 +423,8 @@ const vectors: ConformanceVector[] = [
           freeze: true,
           confiscation: false,
           isDivisible: true,
-          authority: { m: 1, publicKeys: [toHex(cat.PublicKey)] },
+          freezeAuthority: { m: 1, publicKeys: [toHex(cat.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(cat.PublicKey)] },
         },
       );
 

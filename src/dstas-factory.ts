@@ -1,4 +1,10 @@
-import { Address, OutPoint, TPayment, TokenScheme } from "./bitcoin";
+import {
+  Address,
+  OutPoint,
+  TPayment,
+  TokenAuthority,
+  TokenScheme,
+} from "./bitcoin";
 import { ScriptType } from "./bitcoin/script-type";
 import { Bytes, fromHex, toHex } from "./bytes";
 import {
@@ -79,7 +85,7 @@ const deriveFlagsFromScheme = (scheme: TokenScheme): Bytes =>
   });
 
 const buildAuthorityServiceField = (
-  authority: TokenScheme["Authority"],
+  authority: TokenAuthority | undefined,
   role: "freeze" | "confiscation",
 ): Bytes => {
   const keys = authority?.publicKeys ?? [];
@@ -121,19 +127,13 @@ const deriveServiceFieldsFromScheme = (scheme: TokenScheme): Bytes[] => {
 
   if (scheme.Freeze) {
     serviceFields.push(
-      buildAuthorityServiceField(
-        scheme.FreezeAuthority ?? scheme.Authority,
-        "freeze",
-      ),
+      buildAuthorityServiceField(scheme.FreezeAuthority, "freeze"),
     );
   }
 
   if (scheme.Confiscation) {
     serviceFields.push(
-      buildAuthorityServiceField(
-        scheme.ConfiscationAuthority ?? scheme.Authority,
-        "confiscation",
-      ),
+      buildAuthorityServiceField(scheme.ConfiscationAuthority, "confiscation"),
     );
   }
 
@@ -414,9 +414,6 @@ export type TDstasSwapDestination = {
   Owner: Bytes;
   TokenIdHex: string;
   Freezable: boolean;
-  // Legacy single-authority field; used for freeze and confiscation when
-  // dedicated fields are not supplied.
-  AuthorityServiceField?: Bytes;
   Confiscatable?: boolean;
   FreezeAuthorityServiceField?: Bytes;
   ConfiscationAuthorityServiceField?: Bytes;
@@ -452,35 +449,39 @@ export const ResolveDstasSwapMode = (
 
 const toSwapFlowDestination = (
   value: TDstasSwapDestination,
-): TDstasDestinationByLockingParams => ({
-  Satoshis: value.Satoshis,
-  LockingParams: {
-    owner: value.Owner,
-    actionData: value.ActionData !== undefined ? value.ActionData : null,
-    redemptionPkh: fromHex(value.TokenIdHex),
-    flags: buildStas3Flags({
-      freezable: value.Freezable,
-      confiscatable: value.Confiscatable === true,
-    }),
-    serviceFields: [
-      ...(value.Freezable &&
-      (value.FreezeAuthorityServiceField ?? value.AuthorityServiceField)
-        ? [
-            value.FreezeAuthorityServiceField ??
-              (value.AuthorityServiceField as Bytes),
-          ]
-        : []),
-      ...(value.Confiscatable &&
-      (value.ConfiscationAuthorityServiceField ?? value.AuthorityServiceField)
-        ? [
-            value.ConfiscationAuthorityServiceField ??
-              (value.AuthorityServiceField as Bytes),
-          ]
-        : []),
-    ],
-    optionalData: value.OptionalData ?? [],
-  },
-});
+): TDstasDestinationByLockingParams => {
+  if (value.Freezable && !value.FreezeAuthorityServiceField) {
+    throw new Error(
+      "FreezeAuthorityServiceField is required when Freezable=true",
+    );
+  }
+
+  if (value.Confiscatable && !value.ConfiscationAuthorityServiceField) {
+    throw new Error(
+      "ConfiscationAuthorityServiceField is required when Confiscatable=true",
+    );
+  }
+
+  return {
+    Satoshis: value.Satoshis,
+    LockingParams: {
+      owner: value.Owner,
+      actionData: value.ActionData !== undefined ? value.ActionData : null,
+      redemptionPkh: fromHex(value.TokenIdHex),
+      flags: buildStas3Flags({
+        freezable: value.Freezable,
+        confiscatable: value.Confiscatable === true,
+      }),
+      serviceFields: [
+        ...(value.Freezable ? [value.FreezeAuthorityServiceField as Bytes] : []),
+        ...(value.Confiscatable
+          ? [value.ConfiscationAuthorityServiceField as Bytes]
+          : []),
+      ],
+      optionalData: value.OptionalData ?? [],
+    },
+  };
+};
 
 /**
  * Build swap flow where one side performs a transfer path (spending-type=1)

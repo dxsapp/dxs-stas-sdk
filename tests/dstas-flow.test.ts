@@ -159,7 +159,7 @@ const swapDestination = ({
   TokenIdHex: tokenIdHex,
   Freezable: freezable,
   Confiscatable: confiscatable,
-  AuthorityServiceField: authorityServiceField,
+  FreezeAuthorityServiceField: authorityServiceField,
   ConfiscationAuthorityServiceField: confiscationAuthorityServiceField,
   ActionData: actionData ?? null,
 });
@@ -307,7 +307,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
 
@@ -621,7 +622,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
 
@@ -778,7 +780,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
 
@@ -950,7 +953,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
     const sampleBTail = buildDstasLockingScriptForOwnerField({
@@ -1041,7 +1045,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
     const sampleATail = buildDstasLockingScriptForOwnerField({
@@ -1152,7 +1157,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
     const sampleBTail = buildDstasLockingScriptForOwnerField({
@@ -1252,7 +1258,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
     const sampleATail = buildDstasLockingScriptForOwnerField({
@@ -1372,7 +1379,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
     const sampleBTail = buildDstasLockingScriptForOwnerField({
@@ -1453,7 +1461,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: true,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
       },
     );
     const sampleATail = buildDstasLockingScriptForOwnerField({
@@ -2144,7 +2153,8 @@ describe("dstas flow", () => {
         freeze: true,
         confiscation: false,
         isDivisible: true,
-        authority: { m: 1, publicKeys: [toHex(cat.PublicKey)] },
+        freezeAuthority: { m: 1, publicKeys: [toHex(cat.PublicKey)] },
+        confiscationAuthority: { m: 1, publicKeys: [toHex(cat.PublicKey)] },
       },
     );
 

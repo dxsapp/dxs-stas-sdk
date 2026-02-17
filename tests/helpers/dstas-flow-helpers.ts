@@ -48,7 +48,11 @@ export const createDefaultDstasScheme = (issuer: Wallet, authority: Wallet) =>
     freeze: true,
     confiscation: true,
     isDivisible: true,
-    authority: {
+    freezeAuthority: {
+      m: 1,
+      publicKeys: [toHex(authority.PublicKey)],
+    },
+    confiscationAuthority: {
       m: 1,
       publicKeys: [toHex(authority.PublicKey)],
     },

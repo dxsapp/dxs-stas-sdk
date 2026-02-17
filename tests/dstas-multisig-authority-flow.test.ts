@@ -55,7 +55,7 @@ const buildAuthorityMlpkhPreimage = (
 };
 
 const buildAuthorityServiceField = (scheme: TokenScheme): Uint8Array => {
-  const authority = scheme.Authority!;
+  const authority = scheme.FreezeAuthority!;
   const pubKeys = authority.publicKeys.map((x) => fromHex(x));
   if (authority.m === 1 && pubKeys.length === 1) return hash160(pubKeys[0]);
   return hash160(buildAuthorityMlpkhPreimage(authority.m, pubKeys));
@@ -255,7 +255,7 @@ describe("dstas multisig authority flow", () => {
         freeze: true,
         confiscation: false,
         isDivisible: true,
-        authority: {
+        freezeAuthority: {
           m: 3,
           publicKeys: authorityPubKeys.map((k) => toHex(k)),
         },
