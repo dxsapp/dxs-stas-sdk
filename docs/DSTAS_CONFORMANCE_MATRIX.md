@@ -56,3 +56,10 @@ This matrix maps normative DSTAS rules to concrete automated tests.
 | Rule                                                                | Covered by test                                                                                           |
 | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Fee not below target and not above deterministic upper bound window | `tests/dstas-flow.test.ts` -> `real funding: fee is within expected range for built Divisible STAS steps` |
+
+## Vector Export
+
+- JSON export path: `tests/fixtures/dstas-conformance-vectors.json`.
+- Export source: `tests/dstas-conformance-vectors.test.ts`.
+- Refresh command:
+  `UPDATE_DSTAS_CONFORMANCE_VECTORS=1 npm test -- tests/dstas-conformance-vectors.test.ts --runInBand`.

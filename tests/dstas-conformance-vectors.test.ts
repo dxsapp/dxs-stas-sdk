@@ -29,6 +29,9 @@ import {
   createRealFundingOutPoint,
   mnemonic,
 } from "./helpers/dstas-flow-helpers";
+import { readFileSync, writeFileSync } from "fs";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 
 const resolveFromTx = (txHex: string): ResolvePrevOutput => {
   const tx = TransactionReader.readHex(txHex);
@@ -88,8 +91,46 @@ type ConformanceVector = {
   id: string;
   expectedSuccess: boolean;
   failedInputs?: number[];
-  run: () => TransactionEvalResult;
+  run: () => ConformanceVectorRunResult;
 };
+
+type ConformanceVectorRunResult = {
+  txHex: string;
+  resolvePrevOutput: ResolvePrevOutput;
+  evalResult: TransactionEvalResult;
+};
+
+type ExportedVectorPrevout = {
+  inputIndex: number;
+  txId: string;
+  vout: number;
+  lockingScriptHex: string;
+  satoshis: number;
+};
+
+type ExportedConformanceVector = {
+  id: string;
+  expectedSuccess: boolean;
+  failedInputs?: number[];
+  txHex: string;
+  prevouts: ExportedVectorPrevout[];
+};
+
+const conformanceFixturePath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "fixtures/dstas-conformance-vectors.json",
+);
+
+const runVector = (
+  txHex: string,
+  resolvePrevOutput: ResolvePrevOutput,
+): ConformanceVectorRunResult => ({
+  txHex,
+  resolvePrevOutput,
+  evalResult: evaluateTransactionHex(txHex, resolvePrevOutput, {
+    allowOpReturn: true,
+  }),
+});
 
 const vectors: ConformanceVector[] = [
   {
@@ -112,13 +153,7 @@ const vectors: ConformanceVector[] = [
           To: fixture.bob.Address,
         },
       });
-      return evaluateTransactionHex(
-        transferTxHex,
-        resolveFromTx(fixture.issueTxHex),
-        {
-          allowOpReturn: true,
-        },
-      );
+      return runVector(transferTxHex, resolveFromTx(fixture.issueTxHex));
     },
   },
   {
@@ -146,13 +181,7 @@ const vectors: ConformanceVector[] = [
         ],
         Scheme: fixture.scheme,
       });
-      return evaluateTransactionHex(
-        freezeTxHex,
-        resolveFromTx(fixture.issueTxHex),
-        {
-          allowOpReturn: true,
-        },
-      );
+      return runVector(freezeTxHex, resolveFromTx(fixture.issueTxHex));
     },
   },
   {
@@ -216,13 +245,7 @@ const vectors: ConformanceVector[] = [
         },
       });
 
-      return evaluateTransactionHex(
-        spendFrozenTxHex,
-        resolveFromTx(freezeTxHex),
-        {
-          allowOpReturn: true,
-        },
-      );
+      return runVector(spendFrozenTxHex, resolveFromTx(freezeTxHex));
     },
   },
   {
@@ -290,9 +313,7 @@ const vectors: ConformanceVector[] = [
         Scheme: fixture.scheme,
       });
 
-      return evaluateTransactionHex(unfreezeTxHex, resolveFromTx(freezeTxHex), {
-        allowOpReturn: true,
-      });
+      return runVector(unfreezeTxHex, resolveFromTx(freezeTxHex));
     },
   },
   {
@@ -346,10 +367,9 @@ const vectors: ConformanceVector[] = [
         Scheme: fixture.scheme,
       });
 
-      return evaluateTransactionHex(
+      return runVector(
         confiscateTxHex,
         strictResolverFromTxHexes(transferTxHex, fixture.issueTxHex),
-        { allowOpReturn: true },
       );
     },
   },
@@ -379,13 +399,7 @@ const vectors: ConformanceVector[] = [
         ],
         Scheme: fixture.scheme,
       });
-      return evaluateTransactionHex(
-        confiscateTxHex,
-        resolveFromTx(fixture.issueTxHex),
-        {
-          allowOpReturn: true,
-        },
-      );
+      return runVector(confiscateTxHex, resolveFromTx(fixture.issueTxHex));
     },
   },
   {
@@ -461,13 +475,7 @@ const vectors: ConformanceVector[] = [
         Scheme: schemeNoConfiscation,
       });
 
-      return evaluateTransactionHex(
-        confiscateTxHex,
-        resolveFromTx(issueTxHex),
-        {
-          allowOpReturn: true,
-        },
-      );
+      return runVector(confiscateTxHex, resolveFromTx(issueTxHex));
     },
   },
   {
@@ -518,10 +526,9 @@ const vectors: ConformanceVector[] = [
         feeOwner: fixture.bob,
         redeemAddress: fixture.bob.Address,
       });
-      return evaluateTransactionHex(
+      return runVector(
         redeemTxHex,
         strictResolverFromTxHexes(transferToIssuerTxHex, fixture.issueTxHex),
-        { allowOpReturn: true },
       );
     },
   },
@@ -538,13 +545,7 @@ const vectors: ConformanceVector[] = [
         feeOwner: fixture.bob,
         redeemAddress: fixture.bob.Address,
       });
-      return evaluateTransactionHex(
-        redeemTxHex,
-        resolveFromTx(fixture.issueTxHex),
-        {
-          allowOpReturn: true,
-        },
-      );
+      return runVector(redeemTxHex, resolveFromTx(fixture.issueTxHex));
     },
   },
   {
@@ -624,14 +625,13 @@ const vectors: ConformanceVector[] = [
         feeOwner: fixture.bob,
         redeemAddress: fixture.bob.Address,
       });
-      return evaluateTransactionHex(
+      return runVector(
         redeemTxHex,
         strictResolverFromTxHexes(
           freezeIssuerUtxoTxHex,
           transferToIssuerTxHex,
           fixture.issueTxHex,
         ),
-        { allowOpReturn: true },
       );
     },
   },
@@ -686,10 +686,9 @@ const vectors: ConformanceVector[] = [
         redeemAddress: fixture.bob.Address,
         spendingType: 3,
       });
-      return evaluateTransactionHex(
+      return runVector(
         redeemTxHex,
         strictResolverFromTxHexes(transferToIssuerTxHex, fixture.issueTxHex),
-        { allowOpReturn: true },
       );
     },
   },
@@ -759,16 +758,50 @@ const vectors: ConformanceVector[] = [
         Scheme: fixture.scheme,
         omitChangeOutput: true,
       });
-      return evaluateTransactionHex(swapTxHex, resolveFromTx(issueTxHex), {
-        allowOpReturn: true,
-      });
+      return runVector(swapTxHex, resolveFromTx(issueTxHex));
     },
   },
 ];
 
 describe("dstas conformance vectors", () => {
+  const materializeVectorForExport = (
+    vector: ConformanceVector,
+    runResult: ConformanceVectorRunResult,
+  ): ExportedConformanceVector => {
+    const tx = TransactionReader.readHex(runResult.txHex);
+    const prevouts = tx.Inputs.map((input, inputIndex) => {
+      const prev = runResult.resolvePrevOutput(input.TxId, input.Vout);
+      if (!prev) {
+        throw new Error(
+          `Missing prevout for vector ${vector.id}: input ${inputIndex} ${input.TxId}:${input.Vout}`,
+        );
+      }
+      return {
+        inputIndex,
+        txId: input.TxId,
+        vout: input.Vout,
+        lockingScriptHex: toHex(prev.lockingScript),
+        satoshis: prev.satoshis,
+      };
+    });
+
+    return {
+      id: vector.id,
+      expectedSuccess: vector.expectedSuccess,
+      failedInputs: vector.failedInputs,
+      txHex: runResult.txHex,
+      prevouts,
+    };
+  };
+
+  const buildExportVectors = () =>
+    vectors.map((vector) => {
+      const runResult = vector.run();
+      return materializeVectorForExport(vector, runResult);
+    });
+
   test.each(vectors)("$id", (vector) => {
-    const result = vector.run();
+    const result = vector.run().evalResult;
 
     expect(result.success).toBe(vector.expectedSuccess);
     if (vector.expectedSuccess) {
@@ -784,5 +817,24 @@ describe("dstas conformance vectors", () => {
         result.inputs.find((x) => x.inputIndex === inputIndex)?.success,
       ).toBe(false);
     }
+  });
+
+  test("export fixture is up to date", () => {
+    const generated = buildExportVectors();
+
+    if (process.env.UPDATE_DSTAS_CONFORMANCE_VECTORS === "1") {
+      writeFileSync(
+        conformanceFixturePath,
+        `${JSON.stringify(generated, null, 2)}\n`,
+        "utf8",
+      );
+      return;
+    }
+
+    const fixture = JSON.parse(
+      readFileSync(conformanceFixturePath, "utf8"),
+    ) as ExportedConformanceVector[];
+
+    expect(fixture).toEqual(generated);
   });
 });
