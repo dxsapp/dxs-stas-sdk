@@ -6,6 +6,7 @@ This matrix maps normative DSTAS rules to concrete automated tests.
 
 | Rule                                                                | Covered by test                                                                                                                          |
 | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Parametrized conformance vectors (pass/fail baseline)               | `tests/dstas-conformance-vectors.test.ts`                                                                                                |
 | Issue transaction is script-valid                                   | `tests/dstas-flow.test.ts` -> `real funding: build contract + issue are valid`                                                           |
 | Transfer (no-change) is valid                                       | `tests/dstas-flow.test.ts` -> `real funding: transfer no-change flow is valid`                                                           |
 | Transfer (with-change) is valid                                     | `tests/dstas-flow.test.ts` -> `real funding: transfer with-change flow (current failing case)`                                           |
