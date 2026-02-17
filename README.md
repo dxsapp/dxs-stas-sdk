@@ -342,6 +342,31 @@ const txHex = TransactionBuilder.init()
 | Transaction building    | Assemble raw txs                     | `TransactionBuilder`, `TransactionReader`                                                             |
 | Token factories         | DSTAS/STAS workflows                 | `DstasBundleFactory`, `BuildDstasIssueTxs`, `BuildDstasTransferTx`, `BuildTransferTx`, `BuildSplitTx` |
 
+## Strict mode (optional hardening)
+
+Strict mode is opt-in and keeps legacy runtime behavior unchanged until enabled.
+
+```ts
+import { configureStrictMode } from "dxs-stas-sdk";
+
+configureStrictMode({
+  strictTxParse: true,
+  strictOutPointValidation: true,
+  strictFeeRateValidation: true,
+  strictPresetUnlockingScript: true,
+  strictMultisigKeys: true,
+  strictScriptReader: true,
+  strictScriptEvaluation: true,
+  maxFeeRateSatsPerByte: 5,
+  scriptEvaluationLimits: {
+    maxScriptSizeBytes: 100000,
+    maxOps: 50000,
+    maxStackDepth: 1000,
+    maxElementSizeBytes: 1024 * 1024,
+  },
+});
+```
+
 ## Author
 
 - Author: [Oleg Panagushin](https://github.com/panagushin)  

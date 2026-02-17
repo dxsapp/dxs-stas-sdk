@@ -19,6 +19,7 @@ import { TransactionBuilder } from "./transaction-builder";
 import { OutputBuilder } from "./output-builder";
 import { Wallet } from "../../bitcoin";
 import { Bytes, fromHex } from "../../bytes";
+import { getStrictModeConfig } from "../../security/strict-mode";
 
 export class InputBilder {
   protected TxBuilder: TransactionBuilder;
@@ -28,6 +29,7 @@ export class InputBilder {
   OutPoint: OutPoint;
   Merge: boolean;
   UnlockingScript?: Bytes;
+  AllowPresetUnlockingScript = false;
   AuthoritySignaturesCount?: number;
   AuthorityPubKeysCount?: number;
   DstasSpendingType = 1;
@@ -50,7 +52,17 @@ export class InputBilder {
   }
 
   sign = (force = false) => {
-    if (!force && this.UnlockingScript !== undefined) return;
+    if (!force && this.UnlockingScript !== undefined) {
+      if (
+        getStrictModeConfig().strictPresetUnlockingScript &&
+        !this.AllowPresetUnlockingScript
+      ) {
+        throw new Error(
+          "Preset unlocking script is disabled in strict mode for this input",
+        );
+      }
+      return;
+    }
 
     const scriptType = this.OutPoint.ScriptType;
     const preimage = this.preimage(TransactionBuilder.DefaultSighashType);

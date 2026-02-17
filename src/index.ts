@@ -26,3 +26,4 @@ export {
 } from "./dstas-bundle-factory";
 export * from "./base";
 export * from "./hashes";
+export * from "./security/strict-mode";

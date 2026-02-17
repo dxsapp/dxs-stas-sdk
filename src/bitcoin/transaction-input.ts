@@ -22,13 +22,15 @@ export class TransactionInput {
 
   tryGetAddress = () => {
     const scriptTokens = ScriptReader.read(this.UnlockingScript);
+    if (scriptTokens.length === 0) return undefined;
     const lastToken = scriptTokens[scriptTokens.length - 1];
+    if (!lastToken?.Data) return undefined;
 
     if (
       lastToken.DataLength === 33 &&
-      (lastToken.Data![0] === 2 || lastToken.Data![0] === 3)
+      (lastToken.Data[0] === 2 || lastToken.Data[0] === 3)
     ) {
-      return Address.fromPublicKey(lastToken.Data!);
+      return Address.fromPublicKey(lastToken.Data);
     }
   };
 }

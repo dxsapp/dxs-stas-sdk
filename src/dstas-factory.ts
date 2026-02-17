@@ -20,6 +20,7 @@ import { TransactionReader } from "./transaction/read/transaction-reader";
 import { FeeRate } from "./transaction-factory";
 import { hash160 } from "./hashes";
 import { LockingScriptReader } from "./script/read/locking-script-reader";
+import { getStrictModeConfig } from "./security/strict-mode";
 
 export type TDstasPayment = TPayment & {
   UnlockingScript?: Bytes;
@@ -84,6 +85,33 @@ const deriveFlagsFromScheme = (scheme: TokenScheme): Bytes =>
     confiscatable: scheme.Confiscation,
   });
 
+const isCompressedPubKey = (key: Bytes): boolean =>
+  key.length === 33 && (key[0] === 0x02 || key[0] === 0x03);
+
+const validateMultisigPublicKeys = (
+  keys: string[],
+  role: string,
+  strict: boolean,
+) => {
+  const seen = new Set<string>();
+
+  for (const keyHex of keys) {
+    const normalized = keyHex.toLowerCase();
+    const key = fromHex(keyHex);
+
+    if (!isCompressedPubKey(key)) {
+      throw new Error(`${role} public key must be a compressed SEC key`);
+    }
+
+    if (strict) {
+      if (seen.has(normalized)) {
+        throw new Error(`${role} contains duplicate public keys`);
+      }
+      seen.add(normalized);
+    }
+  }
+};
+
 const buildAuthorityServiceField = (
   authority: TokenAuthority | undefined,
   role: "freeze" | "confiscation",
@@ -100,6 +128,12 @@ const buildAuthorityServiceField = (
   if (m <= 0 || m > n) {
     throw new Error(`${role} authority has invalid threshold m=${m}, n=${n}`);
   }
+
+  validateMultisigPublicKeys(
+    keys,
+    `${role} authority`,
+    getStrictModeConfig().strictMultisigKeys,
+  );
 
   if (m === 1 && n === 1) {
     return hash160(fromHex(keys[0]));
@@ -164,6 +198,12 @@ const resolveLockingParams = (
         `ToOwnerMultisig has invalid threshold m=${m}, n=${publicKeys.length}`,
       );
     }
+
+    validateMultisigPublicKeys(
+      publicKeys,
+      "ToOwnerMultisig",
+      getStrictModeConfig().strictMultisigKeys,
+    );
 
     const preimage = new Uint8Array(1 + publicKeys.length * (1 + 33) + 1);
     let off = 0;
@@ -284,7 +324,10 @@ export const BuildDstasBaseTx = ({
     const payment = stasPayments[i];
     txBuilder.Inputs[idx].DstasSpendingType = spendingType ?? 1;
     const unlocking = resolveUnlockingScript(payment);
-    if (unlocking) txBuilder.Inputs[idx].UnlockingScript = unlocking;
+    if (unlocking) {
+      txBuilder.Inputs[idx].AllowPresetUnlockingScript = true;
+      txBuilder.Inputs[idx].UnlockingScript = unlocking;
+    }
   });
 
   return txBuilder.sign().toHex();

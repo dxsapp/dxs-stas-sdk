@@ -3,6 +3,8 @@ import { Address } from "./address";
 import { ScriptType } from "./script-type";
 import { Transaction } from "./transaction";
 import { Bytes } from "../bytes";
+import { getStrictModeConfig } from "../security/strict-mode";
+import { LockingScriptReader } from "../script/read/locking-script-reader";
 
 export class OutPoint {
   TxId: string;
@@ -27,6 +29,22 @@ export class OutPoint {
     this.Satoshis = satoshis;
     this.Address = address;
     this.ScriptType = scriptType;
+
+    if (getStrictModeConfig().strictOutPointValidation) {
+      const reader = LockingScriptReader.read(lockignScript);
+
+      if (reader.ScriptType !== scriptType) {
+        throw new Error(
+          `OutPoint scriptType mismatch: expected ${scriptType}, got ${reader.ScriptType}`,
+        );
+      }
+
+      if (reader.Address && reader.Address.Value !== address.Value) {
+        throw new Error(
+          `OutPoint address mismatch: expected ${address.Value}, got ${reader.Address.Value}`,
+        );
+      }
+    }
   }
 
   static fromTransaction = (transaction: Transaction, vout: number) =>

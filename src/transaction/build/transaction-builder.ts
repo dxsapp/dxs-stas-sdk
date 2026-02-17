@@ -15,6 +15,7 @@ import { InputBilder } from "./input-builder";
 import { OutputBuilder } from "./output-builder";
 import { Wallet } from "../../bitcoin";
 import { Bytes, bytesToUtf8, toHex } from "../../bytes";
+import { getStrictModeConfig } from "../../security/strict-mode";
 
 export class TransactionBuilderError extends Error {
   constructor(
@@ -38,6 +39,25 @@ export class TransactionBuilder {
 
   static init = () => new TransactionBuilder();
 
+  private validateFeeRate = (satoshisPerByte: number) => {
+    const strict = getStrictModeConfig();
+    if (!strict.strictFeeRateValidation) return;
+
+    if (!Number.isFinite(satoshisPerByte) || satoshisPerByte <= 0) {
+      throw new TransactionBuilderError(
+        "Invalid fee rate",
+        `feeRate must be a positive finite number, got: ${satoshisPerByte}`,
+      );
+    }
+
+    if (satoshisPerByte > strict.maxFeeRateSatsPerByte) {
+      throw new TransactionBuilderError(
+        "Fee rate too high",
+        `feeRate ${satoshisPerByte} exceeds strict max ${strict.maxFeeRateSatsPerByte}`,
+      );
+    }
+  };
+
   size = () =>
     4 + // version
     4 + // locktime
@@ -46,8 +66,10 @@ export class TransactionBuilder {
     getVarIntLength(this.Outputs.length) +
     this.Outputs.reduce((a, x) => a + x.size(), 0);
 
-  getFee = (satoshisPerByte: number) =>
-    Math.ceil(this.size() * satoshisPerByte);
+  getFee = (satoshisPerByte: number) => {
+    this.validateFeeRate(satoshisPerByte);
+    return Math.ceil(this.size() * satoshisPerByte);
+  };
 
   addInput = (outPoint: OutPoint, signer: PrivateKey | Wallet) => {
     this.Inputs.push(new InputBilder(this, outPoint, signer, false));
@@ -138,13 +160,35 @@ export class TransactionBuilder {
     const opReturnIdx = prevScriptTokens.findIndex(
       (x) => x.OpCodeNum === OpCode.OP_RETURN,
     );
+    if (opReturnIdx < 0) {
+      throw new TransactionBuilderError(
+        "Invalid STAS locking script",
+        "OP_RETURN marker was not found in previous STAS locking script",
+      );
+    }
 
-    const toknenId = toHex(prevScriptTokens[opReturnIdx + 1].Data!);
-    const symbol = bytesToUtf8(prevScriptTokens[opReturnIdx + 2].Data!);
+    const tokenIdToken = prevScriptTokens[opReturnIdx + 1];
+    const symbolToken = prevScriptTokens[opReturnIdx + 2];
+    if (!tokenIdToken?.Data || !symbolToken?.Data) {
+      throw new TransactionBuilderError(
+        "Invalid STAS locking script",
+        "TokenId and symbol pushdatas must follow OP_RETURN in previous STAS locking script",
+      );
+    }
+
+    const toknenId = toHex(tokenIdToken.Data);
+    const symbol = bytesToUtf8(symbolToken.Data);
     const data: Bytes[] = [];
 
     for (let i = opReturnIdx + 3; i < prevScriptTokens.length; i++) {
-      data.push(prevScriptTokens[i].Data!);
+      const token = prevScriptTokens[i];
+      if (!token.Data) {
+        throw new TransactionBuilderError(
+          "Invalid STAS locking script",
+          `Unexpected opcode after OP_RETURN payload at token index ${i}`,
+        );
+      }
+      data.push(token.Data);
     }
 
     const script = new P2stasBuilder(to, toknenId, symbol, data);

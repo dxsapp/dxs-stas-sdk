@@ -13,6 +13,7 @@ import { OpCode } from "../../bitcoin/op-codes";
 import { Bytes, concat, equal, fromHex, toHex } from "../../bytes";
 import { hash160, hash256, ripemd160, sha256 } from "../../hashes";
 import { TransactionReader } from "../../transaction/read/transaction-reader";
+import { getStrictModeConfig } from "../../security/strict-mode";
 
 export type PrevOutput = {
   lockingScript: Bytes;
@@ -39,6 +40,12 @@ export type ScriptEvalOptions = {
   scriptFlags?: number;
   trace?: boolean;
   traceLimit?: number;
+  strict?: boolean;
+  requireDerSignatures?: boolean;
+  maxScriptSizeBytes?: number;
+  maxOps?: number;
+  maxStackDepth?: number;
+  maxElementSizeBytes?: number;
 };
 
 export type ScriptTraceStep = {
@@ -247,7 +254,7 @@ const derDecodeSignature = (der: Bytes) => {
   return new Signature(bytesToBigInt(r), bytesToBigInt(s));
 };
 
-const parseSignature = (sigWithHashType: Bytes) => {
+const parseSignature = (sigWithHashType: Bytes, requireDerSignatures = false) => {
   if (sigWithHashType.length === 0) {
     return { signature: new Uint8Array(), sighashType: 0 };
   }
@@ -257,6 +264,10 @@ const parseSignature = (sigWithHashType: Bytes) => {
 
   if (signature.length === 0) {
     return { signature: new Uint8Array(), sighashType };
+  }
+
+  if (requireDerSignatures && signature[0] !== 0x30) {
+    throw new ScriptEvalError("Non-DER signature is rejected in strict mode");
   }
 
   const sigBytes =
@@ -380,13 +391,36 @@ class ScriptInterpreter {
   private tracePhase: "unlocking" | "locking" = "unlocking";
   private trace: ScriptTraceStep[] = [];
   private equalityTrace: ScriptEqualityStep[] = [];
+  private strictMode: boolean;
+  private requireDerSignatures: boolean;
+  private maxScriptSizeBytes: number;
+  private maxOps: number;
+  private maxStackDepth: number;
+  private maxElementSizeBytes: number;
+  private opCount = 0;
 
   constructor(ctx: ScriptEvalContext, options?: ScriptEvalOptions) {
+    const strictConfig = getStrictModeConfig();
+    const strict = options?.strict ?? strictConfig.strictScriptEvaluation;
+
     this.ctx = ctx;
     this.allowOpReturn = options?.allowOpReturn === true;
     this.scriptFlags = options?.scriptFlags ?? DEFAULT_SCRIPT_FLAGS;
     this.traceEnabled = options?.trace === true;
     this.traceLimit = options?.traceLimit ?? 400;
+    this.strictMode = strict;
+    this.requireDerSignatures =
+      options?.requireDerSignatures ?? strict;
+    this.maxScriptSizeBytes =
+      options?.maxScriptSizeBytes ??
+      strictConfig.scriptEvaluationLimits.maxScriptSizeBytes;
+    this.maxOps = options?.maxOps ?? strictConfig.scriptEvaluationLimits.maxOps;
+    this.maxStackDepth =
+      options?.maxStackDepth ??
+      strictConfig.scriptEvaluationLimits.maxStackDepth;
+    this.maxElementSizeBytes =
+      options?.maxElementSizeBytes ??
+      strictConfig.scriptEvaluationLimits.maxElementSizeBytes;
   }
 
   getStack = () => this.stack;
@@ -408,7 +442,32 @@ class ScriptInterpreter {
 
   private popBool = (): boolean => isTruthy(this.pop());
 
-  private push = (value: Bytes) => this.stack.push(value);
+  private ensureElementSize = (value: Bytes) => {
+    if (this.strictMode && value.length > this.maxElementSizeBytes) {
+      throw new ScriptEvalError(
+        `Script element exceeds strict limit: ${value.length} > ${this.maxElementSizeBytes}`,
+      );
+    }
+  };
+
+  private ensureStackDepth = () => {
+    if (
+      this.strictMode &&
+      this.stack.length + this.altStack.length > this.maxStackDepth
+    ) {
+      throw new ScriptEvalError(
+        `Stack depth exceeds strict limit: ${
+          this.stack.length + this.altStack.length
+        } > ${this.maxStackDepth}`,
+      );
+    }
+  };
+
+  private push = (value: Bytes) => {
+    this.ensureElementSize(value);
+    this.stack.push(value);
+    this.ensureStackDepth();
+  };
 
   private top = (): Bytes => {
     if (this.stack.length === 0) throw new ScriptEvalError("Stack underflow");
@@ -435,6 +494,12 @@ class ScriptInterpreter {
   };
 
   execute = (script: Bytes) => {
+    if (this.strictMode && script.length > this.maxScriptSizeBytes) {
+      throw new ScriptEvalError(
+        `Script exceeds strict size limit: ${script.length} > ${this.maxScriptSizeBytes}`,
+      );
+    }
+
     this.script = script;
     this.codeSeparator = -1;
 
@@ -448,6 +513,13 @@ class ScriptInterpreter {
         if (executing) this.push(data);
         pc = next;
         continue;
+      }
+
+      this.opCount++;
+      if (this.strictMode && this.opCount > this.maxOps) {
+        throw new ScriptEvalError(
+          `Opcode count exceeds strict limit: ${this.opCount} > ${this.maxOps}`,
+        );
       }
 
       if (!executing) {
@@ -574,6 +646,7 @@ class ScriptInterpreter {
 
       case OpCode.OP_TOALTSTACK:
         this.altStack.push(this.pop());
+        this.ensureStackDepth();
         return;
       case OpCode.OP_FROMALTSTACK:
         if (this.altStack.length === 0)
@@ -993,7 +1066,10 @@ class ScriptInterpreter {
       case OpCode.OP_CHECKSIGVERIFY: {
         const pubKey = this.pop();
         const sigWithType = this.pop();
-        const { signature, sighashType } = parseSignature(sigWithType);
+        const { signature, sighashType } = parseSignature(
+          sigWithType,
+          this.requireDerSignatures,
+        );
 
         const requireForkId = this.hasFlag(SCRIPT_ENABLE_SIGHASH_FORKID);
         const hasForkId =
@@ -1054,7 +1130,10 @@ class ScriptInterpreter {
         let keyIdx = 0;
 
         while (sigIdx < m && keyIdx < n) {
-          const { signature, sighashType } = parseSignature(sigs[sigIdx]);
+          const { signature, sighashType } = parseSignature(
+            sigs[sigIdx],
+            this.requireDerSignatures,
+          );
           const requireForkId = this.hasFlag(SCRIPT_ENABLE_SIGHASH_FORKID);
           const hasForkId =
             (sighashType & SignatureHashType.SIGHASH_FORKID) ===

@@ -689,6 +689,7 @@ export class DstasBundleFactory {
 
     for (const idx of stasInputIdxs) {
       const input = txBuilder.Inputs[idx];
+      input.AllowPresetUnlockingScript = true;
       input.UnlockingScript = this.buildUnlockingScript({
         txBuilder,
         inputIndex: idx,

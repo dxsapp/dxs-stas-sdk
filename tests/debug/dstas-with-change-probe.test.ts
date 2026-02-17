@@ -7,8 +7,6 @@ import {
   createRealFundingFlowFixture,
 } from "../helpers/dstas-flow-helpers";
 
-const toHex = (b?: Uint8Array) => (b ? Buffer.from(b).toString("hex") : "");
-
 describe("dstas with-change probe", () => {
   test("probe unlocking variants", () => {
     const f = createRealFundingFlowFixture();
@@ -32,15 +30,7 @@ describe("dstas with-change probe", () => {
 
     const baseTokens = ScriptReader.read(tx.Inputs[0].UnlockingScript);
 
-    const show = baseTokens.slice(0, 12).map((t, i) => ({
-      i,
-      op: t.OpCodeNum,
-      data: t.Data ? toHex(t.Data) : null,
-    }));
-    // tslint:disable-next-line:no-console
-    console.log("base first tokens", show);
-
-    const evalVariant = (name: string, tokens: ScriptToken[]) => {
+    const evalVariant = (_name: string, tokens: ScriptToken[]) => {
       const unlocking = ScriptBuilder.fromTokens(
         tokens,
         ScriptType.unknown,
@@ -64,8 +54,7 @@ describe("dstas with-change probe", () => {
         },
         { allowOpReturn: true, trace: false },
       );
-      // tslint:disable-next-line:no-console
-      console.log(name, r.success, r.error);
+      return r;
     };
 
     evalVariant("base", baseTokens);

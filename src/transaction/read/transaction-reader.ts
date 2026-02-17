@@ -4,6 +4,7 @@ import { Bytes, fromHex, toHex } from "../../bytes";
 import { Transaction } from "../../bitcoin/transaction";
 import { TransactionInput } from "../../bitcoin/transaction-input";
 import { TransactionOutput } from "../../bitcoin/transaction-output";
+import { getStrictModeConfig } from "../../security/strict-mode";
 
 export class TransactionReader {
   static readHex = (raw: string) => TransactionReader.readBytes(fromHex(raw));
@@ -27,6 +28,17 @@ export class TransactionReader {
     }
 
     const lockTime = reader.readUInt32();
+
+    if (
+      getStrictModeConfig().strictTxParse &&
+      reader.offset !== buffer.length
+    ) {
+      throw new Error(
+        `Unexpected trailing bytes after locktime: ${
+          buffer.length - reader.offset
+        }`,
+      );
+    }
 
     return new Transaction(buffer, inputs, outputs, version, lockTime);
   };

@@ -2,6 +2,7 @@ import { asMinimalOP, slice } from "../../buffer/buffer-utils";
 import { OpCode } from "../../bitcoin/op-codes";
 import { Bytes } from "../../bytes";
 import { ScriptToken } from "../script-token";
+import { getStrictModeConfig } from "../../security/strict-mode";
 
 export class ScriptReader {
   static read = (source: Bytes) => {
@@ -17,12 +18,22 @@ export class ScriptReader {
         const d = ScriptReader.decode(source, i);
 
         // did reading a pushDataInt fail?
-        if (d === null) return [];
+        if (d === null) {
+          if (getStrictModeConfig().strictScriptReader) {
+            throw new Error(`Malformed pushdata at offset ${i}`);
+          }
+          return [];
+        }
 
         i += d.size;
         // attempt to read too much data?
 
-        if (i + d.number > source.length) return [];
+        if (i + d.number > source.length) {
+          if (getStrictModeConfig().strictScriptReader) {
+            throw new Error(`Pushdata exceeds script length at offset ${i}`);
+          }
+          return [];
+        }
 
         const data = slice(source, i, i + d.number);
         i += d.number;
