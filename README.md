@@ -12,6 +12,14 @@ All binary inputs/outputs are `Uint8Array` (no Node.js `Buffer` in the public AP
 npm install dxs-stas-sdk
 ```
 
+## AI Agent onboarding
+
+If you are integrating this SDK through an AI coding agent, start with:
+
+- `AGENTS.md` (fast onboarding and guardrails)
+- `docs/AGENT_RUNBOOK.md` (task execution workflow)
+- `docs/DSTAS_0_0_8_SDK_SPEC.md` (normative protocol behavior)
+
 ## Concepts
 
 An `OutPoint` represents a spendable UTXO: txid, vout, locking script, satoshis, and owner address.

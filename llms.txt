@@ -1,0 +1,28 @@
+# dxs-stas-sdk
+
+TypeScript SDK for building and validating Bitcoin SV transaction flows, including Divisible STAS (DSTAS) issue, transfer, split, merge, freeze/unfreeze, confiscation, swap, and redeem.
+
+## Primary docs
+
+- [README](README.md): public API, install, and usage examples.
+- [AGENTS](AGENTS.md): shortest practical onboarding path for coding agents.
+- [Agent Runbook](docs/AGENT_RUNBOOK.md): implementation and validation workflow.
+
+## Protocol references
+
+- [DSTAS 0.0.8 SDK Spec](docs/DSTAS_0_0_8_SDK_SPEC.md): normative behavior implemented by the SDK.
+- [DSTAS Script Invariants](docs/DSTAS_SCRIPT_INVARIANTS.md): script-level invariants and conservation rules.
+- [DSTAS Conformance Matrix](docs/DSTAS_CONFORMANCE_MATRIX.md): mapping of protocol rules to tests.
+
+## Additional references
+
+- [STAS3 Freeze/Multisig Notes](docs/STAS3_FREEZE_MULTISIG.md)
+- [Migration Notes](docs/MIGRATION.md)
+- [Agent Handbook (repo snapshot)](docs/AGENT_HANDBOOK.md)
+
+## Code entry points
+
+- `src/index.ts`
+- `src/dstas-factory.ts`
+- `src/dstas-bundle-factory.ts`
+- `src/script/eval/script-evaluator.ts`
