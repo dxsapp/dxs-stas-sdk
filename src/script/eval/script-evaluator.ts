@@ -254,7 +254,10 @@ const derDecodeSignature = (der: Bytes) => {
   return new Signature(bytesToBigInt(r), bytesToBigInt(s));
 };
 
-const parseSignature = (sigWithHashType: Bytes, requireDerSignatures = false) => {
+const parseSignature = (
+  sigWithHashType: Bytes,
+  requireDerSignatures = false,
+) => {
   if (sigWithHashType.length === 0) {
     return { signature: new Uint8Array(), sighashType: 0 };
   }
@@ -409,8 +412,7 @@ class ScriptInterpreter {
     this.traceEnabled = options?.trace === true;
     this.traceLimit = options?.traceLimit ?? 400;
     this.strictMode = strict;
-    this.requireDerSignatures =
-      options?.requireDerSignatures ?? strict;
+    this.requireDerSignatures = options?.requireDerSignatures ?? strict;
     this.maxScriptSizeBytes =
       options?.maxScriptSizeBytes ??
       strictConfig.scriptEvaluationLimits.maxScriptSizeBytes;

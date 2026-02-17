@@ -516,7 +516,9 @@ const toSwapFlowDestination = (
         confiscatable: value.Confiscatable === true,
       }),
       serviceFields: [
-        ...(value.Freezable ? [value.FreezeAuthorityServiceField as Bytes] : []),
+        ...(value.Freezable
+          ? [value.FreezeAuthorityServiceField as Bytes]
+          : []),
         ...(value.Confiscatable
           ? [value.ConfiscationAuthorityServiceField as Bytes]
           : []),

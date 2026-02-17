@@ -59,7 +59,9 @@ export const configureStrictMode = (
 export const resetStrictMode = (): StrictModeConfig => {
   strictModeConfig = {
     ...defaultStrictModeConfig,
-    scriptEvaluationLimits: { ...defaultStrictModeConfig.scriptEvaluationLimits },
+    scriptEvaluationLimits: {
+      ...defaultStrictModeConfig.scriptEvaluationLimits,
+    },
   };
 
   return strictModeConfig;
