@@ -88,7 +88,20 @@ Swap exchanges ownership across two independent assets.
   second variable field and up to the end of the locking script.
   This includes base template bytes, redemption field, flags, service fields, and optional data.
 
-## 6. OptionalData continuity
+## 6. Confiscation
+
+- Inputs:
+  `1..N STAS inputs` (confiscation authority path), `1 funding input`
+- Outputs:
+  `1..N STAS outputs`, `0..1 change output`, `0..1 null-data output`
+- Spending type:
+  unlocking spending-type must be `3`.
+- Rules:
+  service fields after flags must include confiscation authority when confiscation bit is enabled.
+  Frozen inputs can be confiscated.
+  Output conservation per leg remains required (`sum(STAS in) == sum(STAS out)` for same asset leg).
+
+## 7. OptionalData continuity
 
 - If a DSTAS output was issued with `optionalData`, descendant DSTAS outputs that continue
   the same asset leg must preserve `optionalData` byte-exact.
@@ -96,11 +109,20 @@ Swap exchanges ownership across two independent assets.
 - For swap flows, `optionalData` also participates indirectly through `requestedScriptHash`
   because it is part of the locking-script tail hash domain.
 
-## 7. Owner / Authority multisig
+## 8. Owner / Authority multisig
 
-- Authority multisig controls policy actions (freeze/unfreeze).
+- Authority multisig controls policy actions (freeze/unfreeze/confiscation).
 - Owner multisig controls spending ownership path.
 - These roles are independent and must not be conflated in tests or factories.
+
+## 9. Flags/Service-Field coupling
+
+- Flags are interpreted by bits (`0x01` freeze, `0x02` confiscation).
+- Service fields are ordered by enabled policy:
+  1. freeze authority
+  2. confiscation authority
+- Builder-level invariant:
+  `serviceFields.length === enabledPolicyBitsCount`.
 
 ## Notes
 

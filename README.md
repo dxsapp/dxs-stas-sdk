@@ -43,7 +43,13 @@ const scheme = new TokenScheme(
   toHex(bob.Address.Hash160), // issuer token id
   "DSTAS",
   1,
-  { isDivisible: true },
+  {
+    isDivisible: true,
+    freeze: true,
+    confiscation: true,
+    freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+    confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+  },
 );
 
 // Parse a funding transaction that belongs to issuer address (bob).
@@ -115,6 +121,7 @@ const getTransactions = async (
 
 const mapSpendTypeToCode = (spendType: DstasSpendType): number => {
   if (spendType === "swap") return 4;
+  if (spendType === "confiscation") return 3;
   if (spendType === "freeze" || spendType === "unfreeze") return 2;
   return 1;
 };
@@ -185,6 +192,7 @@ Notes:
 
 - `DstasBundleFactory` plans merge/split/transfer service transactions automatically.
 - `note` is attached only to final transfer transaction(s), not to intermediate service transactions.
+- `spendType` supports `transfer`, `freeze`, `unfreeze`, `confiscation`, and `swap`.
 - For recipient multisig (`m > 1`), replace the simple `owner` derivation with your protocol-specific owner preimage/hash strategy.
 
 ## Example: build a simple P2PKH transaction

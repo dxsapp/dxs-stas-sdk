@@ -77,7 +77,7 @@ Script building/reading:
 
 - `ScriptBuilder` provides token-based script assembly with size accounting and byte serialization. (see: src/script/build/script-builder.ts:8-127)
 - `P2pkhBuilder`, `P2stasBuilder`, and `NullDataBuilder` are specialized builders for P2PKH, STAS, and OP_RETURN scripts. (see: src/script/build/p2pkh-builder.ts:8-33, src/script/build/p2stas-builder.ts:8-37, src/script/build/null-data-builder.ts:7-20)
-- `buildStas3FreezeMultisigTokens`, `buildStas3FreezeMultisigScript`, and `buildStas3FreezeMultisigAsm` build STAS 3.0 freeze+multisig scripts from structured params. (see: src/script/build/stas3-freeze-multisig-builder.ts:1-108)
+- `buildStas3FreezeMultisigTokens`, `buildStas3FreezeMultisigScript`, and `buildStas3FreezeMultisigAsm` build DSTAS scripts from structured params (freeze + confiscation + swap + multisig template). (see: src/script/build/stas3-freeze-multisig-builder.ts:1-160)
 - `buildUnlockingScript` assembles standard unlocking script layouts for tests and factory usage. (see: src/script/build/unlocking-script-builder.ts:1-118)
 - `ScriptReader` parses script bytes into `ScriptToken[]` with minimal op encoding. (see: src/script/read/script-reader.ts:5-78)
 - `ScriptToken` models opcodes and pushdata entries and can be created from raw bytes or sample tokens; STAS3-specific flags are carried in `IsSecondField`, `IsRedemptionId`, and `IsFlagsField`. (see: src/script/script-token.ts:4-91)
@@ -143,8 +143,11 @@ const stas3Script = buildStas3FreezeMultisigScript({
   actionData: null,
   redemptionPkh: fromHex("<20-byte-redemption-pkh>"),
   frozen: false,
-  flags: new Uint8Array([0x01]),
-  serviceFields: [],
+  flags: new Uint8Array([0x03]), // freeze + confiscation bits
+  serviceFields: [
+    fromHex("<20-byte-freeze-authority>"),
+    fromHex("<20-byte-confiscation-authority>"),
+  ],
   optionalData: [],
 });
 ```
@@ -224,7 +227,7 @@ const bundle30 = await dstasFactory.createBundle(
 - `src/bitcoin/*` holds address, key, transaction, script-type, and token scheme primitives used by builders and readers. (see: src/bitcoin/index.ts:1-15)
 - `src/buffer/*` re-exports `ByteReader`/`ByteWriter` and contains varint/byte helpers used throughout transaction and script code. (see: src/buffer/index.ts:1-3, src/buffer/buffer-utils.ts:4-116)
 - `src/script/*` implements script tokenization, parsing, Divisible STAS templates/builders, and script evaluation. (see: src/script/index.ts:1-13, src/script/build/script-builder.ts:8-127, src/script/eval/script-evaluator.ts:1-520)
-- `src/script/templates/*` stores Divisible STAS template references, including the ASM template and precompiled base token list. (see: src/script/templates/stas3-freeze-multisig.ts:1-2, src/script/templates/stas3-freeze-multisig-base.ts:1-120)
+- `src/script/templates/*` stores Divisible STAS template references; base tokens are parsed from ASM at runtime and cached. (see: src/script/templates/stas3-freeze-multisig.ts:1-2, src/script/templates/stas3-freeze-multisig-base.ts:1-65)
 - `src/transaction/*` implements transaction construction (`TransactionBuilder`) and parsing (`TransactionReader`). (see: src/transaction/index.ts:1-4, src/transaction/build/transaction-builder.ts:23-172)
 - `src/transaction-factory.ts` provides high-level STAS v1 transaction helper functions (transfer/split/merge/redeem). (see: src/transaction-factory.ts:12-221)
 - `src/dstas-factory.ts` provides Divisible STAS transaction helpers and semantic wrappers for freeze/unfreeze/swap/multisig flows. (see: src/dstas-factory.ts:1-567)
