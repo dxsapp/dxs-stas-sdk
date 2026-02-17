@@ -73,50 +73,71 @@ const buildStas3LockingScriptBuilder = (params: Stas3FreezeMultisigParams) => {
 };
 
 const deriveFlagsFromScheme = (scheme: TokenScheme): Bytes =>
-  buildStas3Flags({ freezable: scheme.Freeze });
+  buildStas3Flags({
+    freezable: scheme.Freeze,
+    confiscatable: scheme.Confiscation,
+  });
 
-const deriveServiceFieldsFromScheme = (scheme: TokenScheme): Bytes[] => {
-  if (!scheme.Freeze) return [];
-
-  const authority = scheme.Authority;
+const buildAuthorityServiceField = (
+  authority: TokenScheme["Authority"],
+  role: "freeze" | "confiscation",
+): Bytes => {
   const keys = authority?.publicKeys ?? [];
   if (keys.length === 0) {
     throw new Error(
-      "Freeze-enabled scheme must define authority public keys for service field derivation",
+      `${role} authority must define at least one public key for service field derivation`,
     );
   }
 
-  if ((authority?.m ?? 1) !== 1) {
-    const m = authority!.m;
-    const n = keys.length;
-    if (m <= 0 || m > n) {
-      throw new Error(
-        `Freeze-enabled scheme has invalid authority threshold m=${m}, n=${n}`,
-      );
-    }
-
-    const preimage = new Uint8Array(1 + n * (1 + 33) + 1);
-    let offset = 0;
-    preimage[offset++] = m & 0xff;
-
-    for (const keyHex of keys) {
-      const key = fromHex(keyHex);
-      if (key.length !== 33) {
-        throw new Error(
-          `Authority public key must be 33 bytes, got ${key.length}`,
-        );
-      }
-      preimage[offset++] = 0x21;
-      preimage.set(key, offset);
-      offset += key.length;
-    }
-
-    preimage[offset] = n & 0xff;
-
-    return [hash160(preimage)];
+  const m = authority?.m ?? 1;
+  const n = keys.length;
+  if (m <= 0 || m > n) {
+    throw new Error(`${role} authority has invalid threshold m=${m}, n=${n}`);
   }
 
-  return [hash160(fromHex(keys[0]))];
+  if (m === 1 && n === 1) {
+    return hash160(fromHex(keys[0]));
+  }
+
+  const preimage = new Uint8Array(1 + n * (1 + 33) + 1);
+  let offset = 0;
+  preimage[offset++] = m & 0xff;
+  for (const keyHex of keys) {
+    const key = fromHex(keyHex);
+    if (key.length !== 33) {
+      throw new Error(`${role} authority public key must be 33 bytes`);
+    }
+    preimage[offset++] = 0x21;
+    preimage.set(key, offset);
+    offset += key.length;
+  }
+  preimage[offset] = n & 0xff;
+
+  return hash160(preimage);
+};
+
+const deriveServiceFieldsFromScheme = (scheme: TokenScheme): Bytes[] => {
+  const serviceFields: Bytes[] = [];
+
+  if (scheme.Freeze) {
+    serviceFields.push(
+      buildAuthorityServiceField(
+        scheme.FreezeAuthority ?? scheme.Authority,
+        "freeze",
+      ),
+    );
+  }
+
+  if (scheme.Confiscation) {
+    serviceFields.push(
+      buildAuthorityServiceField(
+        scheme.ConfiscationAuthority ?? scheme.Authority,
+        "confiscation",
+      ),
+    );
+  }
+
+  return serviceFields;
 };
 
 const resolveLockingParams = (
@@ -379,12 +400,26 @@ export type TBuildDstasSwapTxRequest = TBuildDstasBaseTxRequest;
 export const BuildDstasSwapTx = (request: TBuildDstasSwapTxRequest) =>
   BuildDstasBaseTx({ ...request, spendingType: 4 });
 
+export type TBuildDstasConfiscateTxRequest = TBuildDstasBaseTxRequest;
+/**
+ * Confiscation: provide STAS3 unlocking scripts that encode spending-type=3
+ * and confiscation authority signature fields as required by the template.
+ */
+export const BuildDstasConfiscateTx = (
+  request: TBuildDstasConfiscateTxRequest,
+) => BuildDstasBaseTx({ ...request, spendingType: 3 });
+
 export type TDstasSwapDestination = {
   Satoshis: number;
   Owner: Bytes;
   TokenIdHex: string;
   Freezable: boolean;
-  AuthorityServiceField: Bytes;
+  // Legacy single-authority field; used for freeze and confiscation when
+  // dedicated fields are not supplied.
+  AuthorityServiceField?: Bytes;
+  Confiscatable?: boolean;
+  FreezeAuthorityServiceField?: Bytes;
+  ConfiscationAuthorityServiceField?: Bytes;
   ActionData?: ActionDataInput;
   OptionalData?: Bytes[];
 };
@@ -423,8 +458,26 @@ const toSwapFlowDestination = (
     owner: value.Owner,
     actionData: value.ActionData !== undefined ? value.ActionData : null,
     redemptionPkh: fromHex(value.TokenIdHex),
-    flags: buildStas3Flags({ freezable: value.Freezable }),
-    serviceFields: [value.AuthorityServiceField],
+    flags: buildStas3Flags({
+      freezable: value.Freezable,
+      confiscatable: value.Confiscatable === true,
+    }),
+    serviceFields: [
+      ...(value.Freezable &&
+      (value.FreezeAuthorityServiceField ?? value.AuthorityServiceField)
+        ? [
+            value.FreezeAuthorityServiceField ??
+              (value.AuthorityServiceField as Bytes),
+          ]
+        : []),
+      ...(value.Confiscatable &&
+      (value.ConfiscationAuthorityServiceField ?? value.AuthorityServiceField)
+        ? [
+            value.ConfiscationAuthorityServiceField ??
+              (value.AuthorityServiceField as Bytes),
+          ]
+        : []),
+    ],
     optionalData: value.OptionalData ?? [],
   },
 });

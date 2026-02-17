@@ -85,7 +85,7 @@ export const getP2Stas30Tokens = () => {
   if (stas30Tokens === null) {
     const ownerHex = "1111111111111111111111111111111111111111";
     const redemptionHex = "2222222222222222222222222222222222222222";
-    const flagsHex = "01";
+    const flagsHex = "00";
 
     const script = buildStas3FreezeMultisigScript({
       ownerPkh: fromHex(ownerHex),

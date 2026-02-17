@@ -19,6 +19,7 @@ export type ActionDataInput =
   | DstasActionData;
 export type Stas3FlagsInput = {
   freezable?: boolean;
+  confiscatable?: boolean;
 };
 
 export type Stas3FreezeMultisigParams = {
@@ -35,7 +36,21 @@ export type Stas3FreezeMultisigParams = {
 export const buildStas3Flags = (flags?: Stas3FlagsInput): Bytes => {
   const result = new Uint8Array(1);
   if (flags?.freezable) result[0] |= 0x01;
+  if (flags?.confiscatable) result[0] |= 0x02;
   return result;
+};
+
+const parseProtocolFlags = (
+  flags: Bytes,
+): {
+  freezable: boolean;
+  confiscatable: boolean;
+} => {
+  const rightmostByte = flags.length > 0 ? flags[flags.length - 1] : 0;
+  return {
+    freezable: (rightmostByte & 0x01) === 0x01,
+    confiscatable: (rightmostByte & 0x02) === 0x02,
+  };
 };
 
 const ensureLength = (value: Bytes, expected: number, name: string) => {
@@ -126,13 +141,13 @@ export const buildStas3FreezeMultisigTokens = (
   const flagsToken = buildFlagsToken(params.flags);
   const serviceTokens = buildDataTokens(params.serviceFields);
   const optionalTokens = buildDataTokens(params.optionalData);
-
-  if (
-    !params.flags &&
-    params.serviceFields &&
-    params.serviceFields.length > 0
-  ) {
-    throw new Error("serviceFields require flags to be provided");
+  const parsedFlags = parseProtocolFlags(flagsToken.Data ?? new Uint8Array(0));
+  const expectedServiceFieldsCount =
+    (parsedFlags.freezable ? 1 : 0) + (parsedFlags.confiscatable ? 1 : 0);
+  if (serviceTokens.length !== expectedServiceFieldsCount) {
+    throw new Error(
+      `serviceFields count ${serviceTokens.length} does not match flags requirements ${expectedServiceFieldsCount}`,
+    );
   }
 
   const baseTokens = buildStas3BaseTokens();

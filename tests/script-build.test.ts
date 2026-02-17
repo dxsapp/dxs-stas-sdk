@@ -7,7 +7,10 @@ import { P2stasBuilder } from "../src/script/build/p2stas-builder";
 import { fromHex, utf8ToBytes } from "../src/bytes";
 import { ScriptBuilder } from "../src/script/build/script-builder";
 import { ScriptType } from "../src/bitcoin/script-type";
-import { buildStas3FreezeMultisigTokens } from "../src/script/build/stas3-freeze-multisig-builder";
+import {
+  buildStas3Flags,
+  buildStas3FreezeMultisigTokens,
+} from "../src/script/build/stas3-freeze-multisig-builder";
 
 describe("testing script building", () => {
   const p2mAddress = Address.fromBase58("1AoPwWXXk41vth2J9bHa6wMu65q4j89Q16");
@@ -97,5 +100,29 @@ describe("testing script building", () => {
 
     expect(rebuilt.ToAddress).toBeDefined();
     expect(rebuilt.ToAddress?.Hash160).toEqual(owner);
+  });
+
+  test("buildStas3Flags supports freeze/confiscation bits", () => {
+    expect(buildStas3Flags({ freezable: true })).toEqual(
+      new Uint8Array([0x01]),
+    );
+    expect(buildStas3Flags({ confiscatable: true })).toEqual(
+      new Uint8Array([0x02]),
+    );
+    expect(buildStas3Flags({ freezable: true, confiscatable: true })).toEqual(
+      new Uint8Array([0x03]),
+    );
+  });
+
+  test("dstas builder validates service field count from flags", () => {
+    expect(() =>
+      buildStas3FreezeMultisigTokens({
+        ownerPkh: fromHex("0011223344556677889900112233445566778899"),
+        actionData: null,
+        redemptionPkh: fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+        flags: new Uint8Array([0x03]),
+        serviceFields: [fromHex("11".repeat(20))],
+      }),
+    ).toThrow("serviceFields count");
   });
 });

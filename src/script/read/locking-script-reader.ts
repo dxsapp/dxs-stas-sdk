@@ -32,7 +32,8 @@ type DstasDetectContext = {
   Stage: DstasStage;
   BaseIdx: number;
   FreezeEnabled: boolean;
-  HasAuthority: boolean;
+  ConfiscationEnabled: boolean;
+  ExpectedServiceFieldsCount: number;
   Owner?: Bytes;
   ActionDataRaw?: Bytes;
   ActionDataOpCode?: number;
@@ -88,7 +89,8 @@ export class LockingScriptReader extends BaseScriptReader {
     Stage: "owner",
     BaseIdx: 0,
     FreezeEnabled: false,
-    HasAuthority: false,
+    ConfiscationEnabled: false,
+    ExpectedServiceFieldsCount: 0,
     ServiceFields: [],
     OptionalData: [],
   };
@@ -103,6 +105,7 @@ export class LockingScriptReader extends BaseScriptReader {
     Redemption: Bytes;
     Flags: Bytes;
     FreezeEnabled: boolean;
+    ConfiscationEnabled: boolean;
     ServiceFields: Bytes[];
     OptionalData: Bytes[];
   };
@@ -234,8 +237,13 @@ export class LockingScriptReader extends BaseScriptReader {
           return;
         }
         this.dstasCtx.Flags = token.Data;
-        this.dstasCtx.FreezeEnabled =
-          token.Data.length > 0 && (token.Data[0] & 0x01) === 0x01;
+        const rightmostByte =
+          token.Data.length > 0 ? token.Data[token.Data.length - 1] : 0;
+        this.dstasCtx.FreezeEnabled = (rightmostByte & 0x01) === 0x01;
+        this.dstasCtx.ConfiscationEnabled = (rightmostByte & 0x02) === 0x02;
+        this.dstasCtx.ExpectedServiceFieldsCount =
+          (this.dstasCtx.FreezeEnabled ? 1 : 0) +
+          (this.dstasCtx.ConfiscationEnabled ? 1 : 0);
         this.dstasCtx.Stage = "tail";
         return;
       }
@@ -245,9 +253,11 @@ export class LockingScriptReader extends BaseScriptReader {
           this.dstasCtx.Result = false;
           return;
         }
-        if (this.dstasCtx.FreezeEnabled && !this.dstasCtx.HasAuthority) {
+        if (
+          this.dstasCtx.ServiceFields.length <
+          this.dstasCtx.ExpectedServiceFieldsCount
+        ) {
           this.dstasCtx.ServiceFields.push(token.Data);
-          this.dstasCtx.HasAuthority = true;
         } else {
           this.dstasCtx.OptionalData.push(token.Data);
         }
@@ -269,7 +279,11 @@ export class LockingScriptReader extends BaseScriptReader {
       !this.dstasCtx.Flags
     )
       return;
-    if (this.dstasCtx.FreezeEnabled && !this.dstasCtx.HasAuthority) return;
+    if (
+      this.dstasCtx.ServiceFields.length <
+      this.dstasCtx.ExpectedServiceFieldsCount
+    )
+      return;
 
     this.ScriptTypeOverride = ScriptType.dstas;
     if (this.dstasCtx.Owner.length === 20) {
@@ -283,6 +297,7 @@ export class LockingScriptReader extends BaseScriptReader {
       Redemption: this.dstasCtx.Redemption,
       Flags: this.dstasCtx.Flags,
       FreezeEnabled: this.dstasCtx.FreezeEnabled,
+      ConfiscationEnabled: this.dstasCtx.ConfiscationEnabled,
       ServiceFields: this.dstasCtx.ServiceFields,
       OptionalData: this.dstasCtx.OptionalData,
     };

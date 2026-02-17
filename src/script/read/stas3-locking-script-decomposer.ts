@@ -16,12 +16,16 @@ export type DstasActionDataField =
   | { kind: "data"; hex: string };
 
 export type Stas3LockingScriptDecomposition = {
+  ownerHex?: string;
   ownerPkhHex?: string;
   actionData?: DstasActionDataField;
   baseMatched: boolean;
   redemptionPkhHex?: string;
   flagsHex?: string;
+  freezeEnabled?: boolean;
+  confiscationEnabled?: boolean;
   serviceFieldHexes: string[];
+  optionalDataHexes: string[];
   trailingOpcodes: number[];
   errors: string[];
 };
@@ -84,16 +88,20 @@ export const decomposeStas3LockingScript = (
   const result: Stas3LockingScriptDecomposition = {
     baseMatched: false,
     serviceFieldHexes: [],
+    optionalDataHexes: [],
     trailingOpcodes: [],
     errors: [],
   };
 
   const owner = readRawChunk(script, 0);
-  if (!owner || !owner.data || owner.data.length !== 20) {
-    result.errors.push("owner PKH pushdata(20) was not found at script start");
+  if (!owner || !owner.data || owner.data.length === 0) {
+    result.errors.push("owner field pushdata was not found at script start");
     return result;
   }
-  result.ownerPkhHex = toHex(owner.data);
+  result.ownerHex = toHex(owner.data);
+  if (owner.data.length === 20) {
+    result.ownerPkhHex = result.ownerHex;
+  }
 
   const second = readRawChunk(script, owner.end);
   if (!second) {
@@ -136,14 +144,22 @@ export const decomposeStas3LockingScript = (
 
   if (flags.data) {
     result.flagsHex = toHex(flags.data);
+    const rightmostByte =
+      flags.data.length > 0 ? flags.data[flags.data.length - 1] : 0;
+    result.freezeEnabled = (rightmostByte & 0x01) === 0x01;
+    result.confiscationEnabled = (rightmostByte & 0x02) === 0x02;
   } else if (flags.opcode === OpCode.OP_0) {
     result.flagsHex = "";
+    result.freezeEnabled = false;
+    result.confiscationEnabled = false;
   } else {
     result.errors.push("flags field is not pushdata/OP_0");
     result.trailingOpcodes.push(flags.opcode);
   }
 
   cursor = flags.end;
+  const expectedServiceFieldsCount =
+    (result.freezeEnabled ? 1 : 0) + (result.confiscationEnabled ? 1 : 0);
   while (cursor < script.length) {
     const chunk = readRawChunk(script, cursor);
     if (!chunk) {
@@ -151,7 +167,11 @@ export const decomposeStas3LockingScript = (
       break;
     }
     if (chunk.data) {
-      result.serviceFieldHexes.push(toHex(chunk.data));
+      if (result.serviceFieldHexes.length < expectedServiceFieldsCount) {
+        result.serviceFieldHexes.push(toHex(chunk.data));
+      } else {
+        result.optionalDataHexes.push(toHex(chunk.data));
+      }
     } else {
       result.trailingOpcodes.push(chunk.opcode);
     }

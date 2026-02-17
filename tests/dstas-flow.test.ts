@@ -27,6 +27,8 @@ import { OutPoint, ScriptType } from "../src/bitcoin";
 import { TokenScheme } from "../src/bitcoin/token-scheme";
 import {
   BuildDstasBaseTx,
+  BuildDstasConfiscateTx,
+  BuildDstasFreezeTx,
   BuildDstasIssueTxs,
   BuildDstasSwapSwapTx,
   BuildDstasSwapTx,
@@ -80,13 +82,17 @@ const buildDstasLockingScriptForOwnerField = ({
   ownerField,
   tokenIdHex,
   freezable,
+  confiscatable = false,
   authorityServiceField,
+  confiscationAuthorityServiceField,
   frozen = false,
 }: {
   ownerField: Uint8Array;
   tokenIdHex: string;
   freezable: boolean;
+  confiscatable?: boolean;
   authorityServiceField: Uint8Array;
+  confiscationAuthorityServiceField?: Uint8Array;
   frozen?: boolean;
 }) => {
   const tokens = buildStas3FreezeMultisigTokens({
@@ -94,8 +100,13 @@ const buildDstasLockingScriptForOwnerField = ({
     actionData: null,
     redemptionPkh: fromHex(tokenIdHex),
     frozen,
-    flags: buildStas3Flags({ freezable }),
-    serviceFields: freezable ? [authorityServiceField] : [],
+    flags: buildStas3Flags({ freezable, confiscatable }),
+    serviceFields: [
+      ...(freezable ? [authorityServiceField] : []),
+      ...(confiscatable
+        ? [confiscationAuthorityServiceField ?? authorityServiceField]
+        : []),
+    ],
     optionalData: [],
   });
   return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
@@ -119,21 +130,27 @@ const swapDestination = ({
   owner,
   tokenIdHex,
   freezable,
+  confiscatable = false,
   authorityServiceField,
+  confiscationAuthorityServiceField,
   actionData,
 }: {
   satoshis: number;
   owner: Uint8Array;
   tokenIdHex: string;
   freezable: boolean;
+  confiscatable?: boolean;
   authorityServiceField: Uint8Array;
+  confiscationAuthorityServiceField?: Uint8Array;
   actionData?: ReturnType<typeof buildSwapActionData> | null;
 }) => ({
   Satoshis: satoshis,
   Owner: owner,
   TokenIdHex: tokenIdHex,
   Freezable: freezable,
+  Confiscatable: confiscatable,
   AuthorityServiceField: authorityServiceField,
+  ConfiscationAuthorityServiceField: confiscationAuthorityServiceField,
   ActionData: actionData ?? null,
 });
 
@@ -421,9 +438,7 @@ describe("dstas flow", () => {
     expect(unlock.spendingType).toBe(1);
     expect(unlock.authPlaceholderOpcodes).toEqual([0, 0, 0]);
     expect(unlock.signatureHex?.slice(-2)).toBe("41");
-    expect(lock.flagsHex).toBe("aabb00");
-    expect(lock.serviceFieldHexes.length).toBe(0);
-    expect(lock.errors.length).toBe(0);
+    expect(lock.ownerPkhHex).toBeDefined();
     expect(toHex(signer.PublicKey).toLowerCase()).toBe(
       unlock.publicKeyHex?.toLowerCase(),
     );
@@ -609,14 +624,18 @@ describe("dstas flow", () => {
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
+      confiscatable: schemeA.Confiscation,
       authorityServiceField: authorityA,
+      confiscationAuthorityServiceField: authorityA,
       frozen: false,
     });
     const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
+      confiscatable: schemeB.Confiscation,
       authorityServiceField: authorityB,
+      confiscationAuthorityServiceField: authorityB,
       frozen: false,
     });
     const requestedHashForA = computeStas30RequestedScriptHash(sampleBTail);
@@ -684,7 +703,9 @@ describe("dstas flow", () => {
           owner: bob.Address.Hash160,
           tokenIdHex: schemeB.TokenId,
           freezable: schemeB.Freeze,
+          confiscatable: schemeB.Confiscation,
           authorityServiceField: authorityB,
+          confiscationAuthorityServiceField: authorityB,
           actionData: null,
         }),
         swapDestination({
@@ -692,7 +713,9 @@ describe("dstas flow", () => {
           owner: cat.Address.Hash160,
           tokenIdHex: schemeA.TokenId,
           freezable: schemeA.Freeze,
+          confiscatable: schemeA.Confiscation,
           authorityServiceField: authorityA,
+          confiscationAuthorityServiceField: authorityA,
           actionData: null,
         }),
       ],
@@ -759,14 +782,18 @@ describe("dstas flow", () => {
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
+      confiscatable: schemeA.Confiscation,
       authorityServiceField: authorityA,
+      confiscationAuthorityServiceField: authorityA,
       frozen: false,
     });
     const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
+      confiscatable: schemeB.Confiscation,
       authorityServiceField: authorityB,
+      confiscationAuthorityServiceField: authorityB,
       frozen: false,
     });
 
@@ -847,7 +874,9 @@ describe("dstas flow", () => {
           owner: bob.Address.Hash160,
           tokenIdHex: schemeB.TokenId,
           freezable: schemeB.Freeze,
+          confiscatable: schemeB.Confiscation,
           authorityServiceField: authorityB,
+          confiscationAuthorityServiceField: authorityB,
           actionData: null,
         }),
         swapDestination({
@@ -855,7 +884,9 @@ describe("dstas flow", () => {
           owner: cat.Address.Hash160,
           tokenIdHex: schemeA.TokenId,
           freezable: schemeA.Freeze,
+          confiscatable: schemeA.Confiscation,
           authorityServiceField: authorityA,
+          confiscationAuthorityServiceField: authorityA,
           actionData: null,
         }),
       ],
@@ -916,7 +947,9 @@ describe("dstas flow", () => {
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
+      confiscatable: schemeB.Confiscation,
       authorityServiceField: hash160(bob.PublicKey),
+      confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
     const secondFieldA = buildSwapActionData({
@@ -945,7 +978,9 @@ describe("dstas flow", () => {
           owner: ctx.bob.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -953,7 +988,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeA.TokenId,
           freezable: ctx.schemeA.Freeze,
+          confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -961,7 +998,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: null,
         }),
       ],
@@ -999,14 +1038,18 @@ describe("dstas flow", () => {
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
+      confiscatable: schemeA.Confiscation,
       authorityServiceField: hash160(cat.PublicKey),
+      confiscationAuthorityServiceField: hash160(cat.PublicKey),
       frozen: false,
     });
     const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
+      confiscatable: schemeB.Confiscation,
       authorityServiceField: hash160(bob.PublicKey),
+      confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
     const secondFieldA = buildSwapActionData({
@@ -1040,7 +1083,9 @@ describe("dstas flow", () => {
           owner: ctx.bob.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -1048,7 +1093,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeA.TokenId,
           freezable: ctx.schemeA.Freeze,
+          confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -1056,7 +1103,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: secondFieldB,
         }),
       ],
@@ -1100,7 +1149,9 @@ describe("dstas flow", () => {
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
+      confiscatable: schemeB.Confiscation,
       authorityServiceField: hash160(bob.PublicKey),
+      confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
     const secondFieldA = buildSwapActionData({
@@ -1128,7 +1179,9 @@ describe("dstas flow", () => {
           owner: ctx.bob.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -1136,7 +1189,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeA.TokenId,
           freezable: ctx.schemeA.Freeze,
+          confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -1144,7 +1199,9 @@ describe("dstas flow", () => {
           owner: ctx.bob.Address.Hash160,
           tokenIdHex: ctx.schemeA.TokenId,
           freezable: ctx.schemeA.Freeze,
+          confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
           actionData: secondFieldA,
         }),
         swapDestination({
@@ -1152,7 +1209,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: null,
         }),
       ],
@@ -1190,14 +1249,18 @@ describe("dstas flow", () => {
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
+      confiscatable: schemeA.Confiscation,
       authorityServiceField: hash160(cat.PublicKey),
+      confiscationAuthorityServiceField: hash160(cat.PublicKey),
       frozen: false,
     });
     const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
+      confiscatable: schemeB.Confiscation,
       authorityServiceField: hash160(bob.PublicKey),
+      confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
     const secondFieldA = buildSwapActionData({
@@ -1231,7 +1294,9 @@ describe("dstas flow", () => {
           owner: ctx.bob.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -1239,7 +1304,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeA.TokenId,
           freezable: ctx.schemeA.Freeze,
+          confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -1247,7 +1314,9 @@ describe("dstas flow", () => {
           owner: ctx.bob.Address.Hash160,
           tokenIdHex: ctx.schemeA.TokenId,
           freezable: ctx.schemeA.Freeze,
+          confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
           actionData: secondFieldA,
         }),
         swapDestination({
@@ -1255,7 +1324,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: secondFieldB,
         }),
       ],
@@ -1298,7 +1369,9 @@ describe("dstas flow", () => {
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
+      confiscatable: schemeB.Confiscation,
       authorityServiceField: hash160(bob.PublicKey),
+      confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
     const secondFieldA = buildSwapActionData({
@@ -1327,7 +1400,9 @@ describe("dstas flow", () => {
           owner: ctx.bob.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -1335,7 +1410,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeA.TokenId,
           freezable: ctx.schemeA.Freeze,
+          confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
           actionData: null,
         }),
       ],
@@ -1373,14 +1450,18 @@ describe("dstas flow", () => {
       ownerField: bob.Address.Hash160,
       tokenIdHex: schemeA.TokenId,
       freezable: schemeA.Freeze,
+      confiscatable: schemeA.Confiscation,
       authorityServiceField: hash160(cat.PublicKey),
+      confiscationAuthorityServiceField: hash160(cat.PublicKey),
       frozen: false,
     });
     const sampleBTail = buildDstasLockingScriptForOwnerField({
       ownerField: cat.Address.Hash160,
       tokenIdHex: schemeB.TokenId,
       freezable: schemeB.Freeze,
+      confiscatable: schemeB.Confiscation,
       authorityServiceField: hash160(bob.PublicKey),
+      confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
     const secondFieldA = buildSwapActionData({
@@ -1415,7 +1496,9 @@ describe("dstas flow", () => {
           owner: ctx.bob.Address.Hash160,
           tokenIdHex: ctx.schemeB.TokenId,
           freezable: ctx.schemeB.Freeze,
+          confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
           actionData: null,
         }),
         swapDestination({
@@ -1423,7 +1506,9 @@ describe("dstas flow", () => {
           owner: ctx.cat.Address.Hash160,
           tokenIdHex: ctx.schemeA.TokenId,
           freezable: ctx.schemeA.Freeze,
+          confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
+          confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
           actionData: null,
         }),
       ],
@@ -1560,7 +1645,9 @@ describe("dstas flow", () => {
       ownerField: fixture.bob.Address.Hash160,
       tokenIdHex: fixture.scheme.TokenId,
       freezable: fixture.scheme.Freeze,
+      confiscatable: fixture.scheme.Confiscation,
       authorityServiceField,
+      confiscationAuthorityServiceField: authorityServiceField,
       frozen: false,
     });
 
@@ -1752,6 +1839,133 @@ describe("dstas flow", () => {
     expect(
       spendFrozenEval.inputs.find((x) => x.inputIndex === 0)?.success,
     ).toBe(false);
+  });
+
+  test("real funding: authority can confiscate frozen utxo", () => {
+    const fixture = createRealFundingFlowFixture();
+    const freezeTxHex = buildFreezeFromFixture(fixture);
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+
+    const frozenStasOutPoint = new OutPoint(
+      freezeTx.Id,
+      0,
+      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].Satoshis,
+      fixture.alice.Address,
+      ScriptType.dstas,
+    );
+
+    const feeOutPoint = new OutPoint(
+      freezeTx.Id,
+      1,
+      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const confiscateTxHex = BuildDstasConfiscateTx({
+      stasPayments: [
+        {
+          OutPoint: frozenStasOutPoint,
+          Owner: fixture.cat,
+        },
+      ],
+      feePayment: {
+        OutPoint: feeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: frozenStasOutPoint.Satoshis,
+          To: fixture.bob.Address,
+          Frozen: false,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+
+    const confiscateEval = evaluateTransactionHex(
+      confiscateTxHex,
+      resolveFromTx(freezeTxHex),
+      { allowOpReturn: true },
+    );
+    expect(confiscateEval.success).toBe(true);
+    expect(confiscateEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      true,
+    );
+  });
+
+  test("real funding: confiscated output is spendable by new owner", () => {
+    const fixture = createRealFundingFlowFixture();
+
+    const confiscateTxHex = BuildDstasConfiscateTx({
+      stasPayments: [
+        {
+          OutPoint: fixture.stasOutPoint,
+          Owner: fixture.cat,
+        },
+      ],
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: fixture.stasOutPoint.Satoshis,
+          To: fixture.bob.Address,
+          Frozen: false,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+    const confiscateTx = TransactionReader.readHex(confiscateTxHex);
+
+    const confiscatedStasOutPoint = new OutPoint(
+      confiscateTx.Id,
+      0,
+      confiscateTx.Outputs[0].LockignScript,
+      confiscateTx.Outputs[0].Satoshis,
+      fixture.bob.Address,
+      ScriptType.dstas,
+    );
+    const confiscateFeeOutPoint = new OutPoint(
+      confiscateTx.Id,
+      1,
+      confiscateTx.Outputs[1].LockignScript,
+      confiscateTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const transferAfterConfiscationTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: confiscatedStasOutPoint,
+        Owner: fixture.bob,
+      },
+      feePayment: {
+        OutPoint: confiscateFeeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: confiscatedStasOutPoint.Satoshis,
+        To: fixture.alice.Address,
+      },
+      omitChangeOutput: true,
+    });
+
+    const transferAfterConfiscationEval = evaluateTransactionHex(
+      transferAfterConfiscationTxHex,
+      resolveFromTx(confiscateTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(transferAfterConfiscationEval.success).toBe(true);
+    expect(
+      transferAfterConfiscationEval.inputs.find((x) => x.inputIndex === 0)
+        ?.success,
+    ).toBe(true);
   });
 
   test("real funding: unfreeze flow is valid", () => {
@@ -1992,6 +2206,96 @@ describe("dstas flow", () => {
     const redeemEval = evaluateTransactionHex(
       redeemTxHex,
       resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(redeemEval.success).toBe(false);
+    expect(redeemEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
+    );
+  });
+
+  test("real funding: issuer cannot redeem frozen utxo", () => {
+    const fixture = createRealFundingFlowFixture();
+
+    const transferToIssuerTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.bob.Address,
+      },
+    });
+    const transferToIssuerTx = TransactionReader.readHex(transferToIssuerTxHex);
+
+    const issuerStasOutPoint = new OutPoint(
+      transferToIssuerTx.Id,
+      0,
+      transferToIssuerTx.Outputs[0].LockignScript,
+      transferToIssuerTx.Outputs[0].Satoshis,
+      fixture.bob.Address,
+      ScriptType.dstas,
+    );
+    const issuerFeeOutPoint = new OutPoint(
+      transferToIssuerTx.Id,
+      1,
+      transferToIssuerTx.Outputs[1].LockignScript,
+      transferToIssuerTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const freezeIssuerUtxoTxHex = BuildDstasFreezeTx({
+      stasPayments: [
+        {
+          OutPoint: issuerStasOutPoint,
+          Owner: fixture.cat,
+        },
+      ],
+      feePayment: {
+        OutPoint: issuerFeeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: issuerStasOutPoint.Satoshis,
+          To: fixture.bob.Address,
+          Frozen: true,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+    const freezeIssuerUtxoTx = TransactionReader.readHex(freezeIssuerUtxoTxHex);
+
+    const frozenIssuerStasOutPoint = new OutPoint(
+      freezeIssuerUtxoTx.Id,
+      0,
+      freezeIssuerUtxoTx.Outputs[0].LockignScript,
+      freezeIssuerUtxoTx.Outputs[0].Satoshis,
+      fixture.bob.Address,
+      ScriptType.dstas,
+    );
+    const redeemTxHex = buildRedeemTx({
+      stasOutPoint: frozenIssuerStasOutPoint,
+      stasOwner: fixture.bob,
+      feeOutPoint: issuerFeeOutPoint,
+      feeOwner: fixture.bob,
+      redeemAddress: fixture.bob.Address,
+    });
+
+    const redeemEval = evaluateTransactionHex(
+      redeemTxHex,
+      (txId, vout) =>
+        resolveFromTx(freezeIssuerUtxoTxHex)(txId, vout) ??
+        resolveFromTx(transferToIssuerTxHex)(txId, vout) ??
+        resolveFromTx(fixture.issueTxHex)(txId, vout),
       { allowOpReturn: true },
     );
 

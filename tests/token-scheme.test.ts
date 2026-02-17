@@ -30,5 +30,29 @@ describe("token scheme", () => {
     expect(json.isDivisible).toBe(true);
     expect(json.authority.m).toBe(2);
     expect(json.authority.publicKeys.length).toBe(3);
+    expect(json.freezeAuthority.m).toBe(2);
+    expect(json.confiscationAuthority.m).toBe(2);
+  });
+
+  test("supports separate freeze/confiscation authorities", () => {
+    const scheme = new TokenScheme("Dstas", "cc".repeat(32), "S30", 1, {
+      freeze: true,
+      confiscation: true,
+      freezeAuthority: {
+        m: 2,
+        publicKeys: ["02".repeat(33), "03".repeat(33), "04".repeat(33)],
+      },
+      confiscationAuthority: {
+        m: 1,
+        publicKeys: ["05".repeat(33)],
+      },
+    });
+
+    const json = JSON.parse(scheme.toJson());
+
+    expect(json.freezeAuthority.m).toBe(2);
+    expect(json.freezeAuthority.publicKeys.length).toBe(3);
+    expect(json.confiscationAuthority.m).toBe(1);
+    expect(json.confiscationAuthority.publicKeys.length).toBe(1);
   });
 });

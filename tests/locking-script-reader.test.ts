@@ -146,6 +146,60 @@ describe("locking script reader", () => {
     expect(toHex(reader.Dstas!.OptionalData[0])).toBe(toHex(optional));
   });
 
+  test("detects dstas confiscation-only mode and parses one service field", () => {
+    const owner = fromHex("1111222233334444555566667777888899990000");
+    const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    const confiscationAuthority = fromHex(
+      "cccccccccccccccccccccccccccccccccccccccc",
+    );
+
+    const script = buildStas3FreezeMultisigScript({
+      ownerPkh: owner,
+      actionData: null,
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x02]),
+      serviceFields: [confiscationAuthority],
+    });
+
+    const reader = LockingScriptReader.read(script);
+
+    expect(reader.ScriptType).toBe(ScriptType.dstas);
+    expect(reader.Dstas!.FreezeEnabled).toBe(false);
+    expect(reader.Dstas!.ConfiscationEnabled).toBe(true);
+    expect(reader.Dstas!.ServiceFields).toHaveLength(1);
+    expect(toHex(reader.Dstas!.ServiceFields[0])).toBe(
+      toHex(confiscationAuthority),
+    );
+  });
+
+  test("detects dstas freeze+confiscation mode with ordered service fields", () => {
+    const owner = fromHex("1111222233334444555566667777888899990000");
+    const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    const freezeAuthority = fromHex("1111111111111111111111111111111111111111");
+    const confiscationAuthority = fromHex(
+      "2222222222222222222222222222222222222222",
+    );
+
+    const script = buildStas3FreezeMultisigScript({
+      ownerPkh: owner,
+      actionData: null,
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x03]),
+      serviceFields: [freezeAuthority, confiscationAuthority],
+    });
+
+    const reader = LockingScriptReader.read(script);
+
+    expect(reader.ScriptType).toBe(ScriptType.dstas);
+    expect(reader.Dstas!.FreezeEnabled).toBe(true);
+    expect(reader.Dstas!.ConfiscationEnabled).toBe(true);
+    expect(reader.Dstas!.ServiceFields).toHaveLength(2);
+    expect(toHex(reader.Dstas!.ServiceFields[0])).toBe(toHex(freezeAuthority));
+    expect(toHex(reader.Dstas!.ServiceFields[1])).toBe(
+      toHex(confiscationAuthority),
+    );
+  });
+
   test("parses dstas swap second field", () => {
     const owner = fromHex("1111222233334444555566667777888899990000");
     const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");

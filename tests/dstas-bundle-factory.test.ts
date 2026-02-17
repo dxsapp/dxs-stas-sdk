@@ -23,6 +23,7 @@ const mnemonic =
 
 const ownerPkh = fromHex("2f2ec98dfa6429a028536a6c9451f702daa3a333");
 const redemptionPkh = fromHex("b4ab0fffa02223a8a40d9e7f7823e61b38625382");
+const freezeAuthorityPkh = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
 type TestFactory = {
   factory: DstasBundleFactory;
@@ -91,7 +92,7 @@ const makeFactory = (
     redemptionPkh,
     frozen: false,
     flags: buildStas3Flags({ freezable: true }),
-    serviceFields: [],
+    serviceFields: [freezeAuthorityPkh],
     optionalData: [],
   }));
 
@@ -178,11 +179,12 @@ describe("DstasBundleFactory spendType flags", () => {
     }
   });
 
-  test("transfer/swap set isFreezeLike=false", async () => {
+  test("transfer/swap/confiscation set isFreezeLike=false", async () => {
     const { factory, buildUnlockingScript, recipient } = makeFactory(1000);
 
     await factory.createTransferBundle(1000, recipient);
     await factory.createSwapBundle(1000, recipient);
+    await factory.createConfiscationBundle(1000, recipient);
 
     const calls = buildUnlockingScript.calls.map(
       (call) => call[0] as UnlockingArgs,
@@ -193,14 +195,21 @@ describe("DstasBundleFactory spendType flags", () => {
     const swapCalls = calls.filter(
       (c: UnlockingArgs) => c.spendType === "swap",
     );
+    const confiscationCalls = calls.filter(
+      (c: UnlockingArgs) => c.spendType === "confiscation",
+    );
 
     expect(transferCalls.length).toBeGreaterThan(0);
     expect(swapCalls.length).toBeGreaterThan(0);
+    expect(confiscationCalls.length).toBeGreaterThan(0);
 
     for (const call of transferCalls) {
       expect(call.isFreezeLike).toBe(false);
     }
     for (const call of swapCalls) {
+      expect(call.isFreezeLike).toBe(false);
+    }
+    for (const call of confiscationCalls) {
       expect(call.isFreezeLike).toBe(false);
     }
   });
@@ -312,7 +321,7 @@ describe("DstasBundleFactory spendType flags", () => {
           redemptionPkh,
           frozen: false,
           flags: buildStas3Flags({ freezable: true }),
-          serviceFields: [],
+          serviceFields: [freezeAuthorityPkh],
           optionalData: [],
         }),
         ScriptType.dstas,
@@ -386,7 +395,7 @@ describe("DstasBundleFactory spendType flags", () => {
         redemptionPkh,
         frozen: false,
         flags: buildStas3Flags({ freezable: true }),
-        serviceFields: [],
+        serviceFields: [freezeAuthorityPkh],
         optionalData: [],
       }),
       () => new Uint8Array(),

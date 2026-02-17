@@ -46,6 +46,7 @@ export type DstasSpendType =
   | "merge"
   | "freeze"
   | "unfreeze"
+  | "confiscation"
   | "swap";
 
 export type TDstasRecipient = {
@@ -181,6 +182,12 @@ export class DstasBundleFactory {
     recipient: TDstasRecipient,
     note?: Bytes[],
   ) => this.createBundle(amountSatoshis, recipient, "swap", note);
+
+  public createConfiscationBundle = async (
+    amountSatoshis: number,
+    recipient: TDstasRecipient,
+    note?: Bytes[],
+  ) => this.createBundle(amountSatoshis, recipient, "confiscation", note);
 
   public createBundle = async (
     amountSatoshis: number,

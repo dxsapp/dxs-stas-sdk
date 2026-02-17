@@ -8,6 +8,8 @@ export type TokenSchemeOptions = {
   confiscation?: boolean;
   isDivisible?: boolean;
   authority?: TokenAuthority;
+  freezeAuthority?: TokenAuthority;
+  confiscationAuthority?: TokenAuthority;
 };
 
 export class TokenScheme {
@@ -18,7 +20,10 @@ export class TokenScheme {
   Freeze: boolean;
   Confiscation: boolean;
   IsDivisible: boolean;
+  // Legacy authority field kept for backward compatibility.
   Authority?: TokenAuthority;
+  FreezeAuthority?: TokenAuthority;
+  ConfiscationAuthority?: TokenAuthority;
 
   constructor(
     name: string,
@@ -35,6 +40,9 @@ export class TokenScheme {
     this.Confiscation = options.confiscation === true;
     this.IsDivisible = options.isDivisible === true;
     this.Authority = options.authority;
+    this.FreezeAuthority = options.freezeAuthority ?? options.authority;
+    this.ConfiscationAuthority =
+      options.confiscationAuthority ?? options.authority;
   }
 
   toJson = () =>
@@ -47,6 +55,8 @@ export class TokenScheme {
       confiscation: this.Confiscation,
       isDivisible: this.IsDivisible,
       authority: this.Authority,
+      freezeAuthority: this.FreezeAuthority,
+      confiscationAuthority: this.ConfiscationAuthority,
     });
 
   toBytes = () => new TextEncoder().encode(this.toJson());
