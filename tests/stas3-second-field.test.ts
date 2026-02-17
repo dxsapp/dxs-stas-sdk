@@ -105,9 +105,7 @@ describe("stas3 second field", () => {
     };
     cyclic.next = cyclic;
 
-    expect(() => buildSwapActionData(cyclic)).toThrow(
-      "cyclic next reference",
-    );
+    expect(() => buildSwapActionData(cyclic)).toThrow("cyclic next reference");
   });
 
   test("encodes action second field", () => {

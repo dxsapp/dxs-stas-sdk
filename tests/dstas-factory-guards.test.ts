@@ -100,7 +100,9 @@ describe("DSTAS factory guards", () => {
     );
 
     const pubKeys = [1, 2, 3, 4, 5, 6].map((i) =>
-      toHex(new PrivateKey(fromHex(i.toString(16).padStart(64, "0"))).PublicKey),
+      toHex(
+        new PrivateKey(fromHex(i.toString(16).padStart(64, "0"))).PublicKey,
+      ),
     );
     const scheme = new TokenScheme(
       "TooManyAuthKeys",
@@ -138,7 +140,9 @@ describe("DSTAS factory guards", () => {
     );
 
     const pubKeys = [11, 12, 13, 14, 15, 16].map((i) =>
-      toHex(new PrivateKey(fromHex(i.toString(16).padStart(64, "0"))).PublicKey),
+      toHex(
+        new PrivateKey(fromHex(i.toString(16).padStart(64, "0"))).PublicKey,
+      ),
     );
     const scheme = new TokenScheme(
       "TooManyOwnerKeys",

@@ -102,10 +102,7 @@ const validateMultisigPolicy = (m: number, n: number, role: string) => {
   }
 };
 
-const validateMultisigPublicKeys = (
-  keys: string[],
-  role: string,
-) => {
+const validateMultisigPublicKeys = (keys: string[], role: string) => {
   const seen = new Set<string>();
 
   for (const keyHex of keys) {
