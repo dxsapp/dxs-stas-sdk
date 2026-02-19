@@ -478,7 +478,10 @@ describe("DstasBundleFactory spendType flags", () => {
     ];
     const getFundingUtxo = async () => feeOutPoint;
     const getTransactions = async () => {
-      const map: Record<string, ReturnType<typeof TransactionReader.readHex>> = {
+      const map: Record<
+        string,
+        ReturnType<typeof TransactionReader.readHex>
+      > = {
         [tx1.Id]: tx1,
         [tx2.Id]: tx2,
       };
