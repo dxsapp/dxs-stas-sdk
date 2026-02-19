@@ -30,9 +30,9 @@ const defaultStrictModeConfig: StrictModeConfig = {
     maxScriptSizeBytes: 100000,
     maxOps: 50000,
     maxStackDepth: 1000,
-    // Keep strict element limit aligned with script-size hard cap to reduce
-    // DoS blast radius from oversized pushes in strict evaluation mode.
-    maxElementSizeBytes: 100000,
+    // 1MB strict element limit keeps BSV-oriented scripts practical while
+    // still bounded in strict evaluation mode.
+    maxElementSizeBytes: 1024 * 1024,
   },
 };
 

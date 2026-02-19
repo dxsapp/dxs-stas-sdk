@@ -11,7 +11,7 @@ All binary inputs/outputs are `Uint8Array` (no Node.js `Buffer` in the public AP
 - ECDSA signing is deterministic (RFC 6979 behavior from `@noble/secp256k1`) with `lowS: true`.
 - Strict transaction parsing is enabled by default.
 - Strict fee-rate validation is enabled by default.
-- Strict script evaluation defaults include a 100KB max element size limit (when strict eval is enabled).
+- Strict script evaluation defaults include a 1MB max element size limit (when strict eval is enabled).
 - DSTAS multisig key validation enforces compressed secp256k1 points and `n <= 5`.
 
 ## Install

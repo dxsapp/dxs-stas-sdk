@@ -36,9 +36,12 @@ For every protocol change or new flow, validate built tx hex with script evaluat
 ## Safety and constraints
 
 - Keep strict parsing enabled by default (`strictTxParse=true`).
+- Keep strict fee-rate validation enabled by default (`strictFeeRateValidation=true`).
+- Keep strict script-eval element limit at 1MB unless protocol/perf requirements change (`maxElementSizeBytes=1024*1024`).
 - Preserve flags/service-field ordering and optional-data continuity invariants.
 - Keep multisig bounds enforced (`m <= n`, `n <= 5`) unless protocol spec changes.
 - Avoid silent behavior changes in unlock/signing semantics; cover with negative tests.
+- Use canonical `LockingScript` in new code; `LockignScript` exists only as deprecated compatibility alias.
 
 ## Standard local commands
 

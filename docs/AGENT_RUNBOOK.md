@@ -85,4 +85,5 @@ If only one suite changed, run targeted tests first, then full-suite before merg
 - Action-data hash domain drift (`requestedScriptHash` scope regression).
 - Wrong service-field order when multiple policy bits are enabled.
 - Optional-data dropped on descendant outputs, causing merge/spend failures.
+- Mixing deprecated `LockignScript` with canonical `LockingScript` in new code paths.
 - Treating debug artifacts as fixtures.

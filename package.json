@@ -1,6 +1,6 @@
 {
   "name": "dxs-stas-sdk",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "TypeScript SDK for building and validating multiple Bitcoin SV transaction flows, including DSTAS token issue, transfer, split, merge, swap, freeze/unfreeze, and redeem.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

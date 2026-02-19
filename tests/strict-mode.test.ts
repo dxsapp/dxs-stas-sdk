@@ -188,10 +188,10 @@ describe("strict mode hardening", () => {
     expect(result.error).toContain("Opcode count exceeds strict limit");
   });
 
-  test("strict script element limit defaults to 100KB", () => {
+  test("strict script element limit defaults to 1MB", () => {
     resetStrictMode();
     const strict = getStrictModeConfig();
 
-    expect(strict.scriptEvaluationLimits.maxElementSizeBytes).toBe(100000);
+    expect(strict.scriptEvaluationLimits.maxElementSizeBytes).toBe(1024 * 1024);
   });
 });

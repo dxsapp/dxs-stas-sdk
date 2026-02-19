@@ -1,5 +1,8 @@
 # Agent Handbook
 
+> Note: this handbook is historical context and can drift.
+> For implementation decisions, prioritize `AGENTS.md`, `docs/AGENT_RUNBOOK.md`, `README.md`, and protocol specs.
+
 Protocol invariants reference:
 
 - Divisible STAS operation invariants are maintained in `docs/DSTAS_SCRIPT_INVARIANTS.md`.
