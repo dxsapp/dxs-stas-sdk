@@ -73,20 +73,35 @@ const derDecodeSignature = (der: Bytes) => {
 
 export class PrivateKey {
   private _pk: Bytes;
+  private _disposed = false;
 
   Address: Address;
   PublicKey: Bytes;
 
   constructor(pk: Bytes) {
-    this._pk = pk;
+    this._pk = new Uint8Array(pk);
     this.PublicKey = getPublicKey(this._pk, true);
     this.Address = Address.fromPublicKey(this.PublicKey);
   }
 
-  sign = (message: Bytes) =>
-    derEncodeSignature(
-      Signature.fromBytes(sign(message, this._pk, { prehash: false })),
+  private assertAlive = () => {
+    if (this._disposed) {
+      throw new Error("PrivateKey has been disposed");
+    }
+  };
+
+  sign = (message: Bytes) => {
+    this.assertAlive();
+    return derEncodeSignature(
+      Signature.fromBytes(
+        sign(message, this._pk, {
+          prehash: false,
+          lowS: true,
+          extraEntropy: false,
+        }),
+      ),
     );
+  };
 
   verify = (signature: Bytes, message: Bytes) => {
     const sig =
@@ -98,6 +113,11 @@ export class PrivateKey {
       prehash: false,
       format: "compact",
     });
+  };
+
+  dispose = () => {
+    this._pk.fill(0);
+    this._disposed = true;
   };
 }
 

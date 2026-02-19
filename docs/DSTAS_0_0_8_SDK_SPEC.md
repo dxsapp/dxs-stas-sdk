@@ -101,3 +101,8 @@ In swap flows this also affects `requestedScriptHash`, because optional data is 
 
 This document covers script-level and builder-level behavior in SDK tests/evaluator.
 Mempool policy, miner policy, and indexer side-effects are out of scope.
+
+## 10. SDK Cryptographic Policy
+
+- ECDSA signatures are produced through `@noble/secp256k1` with deterministic signing behavior and `lowS` normalization enabled.
+- Private keys can be explicitly zeroized through `PrivateKey.dispose()` (best-effort memory hygiene in JS runtime constraints).

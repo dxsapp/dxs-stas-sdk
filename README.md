@@ -6,6 +6,13 @@ TypeScript SDK for building and reading Bitcoin SV transactions, with first-clas
 
 All binary inputs/outputs are `Uint8Array` (no Node.js `Buffer` in the public API).
 
+## Security defaults
+
+- ECDSA signing is deterministic (RFC 6979 behavior from `@noble/secp256k1`) with `lowS: true`.
+- Strict transaction parsing is enabled by default.
+- Strict fee-rate validation is enabled by default.
+- DSTAS multisig key validation enforces compressed secp256k1 points and `n <= 5`.
+
 ## Install
 
 ```bash
