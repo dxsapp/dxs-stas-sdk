@@ -377,7 +377,7 @@ export const BuildDstasIssueTxs = ({
   const contractOutPoint = new OutPoint(
     contractTx.Id,
     0,
-    contractTx.Outputs[0].LockignScript,
+    contractTx.Outputs[0].LockingScript,
     contractTx.Outputs[0].Satoshis,
     fundingPayment.OutPoint.Address,
     ScriptType.p2pkh,
@@ -391,7 +391,7 @@ export const BuildDstasIssueTxs = ({
   const contractChangeOutPoint = new OutPoint(
     contractTx.Id,
     1,
-    contractChangeOutput.LockignScript,
+    contractChangeOutput.LockingScript,
     contractChangeOutput.Satoshis,
     fundingPayment.OutPoint.Address,
     ScriptType.p2pkh,
@@ -480,7 +480,7 @@ export type TBuildDstasSwapFlowTxRequest = {
 export type TDstasSwapMode = "auto" | "transfer-swap" | "swap-swap";
 
 const hasSwapActionData = (payment: TDstasPayment): boolean => {
-  const reader = LockingScriptReader.read(payment.OutPoint.LockignScript);
+  const reader = LockingScriptReader.read(payment.OutPoint.LockingScript);
   if (reader.ScriptType !== ScriptType.dstas) return false;
   return reader.Dstas?.ActionDataParsed?.kind === "swap";
 };

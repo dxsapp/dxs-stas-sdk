@@ -39,7 +39,7 @@ const resolveFromTx = (txHex: string): ResolvePrevOutput => {
     if (txId !== tx.Id) return undefined;
     const out = tx.Outputs[vout];
     if (!out) return undefined;
-    return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+    return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
   };
 };
 
@@ -215,7 +215,7 @@ const vectors: ConformanceVector[] = [
       const frozenStasOutPoint = new OutPoint(
         freezeTx.Id,
         0,
-        freezeTx.Outputs[0].LockignScript,
+        freezeTx.Outputs[0].LockingScript,
         freezeTx.Outputs[0].Satoshis,
         fixture.alice.Address,
         ScriptType.dstas,
@@ -223,7 +223,7 @@ const vectors: ConformanceVector[] = [
       const frozenFeeOutPoint = new OutPoint(
         freezeTx.Id,
         1,
-        freezeTx.Outputs[1].LockignScript,
+        freezeTx.Outputs[1].LockingScript,
         freezeTx.Outputs[1].Satoshis,
         fixture.bob.Address,
         ScriptType.p2pkh,
@@ -278,7 +278,7 @@ const vectors: ConformanceVector[] = [
       const frozenStasOutPoint = new OutPoint(
         freezeTx.Id,
         0,
-        freezeTx.Outputs[0].LockignScript,
+        freezeTx.Outputs[0].LockingScript,
         freezeTx.Outputs[0].Satoshis,
         fixture.alice.Address,
         ScriptType.dstas,
@@ -286,7 +286,7 @@ const vectors: ConformanceVector[] = [
       const frozenFeeOutPoint = new OutPoint(
         freezeTx.Id,
         1,
-        freezeTx.Outputs[1].LockignScript,
+        freezeTx.Outputs[1].LockingScript,
         freezeTx.Outputs[1].Satoshis,
         fixture.bob.Address,
         ScriptType.p2pkh,
@@ -340,7 +340,7 @@ const vectors: ConformanceVector[] = [
       const transferredStasOutPoint = new OutPoint(
         transferTx.Id,
         0,
-        transferTx.Outputs[0].LockignScript,
+        transferTx.Outputs[0].LockingScript,
         transferTx.Outputs[0].Satoshis,
         fixture.bob.Address,
         ScriptType.dstas,
@@ -441,7 +441,7 @@ const vectors: ConformanceVector[] = [
       const stasOutPoint = new OutPoint(
         issueTx.Id,
         0,
-        issueTx.Outputs[0].LockignScript,
+        issueTx.Outputs[0].LockingScript,
         issueTx.Outputs[0].Satoshis,
         alice.Address,
         ScriptType.dstas,
@@ -449,7 +449,7 @@ const vectors: ConformanceVector[] = [
       const feeOutPoint = new OutPoint(
         issueTx.Id,
         1,
-        issueTx.Outputs[1].LockignScript,
+        issueTx.Outputs[1].LockingScript,
         issueTx.Outputs[1].Satoshis,
         bob.Address,
         ScriptType.p2pkh,
@@ -506,7 +506,7 @@ const vectors: ConformanceVector[] = [
       const issuerStasOutPoint = new OutPoint(
         transferToIssuerTx.Id,
         0,
-        transferToIssuerTx.Outputs[0].LockignScript,
+        transferToIssuerTx.Outputs[0].LockingScript,
         transferToIssuerTx.Outputs[0].Satoshis,
         fixture.bob.Address,
         ScriptType.dstas,
@@ -514,7 +514,7 @@ const vectors: ConformanceVector[] = [
       const issuerFeeOutPoint = new OutPoint(
         transferToIssuerTx.Id,
         1,
-        transferToIssuerTx.Outputs[1].LockignScript,
+        transferToIssuerTx.Outputs[1].LockingScript,
         transferToIssuerTx.Outputs[1].Satoshis,
         fixture.bob.Address,
         ScriptType.p2pkh,
@@ -576,7 +576,7 @@ const vectors: ConformanceVector[] = [
       const issuerStasOutPoint = new OutPoint(
         transferToIssuerTx.Id,
         0,
-        transferToIssuerTx.Outputs[0].LockignScript,
+        transferToIssuerTx.Outputs[0].LockingScript,
         transferToIssuerTx.Outputs[0].Satoshis,
         fixture.bob.Address,
         ScriptType.dstas,
@@ -584,7 +584,7 @@ const vectors: ConformanceVector[] = [
       const issuerFeeOutPoint = new OutPoint(
         transferToIssuerTx.Id,
         1,
-        transferToIssuerTx.Outputs[1].LockignScript,
+        transferToIssuerTx.Outputs[1].LockingScript,
         transferToIssuerTx.Outputs[1].Satoshis,
         fixture.bob.Address,
         ScriptType.p2pkh,
@@ -614,7 +614,7 @@ const vectors: ConformanceVector[] = [
       const frozenIssuerStasOutPoint = new OutPoint(
         freezeIssuerTx.Id,
         0,
-        freezeIssuerTx.Outputs[0].LockignScript,
+        freezeIssuerTx.Outputs[0].LockingScript,
         freezeIssuerTx.Outputs[0].Satoshis,
         fixture.bob.Address,
         ScriptType.dstas,
@@ -665,7 +665,7 @@ const vectors: ConformanceVector[] = [
       const issuerStasOutPoint = new OutPoint(
         transferToIssuerTx.Id,
         0,
-        transferToIssuerTx.Outputs[0].LockignScript,
+        transferToIssuerTx.Outputs[0].LockingScript,
         transferToIssuerTx.Outputs[0].Satoshis,
         fixture.bob.Address,
         ScriptType.dstas,
@@ -673,7 +673,7 @@ const vectors: ConformanceVector[] = [
       const issuerFeeOutPoint = new OutPoint(
         transferToIssuerTx.Id,
         1,
-        transferToIssuerTx.Outputs[1].LockignScript,
+        transferToIssuerTx.Outputs[1].LockingScript,
         transferToIssuerTx.Outputs[1].Satoshis,
         fixture.bob.Address,
         ScriptType.p2pkh,
@@ -724,7 +724,7 @@ const vectors: ConformanceVector[] = [
       const stasOutPoint = new OutPoint(
         issueTx.Id,
         0,
-        issueTx.Outputs[0].LockignScript,
+        issueTx.Outputs[0].LockingScript,
         issueTx.Outputs[0].Satoshis,
         fixture.bob.Address,
         ScriptType.dstas,
@@ -732,7 +732,7 @@ const vectors: ConformanceVector[] = [
       const feeOutPoint = new OutPoint(
         issueTx.Id,
         1,
-        issueTx.Outputs[1].LockignScript,
+        issueTx.Outputs[1].LockingScript,
         issueTx.Outputs[1].Satoshis,
         fixture.bob.Address,
         ScriptType.p2pkh,

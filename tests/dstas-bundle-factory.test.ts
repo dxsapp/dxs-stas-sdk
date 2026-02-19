@@ -357,7 +357,7 @@ describe("DstasBundleFactory spendType flags", () => {
       new OutPoint(
         tx1.Id,
         0,
-        tx1.Outputs[0].LockignScript,
+        tx1.Outputs[0].LockingScript,
         tx1.Outputs[0].Satoshis,
         stasWallet.Address,
         ScriptType.dstas,
@@ -365,7 +365,7 @@ describe("DstasBundleFactory spendType flags", () => {
       new OutPoint(
         tx2.Id,
         0,
-        tx2.Outputs[0].LockignScript,
+        tx2.Outputs[0].LockingScript,
         tx2.Outputs[0].Satoshis,
         stasWallet.Address,
         ScriptType.dstas,

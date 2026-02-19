@@ -15,7 +15,9 @@ import {
   BuildTransferTx,
   FeeRate,
 } from "./transaction-factory";
-import { Bytes, fromHex } from "./bytes";
+import { Bytes, toHex } from "./bytes";
+import { hash256 } from "./hashes";
+import { P2pkhBuilder } from "./script/build/p2pkh-builder";
 
 export const AvgFeeForMerge = 500;
 
@@ -72,14 +74,7 @@ export class StasBundleFactory {
       [],
       stasUtxos,
       amountSatoshis,
-      new OutPoint(
-        "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
-        0,
-        fromHex("76a91462e907b15cbf27d5425399ebf6f0fb50ebb88f1888ac"),
-        5000000000,
-        this.feeWallet.Address,
-        ScriptType.p2pkh,
-      ),
+      this.buildFeeProbeOutPoint(),
       to,
       note,
     );
@@ -109,6 +104,24 @@ export class StasBundleFactory {
       fudingUtxo,
       to,
       note,
+    );
+  };
+
+  /**
+   * Deterministic probe UTXO used for fee simulation before the real funding
+   * UTXO is requested from the backend. It must not rely on a real chain txid.
+   */
+  private buildFeeProbeOutPoint = (): OutPoint => {
+    const probeTxId = toHex(hash256(this.feeWallet.PublicKey));
+    const probeScript = new P2pkhBuilder(this.feeWallet.Address).toBytes();
+
+    return new OutPoint(
+      probeTxId,
+      0,
+      probeScript,
+      5_000_000_000,
+      this.feeWallet.Address,
+      ScriptType.p2pkh,
     );
   };
 

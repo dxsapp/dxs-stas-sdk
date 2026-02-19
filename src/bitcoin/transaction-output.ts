@@ -5,18 +5,18 @@ import { ScriptType } from "./script-type";
 
 export class TransactionOutput {
   Satoshis: number;
-  LockignScript: Bytes;
+  private _lockingScript: Bytes;
   ScriptType: ScriptType = ScriptType.unknown;
   Address?: Address;
   TokenId?: string;
   Symbol?: string;
   data: Bytes[] = [];
 
-  constructor(satoshis: number, lockignScript: Bytes) {
+  constructor(satoshis: number, lockingScript: Bytes) {
     this.Satoshis = satoshis;
-    this.LockignScript = lockignScript;
+    this._lockingScript = lockingScript;
 
-    const reader = LockingScriptReader.read(this.LockignScript);
+    const reader = LockingScriptReader.read(this._lockingScript);
 
     this.ScriptType = reader.ScriptType;
     this.Address = reader.Address;
@@ -52,5 +52,22 @@ export class TransactionOutput {
       this.data.push(...reader.Dstas.ServiceFields);
       this.data.push(...reader.Dstas.OptionalData);
     }
+  }
+
+  get LockingScript(): Bytes {
+    return this._lockingScript;
+  }
+
+  set LockingScript(value: Bytes) {
+    this._lockingScript = value;
+  }
+
+  // Deprecated typo kept for backward compatibility.
+  get LockignScript(): Bytes {
+    return this._lockingScript;
+  }
+
+  set LockignScript(value: Bytes) {
+    this._lockingScript = value;
   }
 }

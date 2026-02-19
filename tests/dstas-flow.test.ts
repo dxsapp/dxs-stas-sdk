@@ -60,7 +60,7 @@ const resolveFromTx = (txHex: string) => {
     if (txId !== tx.Id) return undefined;
     const out = tx.Outputs[vout];
     if (!out) return undefined;
-    return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+    return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
   };
 };
 
@@ -347,7 +347,7 @@ describe("dstas flow", () => {
     const stasA = new OutPoint(
       txIssueA.Id,
       0,
-      txIssueA.Outputs[0].LockignScript,
+      txIssueA.Outputs[0].LockingScript,
       txIssueA.Outputs[0].Satoshis,
       bob.Address,
       ScriptType.dstas,
@@ -357,7 +357,7 @@ describe("dstas flow", () => {
     const stasB = new OutPoint(
       txIssueB.Id,
       0,
-      txIssueB.Outputs[0].LockignScript,
+      txIssueB.Outputs[0].LockingScript,
       txIssueB.Outputs[0].Satoshis,
       cat.Address,
       ScriptType.dstas,
@@ -367,7 +367,7 @@ describe("dstas flow", () => {
     const fee = new OutPoint(
       txIssueA.Id,
       1,
-      txIssueA.Outputs[1].LockignScript,
+      txIssueA.Outputs[1].LockingScript,
       txIssueA.Outputs[1].Satoshis,
       bob.Address,
       ScriptType.p2pkh,
@@ -377,12 +377,12 @@ describe("dstas flow", () => {
       if (txId === txIssueA.Id) {
         const out = txIssueA.Outputs[vout];
         if (out)
-          return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+          return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
       }
       if (txId === txIssueB.Id) {
         const out = txIssueB.Outputs[vout];
         if (out)
-          return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+          return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
       }
       return undefined;
     };
@@ -403,7 +403,7 @@ describe("dstas flow", () => {
     const txHex = readFileSync(referenceTransferTxPath, "utf8").trim();
     const tx = TransactionReader.readHex(txHex);
     const unlock = decomposeStas3UnlockingScript(tx.Inputs[0].UnlockingScript);
-    const lock = decomposeStas3LockingScript(tx.Outputs[0].LockignScript);
+    const lock = decomposeStas3LockingScript(tx.Outputs[0].LockingScript);
 
     const preimage = fromHex(unlock.preimageHex!);
     const reader = new ByteReader(preimage);
@@ -469,7 +469,7 @@ describe("dstas flow", () => {
           return undefined;
         }
         return {
-          lockingScript: fixture.sourceFunding.LockignScript,
+          lockingScript: fixture.sourceFunding.LockingScript,
           satoshis: fixture.sourceFunding.Satoshis,
         };
       },
@@ -503,9 +503,9 @@ describe("dstas flow", () => {
 
     dumpTransferDebug({
       transferTxHex,
-      prevStasLockingScript: fixture.issueTx.Outputs[0].LockignScript,
+      prevStasLockingScript: fixture.issueTx.Outputs[0].LockingScript,
       prevStasSatoshis: fixture.issueTx.Outputs[0].Satoshis,
-      prevFeeLockingScript: fixture.issueTx.Outputs[1].LockignScript,
+      prevFeeLockingScript: fixture.issueTx.Outputs[1].LockingScript,
       prevFeeSatoshis: fixture.issueTx.Outputs[1].Satoshis,
       outPath: ".temp/dstas-transfer-no-change-debug.json",
     });
@@ -552,7 +552,7 @@ describe("dstas flow", () => {
     const stasOutPoint = new OutPoint(
       issueTx.Id,
       0,
-      issueTx.Outputs[0].LockignScript,
+      issueTx.Outputs[0].LockingScript,
       issueTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -560,7 +560,7 @@ describe("dstas flow", () => {
     const feeOutPoint = new OutPoint(
       issueTx.Id,
       1,
-      issueTx.Outputs[1].LockignScript,
+      issueTx.Outputs[1].LockingScript,
       issueTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -679,7 +679,7 @@ describe("dstas flow", () => {
     const stasA = new OutPoint(
       txIssueA.Id,
       0,
-      txIssueA.Outputs[0].LockignScript,
+      txIssueA.Outputs[0].LockingScript,
       txIssueA.Outputs[0].Satoshis,
       bob.Address,
       ScriptType.dstas,
@@ -688,7 +688,7 @@ describe("dstas flow", () => {
     const stasB = new OutPoint(
       txIssueB.Id,
       0,
-      txIssueB.Outputs[0].LockignScript,
+      txIssueB.Outputs[0].LockingScript,
       txIssueB.Outputs[0].Satoshis,
       cat.Address,
       ScriptType.dstas,
@@ -697,7 +697,7 @@ describe("dstas flow", () => {
     const fee = new OutPoint(
       txIssueA.Id,
       1,
-      txIssueA.Outputs[1].LockignScript,
+      txIssueA.Outputs[1].LockingScript,
       txIssueA.Outputs[1].Satoshis,
       bob.Address,
       ScriptType.p2pkh,
@@ -741,20 +741,20 @@ describe("dstas flow", () => {
         if (txId === txIssueA.Id) {
           const out = txIssueA.Outputs[vout];
           if (out)
-            return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+            return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
         }
         if (txId === txIssueB.Id) {
           const out = txIssueB.Outputs[vout];
           if (out)
-            return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+            return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
         }
         return undefined;
       },
       { allowOpReturn: true },
     );
     const swapTx = TransactionReader.readHex(swapTxHex);
-    const out0 = decomposeStas3LockingScript(swapTx.Outputs[0].LockignScript);
-    const out1 = decomposeStas3LockingScript(swapTx.Outputs[1].LockignScript);
+    const out0 = decomposeStas3LockingScript(swapTx.Outputs[0].LockingScript);
+    const out1 = decomposeStas3LockingScript(swapTx.Outputs[1].LockingScript);
     expect(swapEval.success).toBe(true);
     expect(swapEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
     expect(swapEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(true);
@@ -849,7 +849,7 @@ describe("dstas flow", () => {
     const stasA = new OutPoint(
       txIssueA.Id,
       0,
-      txIssueA.Outputs[0].LockignScript,
+      txIssueA.Outputs[0].LockingScript,
       txIssueA.Outputs[0].Satoshis,
       bob.Address,
       ScriptType.dstas,
@@ -859,7 +859,7 @@ describe("dstas flow", () => {
     const stasB = new OutPoint(
       txIssueB.Id,
       0,
-      txIssueB.Outputs[0].LockignScript,
+      txIssueB.Outputs[0].LockingScript,
       txIssueB.Outputs[0].Satoshis,
       cat.Address,
       ScriptType.dstas,
@@ -869,7 +869,7 @@ describe("dstas flow", () => {
     const fee = new OutPoint(
       txIssueA.Id,
       1,
-      txIssueA.Outputs[1].LockignScript,
+      txIssueA.Outputs[1].LockingScript,
       txIssueA.Outputs[1].Satoshis,
       bob.Address,
       ScriptType.p2pkh,
@@ -913,12 +913,12 @@ describe("dstas flow", () => {
         if (txId === txIssueA.Id) {
           const out = txIssueA.Outputs[vout];
           if (out)
-            return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+            return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
         }
         if (txId === txIssueB.Id) {
           const out = txIssueB.Outputs[vout];
           if (out)
-            return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+            return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
         }
         return undefined;
       },
@@ -926,8 +926,8 @@ describe("dstas flow", () => {
     );
 
     const swapTx = TransactionReader.readHex(swapTxHex);
-    const out0 = decomposeStas3LockingScript(swapTx.Outputs[0].LockignScript);
-    const out1 = decomposeStas3LockingScript(swapTx.Outputs[1].LockignScript);
+    const out0 = decomposeStas3LockingScript(swapTx.Outputs[0].LockingScript);
+    const out1 = decomposeStas3LockingScript(swapTx.Outputs[1].LockingScript);
 
     expect(swapEval.success).toBe(true);
     expect(swapEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
@@ -1558,9 +1558,9 @@ describe("dstas flow", () => {
 
     dumpTransferDebug({
       transferTxHex,
-      prevStasLockingScript: fixture.issueTx.Outputs[0].LockignScript,
+      prevStasLockingScript: fixture.issueTx.Outputs[0].LockingScript,
       prevStasSatoshis: fixture.issueTx.Outputs[0].Satoshis,
-      prevFeeLockingScript: fixture.issueTx.Outputs[1].LockignScript,
+      prevFeeLockingScript: fixture.issueTx.Outputs[1].LockingScript,
       prevFeeSatoshis: fixture.issueTx.Outputs[1].Satoshis,
       outPath: ".temp/dstas-transfer-with-change-debug.json",
     });
@@ -1645,7 +1645,7 @@ describe("dstas flow", () => {
     const stasOutPoint = new OutPoint(
       prevTx.Id,
       0,
-      prevTx.Outputs[0].LockignScript,
+      prevTx.Outputs[0].LockingScript,
       prevTx.Outputs[0].Satoshis,
       new Address(ownerMlpkh),
       ScriptType.dstas,
@@ -1653,7 +1653,7 @@ describe("dstas flow", () => {
     const feeOutPoint = new OutPoint(
       prevTx.Id,
       1,
-      prevTx.Outputs[1].LockignScript,
+      prevTx.Outputs[1].LockingScript,
       prevTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -1713,7 +1713,7 @@ describe("dstas flow", () => {
           return undefined;
         }
         return {
-          lockingScript: fixture.sourceFunding.LockignScript,
+          lockingScript: fixture.sourceFunding.LockingScript,
           satoshis: fixture.sourceFunding.Satoshis,
         };
       },
@@ -1747,7 +1747,7 @@ describe("dstas flow", () => {
     const frozenStasOutPoint = new OutPoint(
       freezeTx.Id,
       0,
-      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].LockingScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
       ScriptType.dstas,
@@ -1755,7 +1755,7 @@ describe("dstas flow", () => {
     const frozenFeeOutPoint = new OutPoint(
       freezeTx.Id,
       1,
-      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].LockingScript,
       freezeTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -1816,7 +1816,7 @@ describe("dstas flow", () => {
     const frozenStasOutPoint = new OutPoint(
       freezeTx.Id,
       0,
-      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].LockingScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
       ScriptType.dstas,
@@ -1825,7 +1825,7 @@ describe("dstas flow", () => {
     const feeOutPoint = new OutPoint(
       freezeTx.Id,
       1,
-      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].LockingScript,
       freezeTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -1868,7 +1868,7 @@ describe("dstas flow", () => {
     const frozenStasOutPoint = new OutPoint(
       freezeTx.Id,
       0,
-      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].LockingScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
       ScriptType.dstas,
@@ -1877,7 +1877,7 @@ describe("dstas flow", () => {
     const feeOutPoint = new OutPoint(
       freezeTx.Id,
       1,
-      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].LockingScript,
       freezeTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -1938,7 +1938,7 @@ describe("dstas flow", () => {
     const transferredStasOutPoint = new OutPoint(
       transferTx.Id,
       0,
-      transferTx.Outputs[0].LockignScript,
+      transferTx.Outputs[0].LockingScript,
       transferTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -1946,7 +1946,7 @@ describe("dstas flow", () => {
     const transferFeeOutPoint = new OutPoint(
       transferTx.Id,
       1,
-      transferTx.Outputs[1].LockignScript,
+      transferTx.Outputs[1].LockingScript,
       transferTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -2022,7 +2022,7 @@ describe("dstas flow", () => {
     const swapMarkedOutPoint = new OutPoint(
       swapTx.Id,
       0,
-      swapTx.Outputs[0].LockignScript,
+      swapTx.Outputs[0].LockingScript,
       swapTx.Outputs[0].Satoshis,
       fixture.alice.Address,
       ScriptType.dstas,
@@ -2053,7 +2053,7 @@ describe("dstas flow", () => {
     const frozenSwapOutPoint = new OutPoint(
       freezeTx.Id,
       0,
-      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].LockingScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
       ScriptType.dstas,
@@ -2172,7 +2172,7 @@ describe("dstas flow", () => {
     const stasOutPoint = new OutPoint(
       issueTx.Id,
       0,
-      issueTx.Outputs[0].LockignScript,
+      issueTx.Outputs[0].LockingScript,
       issueTx.Outputs[0].Satoshis,
       alice.Address,
       ScriptType.dstas,
@@ -2180,7 +2180,7 @@ describe("dstas flow", () => {
     const feeOutPoint = new OutPoint(
       issueTx.Id,
       1,
-      issueTx.Outputs[1].LockignScript,
+      issueTx.Outputs[1].LockingScript,
       issueTx.Outputs[1].Satoshis,
       bob.Address,
       ScriptType.p2pkh,
@@ -2247,7 +2247,7 @@ describe("dstas flow", () => {
     const confiscatedStasOutPoint = new OutPoint(
       confiscateTx.Id,
       0,
-      confiscateTx.Outputs[0].LockignScript,
+      confiscateTx.Outputs[0].LockingScript,
       confiscateTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -2255,7 +2255,7 @@ describe("dstas flow", () => {
     const confiscateFeeOutPoint = new OutPoint(
       confiscateTx.Id,
       1,
-      confiscateTx.Outputs[1].LockignScript,
+      confiscateTx.Outputs[1].LockingScript,
       confiscateTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -2299,7 +2299,7 @@ describe("dstas flow", () => {
     const frozenStasOutPoint = new OutPoint(
       freezeTx.Id,
       0,
-      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].LockingScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
       ScriptType.dstas,
@@ -2308,7 +2308,7 @@ describe("dstas flow", () => {
     const feeOutPoint = new OutPoint(
       freezeTx.Id,
       1,
-      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].LockingScript,
       freezeTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -2362,7 +2362,7 @@ describe("dstas flow", () => {
     const frozenStasOutPoint = new OutPoint(
       freezeTx.Id,
       0,
-      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].LockingScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
       ScriptType.dstas,
@@ -2371,7 +2371,7 @@ describe("dstas flow", () => {
     const freezeFeeOutPoint = new OutPoint(
       freezeTx.Id,
       1,
-      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].LockingScript,
       freezeTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -2402,7 +2402,7 @@ describe("dstas flow", () => {
     const unfrozenStasOutPoint = new OutPoint(
       unfreezeTx.Id,
       0,
-      unfreezeTx.Outputs[0].LockignScript,
+      unfreezeTx.Outputs[0].LockingScript,
       unfreezeTx.Outputs[0].Satoshis,
       fixture.alice.Address,
       ScriptType.dstas,
@@ -2410,7 +2410,7 @@ describe("dstas flow", () => {
     const unfreezeFeeOutPoint = new OutPoint(
       unfreezeTx.Id,
       1,
-      unfreezeTx.Outputs[1].LockignScript,
+      unfreezeTx.Outputs[1].LockingScript,
       unfreezeTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -2561,7 +2561,7 @@ describe("dstas flow", () => {
     const issuerStasOutPoint = new OutPoint(
       transferToIssuerTx.Id,
       0,
-      transferToIssuerTx.Outputs[0].LockignScript,
+      transferToIssuerTx.Outputs[0].LockingScript,
       transferToIssuerTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -2569,7 +2569,7 @@ describe("dstas flow", () => {
     const issuerFeeOutPoint = new OutPoint(
       transferToIssuerTx.Id,
       1,
-      transferToIssuerTx.Outputs[1].LockignScript,
+      transferToIssuerTx.Outputs[1].LockingScript,
       transferToIssuerTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -2600,7 +2600,7 @@ describe("dstas flow", () => {
     const frozenIssuerStasOutPoint = new OutPoint(
       freezeIssuerUtxoTx.Id,
       0,
-      freezeIssuerUtxoTx.Outputs[0].LockignScript,
+      freezeIssuerUtxoTx.Outputs[0].LockingScript,
       freezeIssuerUtxoTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -2651,7 +2651,7 @@ describe("dstas flow", () => {
     const issuerStasOutPoint = new OutPoint(
       transferToIssuerTx.Id,
       0,
-      transferToIssuerTx.Outputs[0].LockignScript,
+      transferToIssuerTx.Outputs[0].LockingScript,
       transferToIssuerTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -2659,7 +2659,7 @@ describe("dstas flow", () => {
     const issuerFeeOutPoint = new OutPoint(
       transferToIssuerTx.Id,
       1,
-      transferToIssuerTx.Outputs[1].LockignScript,
+      transferToIssuerTx.Outputs[1].LockingScript,
       transferToIssuerTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -2709,7 +2709,7 @@ describe("dstas flow", () => {
     const issuerStasOutPoint = new OutPoint(
       transferToIssuerTx.Id,
       0,
-      transferToIssuerTx.Outputs[0].LockignScript,
+      transferToIssuerTx.Outputs[0].LockingScript,
       transferToIssuerTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -2717,7 +2717,7 @@ describe("dstas flow", () => {
     const issuerFeeOutPoint = new OutPoint(
       transferToIssuerTx.Id,
       1,
-      transferToIssuerTx.Outputs[1].LockignScript,
+      transferToIssuerTx.Outputs[1].LockingScript,
       transferToIssuerTx.Outputs[1].Satoshis,
       fixture.bob.Address,
       ScriptType.p2pkh,
@@ -2770,7 +2770,7 @@ describe("dstas flow", () => {
     const transferredStasOutPoint = new OutPoint(
       transferTx.Id,
       0,
-      transferTx.Outputs[0].LockignScript,
+      transferTx.Outputs[0].LockingScript,
       transferTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -2805,7 +2805,7 @@ describe("dstas flow", () => {
     const frozenStasOutPoint = new OutPoint(
       freezeTx.Id,
       0,
-      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].LockingScript,
       freezeTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,
@@ -2840,7 +2840,7 @@ describe("dstas flow", () => {
     const unfrozenStasOutPoint = new OutPoint(
       unfreezeTx.Id,
       0,
-      unfreezeTx.Outputs[0].LockignScript,
+      unfreezeTx.Outputs[0].LockingScript,
       unfreezeTx.Outputs[0].Satoshis,
       fixture.bob.Address,
       ScriptType.dstas,

@@ -96,6 +96,28 @@ describe("testing transaction builder", () => {
     expect(tx).toBe(IssueTxRaw);
   });
 
+  test("addInput supports custom sequence", () => {
+    const from = issuerPrivateKey.Address;
+    const outPoint = new OutPoint(
+      "aa".repeat(32),
+      1,
+      fromHex("76a914e3b111de8fec527b41f4189e313638075d96ccd688ac"),
+      10_000,
+      from,
+      ScriptType.p2pkh,
+    );
+
+    const txHex = TransactionBuilder.init()
+      .addInput(outPoint, issuerPrivateKey, 0xfffffffe)
+      .addP2PkhOutput(1_000, aliceAddress)
+      .addChangeOutputWithFee(from, 9_000, 0.1)
+      .sign()
+      .toHex();
+
+    const tx = TransactionReader.readHex(txHex);
+    expect(tx.Inputs[0].Sequence).toBe(0xfffffffe);
+  });
+
   test("build STAS transfer transaction", () => {
     const sourceTx = TransactionReader.readHex(IssueTxRaw);
     const stasOutPoint = OutPoint.fromTransaction(sourceTx, 0);

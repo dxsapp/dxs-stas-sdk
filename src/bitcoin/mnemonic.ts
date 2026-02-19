@@ -14,30 +14,43 @@ export class Mnemonic {
   public static generate = (): Mnemonic =>
     Mnemonic.fromPhrase(generateMnemonic(wordlist, 128));
 
-  public static fromWords = (words: TWords): Mnemonic => {
-    const phrase = Object.values(words).join(" ");
+  private static sanitize = (value: string): string =>
+    value
+      .replace(/\r?\n|\r/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
 
-    return new Mnemonic(phrase, words);
+  public static fromWords = (words: TWords): Mnemonic => {
+    const orderedWords = Object.entries(words)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([, word]) => word);
+    const phrase = Mnemonic.sanitize(orderedWords.join(" "));
+
+    return Mnemonic.fromPhrase(phrase);
   };
 
   public static fromPhrase = (phrase: string): Mnemonic => {
-    const words = phrase.split(" ").reduce<TWords>((a, v, i) => {
+    const sanitized = Mnemonic.sanitize(phrase);
+
+    const words = sanitized.split(" ").reduce<TWords>((a, v, i) => {
       a[`${i}`] = v;
 
       return a;
     }, {});
 
-    return new Mnemonic(phrase, words);
+    return new Mnemonic(sanitized, words);
   };
 
   public static fromRandomText = (text: string): Mnemonic | undefined => {
-    const sanitized = text
-      .replace(/\r?\n|\r/g, " ")
-      .replace(/\s{2,}/g, " ")
-      .replace(/^\s+/, "")
-      .replace(/\s+$/, "");
+    const sanitized = Mnemonic.sanitize(text);
 
-    if (validateMnemonic(sanitized, wordlist))
-      return Mnemonic.fromPhrase(sanitized);
+    if (!sanitized) return undefined;
+
+    try {
+      if (validateMnemonic(sanitized, wordlist))
+        return Mnemonic.fromPhrase(sanitized);
+    } catch {
+      return undefined;
+    }
   };
 }

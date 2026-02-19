@@ -9,7 +9,7 @@ import { LockingScriptReader } from "../script/read/locking-script-reader";
 export class OutPoint {
   TxId: string;
   Vout: number;
-  LockignScript: Bytes;
+  private _lockingScript: Bytes;
   Satoshis: number;
   Address: Address;
   ScriptType: ScriptType;
@@ -18,20 +18,20 @@ export class OutPoint {
   constructor(
     txId: string,
     vout: number,
-    lockignScript: Bytes,
+    lockingScript: Bytes,
     satoshis: number,
     address: Address,
     scriptType: ScriptType,
   ) {
     this.TxId = txId;
     this.Vout = vout;
-    this.LockignScript = lockignScript;
+    this._lockingScript = lockingScript;
     this.Satoshis = satoshis;
     this.Address = address;
     this.ScriptType = scriptType;
 
     if (getStrictModeConfig().strictOutPointValidation) {
-      const reader = LockingScriptReader.read(lockignScript);
+      const reader = LockingScriptReader.read(lockingScript);
 
       if (reader.ScriptType !== scriptType) {
         throw new Error(
@@ -54,6 +54,23 @@ export class OutPoint {
     new OutPointFull(TransactionReader.readHex(hex), vout);
 
   toString = () => `${this.TxId}:${this.Vout}`;
+
+  get LockingScript(): Bytes {
+    return this._lockingScript;
+  }
+
+  set LockingScript(value: Bytes) {
+    this._lockingScript = value;
+  }
+
+  // Deprecated typo kept for backward compatibility.
+  get LockignScript(): Bytes {
+    return this._lockingScript;
+  }
+
+  set LockignScript(value: Bytes) {
+    this._lockingScript = value;
+  }
 }
 
 export class OutPointFull extends OutPoint {
@@ -77,7 +94,7 @@ export class OutPointFull extends OutPoint {
     super(
       transaction.Id,
       vout,
-      output.LockignScript,
+      output.LockingScript,
       output.Satoshis,
       output.Address,
       output.ScriptType,

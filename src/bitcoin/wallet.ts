@@ -13,7 +13,12 @@ interface WalletOpt {
 
 export class Wallet extends HDKey {
   static fromMnemonic = (mnemonic: string) => {
-    const seed = mnemonicToSeedSync(mnemonic);
+    let seed: Uint8Array;
+    try {
+      seed = mnemonicToSeedSync(mnemonic.trim());
+    } catch {
+      throw new Error("Invalid mnemonic phrase");
+    }
     return Wallet.fromHdKey(Wallet.fromMasterSeed(seed));
   };
 

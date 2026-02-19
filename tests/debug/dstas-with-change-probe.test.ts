@@ -37,17 +37,17 @@ describe("dstas with-change probe", () => {
       ).toBytes();
       const r = evaluateScripts(
         unlocking,
-        f.issueTx.Outputs[0].LockignScript,
+        f.issueTx.Outputs[0].LockingScript,
         {
           tx,
           inputIndex: 0,
           prevOutputs: [
             {
-              lockingScript: f.issueTx.Outputs[0].LockignScript,
+              lockingScript: f.issueTx.Outputs[0].LockingScript,
               satoshis: f.issueTx.Outputs[0].Satoshis,
             },
             {
-              lockingScript: f.issueTx.Outputs[1].LockignScript,
+              lockingScript: f.issueTx.Outputs[1].LockingScript,
               satoshis: f.issueTx.Outputs[1].Satoshis,
             },
           ],

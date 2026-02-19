@@ -436,7 +436,7 @@ export class DstasBundleFactory {
       currentStas = new OutPoint(
         tx.Id,
         changeOutputIndex,
-        changeOutput.LockignScript,
+        changeOutput.LockingScript,
         changeOutput.Satoshis,
         this.stasWallet.Address,
         changeOutput.ScriptType,
@@ -761,7 +761,7 @@ export class DstasBundleFactory {
     return new OutPoint(
       tx.Id,
       vout,
-      output.LockignScript,
+      output.LockingScript,
       output.Satoshis,
       owner,
       output.ScriptType,
@@ -794,7 +794,7 @@ export class DstasBundleFactory {
         return new OutPoint(
           tx.Id,
           i,
-          output.LockignScript,
+          output.LockingScript,
           output.Satoshis,
           output.Address!,
           output.ScriptType,

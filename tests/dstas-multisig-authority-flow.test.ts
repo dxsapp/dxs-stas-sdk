@@ -33,7 +33,7 @@ const resolveFromTx = (txHex: string) => {
     if (txId !== tx.Id) return undefined;
     const out = tx.Outputs[vout];
     if (!out) return undefined;
-    return { lockingScript: out.LockignScript, satoshis: out.Satoshis };
+    return { lockingScript: out.LockingScript, satoshis: out.Satoshis };
   };
 };
 
@@ -282,7 +282,7 @@ describe("dstas multisig authority flow", () => {
         if (txId !== fundingOutPoint.TxId || vout !== fundingOutPoint.Vout)
           return undefined;
         return {
-          lockingScript: fundingOutPoint.LockignScript,
+          lockingScript: fundingOutPoint.LockingScript,
           satoshis: fundingOutPoint.Satoshis,
         };
       },
@@ -295,7 +295,7 @@ describe("dstas multisig authority flow", () => {
         if (txId !== fundingOutPoint.TxId || vout !== fundingOutPoint.Vout)
           return undefined;
         return {
-          lockingScript: fundingOutPoint.LockignScript,
+          lockingScript: fundingOutPoint.LockingScript,
           satoshis: fundingOutPoint.Satoshis,
         };
       },
@@ -317,7 +317,7 @@ describe("dstas multisig authority flow", () => {
     const issueStasOutPoint = new OutPoint(
       issueTx.Id,
       0,
-      issueTx.Outputs[0].LockignScript,
+      issueTx.Outputs[0].LockingScript,
       issueTx.Outputs[0].Satoshis,
       alice.Address,
       ScriptType.dstas,
@@ -325,7 +325,7 @@ describe("dstas multisig authority flow", () => {
     const issueFeeOutPoint = new OutPoint(
       issueTx.Id,
       1,
-      issueTx.Outputs[1].LockignScript,
+      issueTx.Outputs[1].LockingScript,
       issueTx.Outputs[1].Satoshis,
       bob.Address,
       ScriptType.p2pkh,
@@ -358,7 +358,7 @@ describe("dstas multisig authority flow", () => {
     const transfer1StasOutPoint = new OutPoint(
       transfer1Tx.Id,
       0,
-      transfer1Tx.Outputs[0].LockignScript,
+      transfer1Tx.Outputs[0].LockingScript,
       transfer1Tx.Outputs[0].Satoshis,
       bob.Address,
       ScriptType.dstas,
@@ -366,7 +366,7 @@ describe("dstas multisig authority flow", () => {
     const transfer1FeeOutPoint = new OutPoint(
       transfer1Tx.Id,
       1,
-      transfer1Tx.Outputs[1].LockignScript,
+      transfer1Tx.Outputs[1].LockingScript,
       transfer1Tx.Outputs[1].Satoshis,
       bob.Address,
       ScriptType.p2pkh,
@@ -419,7 +419,7 @@ describe("dstas multisig authority flow", () => {
     const frozenStasOutPoint = new OutPoint(
       freezeTx.Id,
       0,
-      freezeTx.Outputs[0].LockignScript,
+      freezeTx.Outputs[0].LockingScript,
       freezeTx.Outputs[0].Satoshis,
       bob.Address,
       ScriptType.dstas,
@@ -427,7 +427,7 @@ describe("dstas multisig authority flow", () => {
     const frozenFeeOutPoint = new OutPoint(
       freezeTx.Id,
       1,
-      freezeTx.Outputs[1].LockignScript,
+      freezeTx.Outputs[1].LockingScript,
       freezeTx.Outputs[1].Satoshis,
       bob.Address,
       ScriptType.p2pkh,
@@ -478,7 +478,7 @@ describe("dstas multisig authority flow", () => {
     const unfrozenStasOutPoint = new OutPoint(
       unfreezeTx.Id,
       0,
-      unfreezeTx.Outputs[0].LockignScript,
+      unfreezeTx.Outputs[0].LockingScript,
       unfreezeTx.Outputs[0].Satoshis,
       bob.Address,
       ScriptType.dstas,
@@ -486,7 +486,7 @@ describe("dstas multisig authority flow", () => {
     const transfer2FeeOutPoint = new OutPoint(
       unfreezeTx.Id,
       1,
-      unfreezeTx.Outputs[1].LockignScript,
+      unfreezeTx.Outputs[1].LockingScript,
       unfreezeTx.Outputs[1].Satoshis,
       bob.Address,
       ScriptType.p2pkh,

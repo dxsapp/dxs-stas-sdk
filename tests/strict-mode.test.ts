@@ -1,5 +1,6 @@
 import {
   configureStrictMode,
+  getStrictModeConfig,
   resetStrictMode,
 } from "../src/security/strict-mode";
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
@@ -185,5 +186,12 @@ describe("strict mode hardening", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain("Opcode count exceeds strict limit");
+  });
+
+  test("strict script element limit defaults to 100KB", () => {
+    resetStrictMode();
+    const strict = getStrictModeConfig();
+
+    expect(strict.scriptEvaluationLimits.maxElementSizeBytes).toBe(100000);
   });
 });

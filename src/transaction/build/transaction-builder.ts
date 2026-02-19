@@ -27,6 +27,10 @@ export class TransactionBuilderError extends Error {
 }
 
 export class TransactionBuilder {
+  /**
+   * Finalized input sequence (0xffffffff): disables relative locktime (CSV)
+   * and keeps the transaction immediately spendable.
+   */
   static DefaultSequence = 0xffffffff;
   static DefaultSighashType =
     SignatureHashType.SIGHASH_ALL | SignatureHashType.SIGHASH_FORKID;
@@ -71,14 +75,26 @@ export class TransactionBuilder {
     return Math.ceil(this.size() * satoshisPerByte);
   };
 
-  addInput = (outPoint: OutPoint, signer: PrivateKey | Wallet) => {
-    this.Inputs.push(new InputBilder(this, outPoint, signer, false));
+  addInput = (
+    outPoint: OutPoint,
+    signer: PrivateKey | Wallet,
+    sequence: number = TransactionBuilder.DefaultSequence,
+  ) => {
+    const input = new InputBilder(this, outPoint, signer, false);
+    input.Sequence = sequence;
+    this.Inputs.push(input);
 
     return this;
   };
 
-  addStasMergeInput = (outPoint: OutPoint, signer: PrivateKey | Wallet) => {
-    this.Inputs.push(new InputBilder(this, outPoint, signer, true));
+  addStasMergeInput = (
+    outPoint: OutPoint,
+    signer: PrivateKey | Wallet,
+    sequence: number = TransactionBuilder.DefaultSequence,
+  ) => {
+    const input = new InputBilder(this, outPoint, signer, true);
+    input.Sequence = sequence;
+    this.Inputs.push(input);
 
     return this;
   };

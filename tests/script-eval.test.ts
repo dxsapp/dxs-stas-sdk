@@ -30,7 +30,7 @@ const buildPrevOutputs = (tx: Transaction, txMap: Map<string, Transaction>) =>
     const output = prevTx.Outputs[input.Vout];
     if (!output) return null;
     return {
-      lockingScript: output.LockignScript,
+      lockingScript: output.LockingScript,
       satoshis: output.Satoshis,
     };
   });

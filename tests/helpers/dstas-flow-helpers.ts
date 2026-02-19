@@ -86,7 +86,7 @@ export const createRealFundingFlowFixture = (): TDstasFlowFixture => {
   const stasOutPoint = new OutPoint(
     issueTx.Id,
     0,
-    issueTx.Outputs[0].LockignScript,
+    issueTx.Outputs[0].LockingScript,
     issueTx.Outputs[0].Satoshis,
     alice.Address,
     ScriptType.dstas,
@@ -95,7 +95,7 @@ export const createRealFundingFlowFixture = (): TDstasFlowFixture => {
   const feeOutPoint = new OutPoint(
     issueTx.Id,
     1,
-    issueTx.Outputs[1].LockignScript,
+    issueTx.Outputs[1].LockingScript,
     issueTx.Outputs[1].Satoshis,
     bob.Address,
     ScriptType.p2pkh,

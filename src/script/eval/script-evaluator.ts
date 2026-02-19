@@ -281,11 +281,11 @@ const parseSignature = (
 
 const writeOutputTo = (writer: ByteWriter, output: TransactionOutput) => {
   writer.writeUInt64(output.Satoshis);
-  writer.writeVarChunk(output.LockignScript);
+  writer.writeVarChunk(output.LockingScript);
 };
 
 const outputSize = (output: TransactionOutput) =>
-  8 + estimateChunkSize(output.LockignScript.length);
+  8 + estimateChunkSize(output.LockingScript.length);
 
 const buildSighashPreimage = (
   ctx: ScriptEvalContext,
@@ -1310,7 +1310,7 @@ export const createPrevOutputResolverFromTransactions = (
     const output = tx.Outputs[vout];
     if (!output) return undefined;
     return {
-      lockingScript: output.LockignScript,
+      lockingScript: output.LockingScript,
       satoshis: output.Satoshis,
     };
   };

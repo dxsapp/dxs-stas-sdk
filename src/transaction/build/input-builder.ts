@@ -188,7 +188,7 @@ export class InputBilder {
     32 + // Sequence hash
     32 + // Output Tx id
     4 + // VOUT ;
-    getChunkSize(this.OutPoint.LockignScript) +
+    getChunkSize(this.OutPoint.LockingScript) +
     8 + // Satoshis
     4 + // Sequence
     32 + // Outputs hash
@@ -420,7 +420,7 @@ export class InputBilder {
 
     writer.writeChunk(reverseBytes(fromHex(this.OutPoint.TxId))); // 32
     writer.writeUInt32(this.OutPoint.Vout); // 4
-    writer.writeVarChunk(this.OutPoint.LockignScript);
+    writer.writeVarChunk(this.OutPoint.LockingScript);
     writer.writeUInt64(this.OutPoint.Satoshis); // 8
     writer.writeUInt32(this.Sequence); // 4
 
@@ -508,7 +508,7 @@ export class InputBilder {
       return;
     }
 
-    const lockingScript = this.TxBuilder.Inputs[0].OutPoint.LockignScript;
+    const lockingScript = this.TxBuilder.Inputs[0].OutPoint.LockingScript;
     const scriptToCut = cloneBytes(lockingScript, 0, 23);
     this._mergeSegments = splitBytes(mergeRaw, scriptToCut).reverse();
   };

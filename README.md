@@ -11,6 +11,7 @@ All binary inputs/outputs are `Uint8Array` (no Node.js `Buffer` in the public AP
 - ECDSA signing is deterministic (RFC 6979 behavior from `@noble/secp256k1`) with `lowS: true`.
 - Strict transaction parsing is enabled by default.
 - Strict fee-rate validation is enabled by default.
+- Strict script evaluation defaults include a 100KB max element size limit (when strict eval is enabled).
 - DSTAS multisig key validation enforces compressed secp256k1 points and `n <= 5`.
 
 ## Install
@@ -148,7 +149,7 @@ const factory = new DstasBundleFactory(
   getStasUtxoSet,
   getTransactions,
   ({ fromOutPoint, recipient, spendType, isFreezeLike, isChange }) => {
-    const parsed = LockingScriptReader.read(fromOutPoint.LockignScript).Dstas;
+    const parsed = LockingScriptReader.read(fromOutPoint.LockingScript).Dstas;
     if (!parsed) throw new Error("Expected DSTAS input locking script");
     if (recipient.m !== 1 || recipient.addresses.length !== 1) {
       throw new Error("README example supports only m=1 recipient");
@@ -242,6 +243,14 @@ const utxo = new OutPoint(
 
 const txHex = TransactionBuilder.init()
   .addInput(utxo, pk)
+  .addP2PkhOutput(1_000, to)
+  .addChangeOutputWithFee(pk.Address, utxo.Satoshis - 1_000, 0.1)
+  .sign()
+  .toHex();
+
+// Optional: pass a custom input sequence (default is 0xffffffff).
+const txWithSequence = TransactionBuilder.init()
+  .addInput(utxo, pk, 0xfffffffe)
   .addP2PkhOutput(1_000, to)
   .addChangeOutputWithFee(pk.Address, utxo.Satoshis - 1_000, 0.1)
   .sign()

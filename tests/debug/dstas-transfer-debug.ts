@@ -70,7 +70,7 @@ export const dumpTransferDebug = ({
 
   const transferTx = TransactionReader.readHex(transferTxHex);
   const transferLockingDecomposition = decomposeStas3LockingScript(
-    transferTx.Outputs[0].LockignScript,
+    transferTx.Outputs[0].LockingScript,
   );
   const transferUnlockingDecomposition = decomposeStas3UnlockingScript(
     transferTx.Inputs[0].UnlockingScript,
