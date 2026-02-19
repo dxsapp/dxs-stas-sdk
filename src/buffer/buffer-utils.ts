@@ -99,9 +99,7 @@ const asSafeInteger = (value: number): number => {
   }
 
   if (!Number.isSafeInteger(value)) {
-    throw new Error(
-      `value exceeds Number.MAX_SAFE_INTEGER bounds: ${value}`,
-    );
+    throw new Error(`value exceeds Number.MAX_SAFE_INTEGER bounds: ${value}`);
   }
 
   return value;

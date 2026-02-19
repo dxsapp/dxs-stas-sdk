@@ -20,7 +20,7 @@ export type StrictModeConfig = {
 const defaultStrictModeConfig: StrictModeConfig = {
   strictTxParse: true,
   strictOutPointValidation: false,
-  strictFeeRateValidation: false,
+  strictFeeRateValidation: true,
   maxFeeRateSatsPerByte: 1000,
   strictPresetUnlockingScript: false,
   strictMultisigKeys: false,

@@ -1,4 +1,7 @@
-import { getMinimumRequiredByte, getNumberBytes } from "../src/buffer/buffer-utils";
+import {
+  getMinimumRequiredByte,
+  getNumberBytes,
+} from "../src/buffer/buffer-utils";
 
 describe("buffer utils numeric safety", () => {
   test("computes minimum signed byte size for safe integer boundaries", () => {

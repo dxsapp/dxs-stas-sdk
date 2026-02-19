@@ -60,6 +60,27 @@ describe("strict mode hardening", () => {
     ).toThrow("Invalid fee rate");
   });
 
+  test("strictFeeRateValidation is enabled by default", () => {
+    const from = issuerPrivateKey.Address;
+    const outPoint = new OutPoint(
+      "66".repeat(32),
+      0,
+      p2pkhScript(from),
+      5000,
+      from,
+      ScriptType.p2pkh,
+    );
+
+    resetStrictMode();
+
+    expect(() =>
+      TransactionBuilder.init()
+        .addInput(outPoint, issuerPrivateKey)
+        .addP2PkhOutput(1000, from)
+        .addChangeOutputWithFee(from, 4000, Number.NaN),
+    ).toThrow("Invalid fee rate");
+  });
+
   test("strictPresetUnlockingScript requires explicit opt-in", () => {
     const from = issuerPrivateKey.Address;
     const outPoint = new OutPoint(
