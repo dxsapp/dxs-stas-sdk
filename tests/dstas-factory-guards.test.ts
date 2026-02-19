@@ -202,4 +202,68 @@ describe("DSTAS factory guards", () => {
       }),
     ).toThrow("supports at most 5 public keys");
   });
+
+  test("base tx rejects non-positive destination satoshis", () => {
+    const wallet = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/0");
+    const script = new P2pkhBuilder(wallet.Address).toBytes();
+    const makeOutPoint = (txByte: string, satoshis: number) =>
+      new OutPoint(
+        txByte.repeat(64),
+        0,
+        script,
+        satoshis,
+        wallet.Address,
+        ScriptType.p2pkh,
+      );
+
+    expect(() =>
+      BuildDstasBaseTx({
+        stasPayments: [{ OutPoint: makeOutPoint("a", 100), Owner: wallet }],
+        feePayment: { OutPoint: makeOutPoint("b", 1000), Owner: wallet },
+        destinations: [
+          {
+            Satoshis: 0,
+            LockingParams: {
+              owner: wallet.Address.Hash160,
+              actionData: null,
+              redemptionPkh: wallet.Address.Hash160,
+              frozen: false,
+              flags: buildStas3Flags({}),
+              serviceFields: [],
+              optionalData: [],
+            },
+          },
+        ],
+      }),
+    ).toThrow("satoshis must be a positive integer");
+  });
+
+  test("issue rejects non-positive destination satoshis", () => {
+    const issuer = new PrivateKey(fromHex("0c".padStart(64, "0")));
+    const issuerScript = new P2pkhBuilder(issuer.Address).toBytes();
+    const issuerOutPoint = new OutPoint(
+      "44".repeat(32),
+      0,
+      issuerScript,
+      5000,
+      issuer.Address,
+      ScriptType.p2pkh,
+    );
+    const scheme = new TokenScheme(
+      "InvalidIssueSats",
+      toHex(issuer.Address.Hash160),
+      "IIS",
+      1,
+    );
+
+    expect(() =>
+      BuildDstasIssueTxs({
+        fundingPayment: { OutPoint: issuerOutPoint, Owner: issuer },
+        scheme,
+        destinations: [{ Satoshis: 0, To: issuer.Address }],
+      }),
+    ).toThrow("satoshis must be a positive integer");
+  });
 });

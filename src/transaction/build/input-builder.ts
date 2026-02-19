@@ -103,8 +103,6 @@ export class InputBilder {
 
           hasNote = true;
         } else {
-          if (!this.shouldEncodeOutput(output, outIdx)) continue;
-
           script
             .addNumber(output.Satoshis)
             .addData(this.resolveOutputOwnerField(output.LockingScript));
@@ -242,14 +240,6 @@ export class InputBilder {
     return this.isP2PkLike(this.TxBuilder.Outputs[0].LockingScript.ScriptType);
   };
 
-  private shouldEncodeOutput = (
-    output: OutputBuilder,
-    idx: number,
-  ): boolean => {
-    if (output.LockingScript.ScriptType === ScriptType.nullData) return true;
-    return true;
-  };
-
   private resolveFundingInput = (): InputBilder => {
     const candidates = this.TxBuilder.Inputs.filter(
       (input, idx) =>
@@ -333,7 +323,6 @@ export class InputBilder {
 
       size += this.TxBuilder.Outputs.reduce((a, x, outIdx) => {
         if (x.LockingScript.ScriptType === ScriptType.nullData) return a;
-        if (!this.shouldEncodeOutput(x, outIdx)) return a;
 
         const ownerField = this.resolveOutputOwnerField(x.LockingScript);
         a += getNumberSize(x.Satoshis) + estimateChunkSize(ownerField.length);

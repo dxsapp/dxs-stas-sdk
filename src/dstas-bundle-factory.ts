@@ -663,7 +663,11 @@ export class DstasBundleFactory {
     const stasInputIdxs: number[] = [];
 
     for (const payment of stasPayments) {
-      txBuilder.addInput(payment.OutPoint, payment.Owner);
+      if (isMerge) {
+        txBuilder.addStasMergeInput(payment.OutPoint, payment.Owner);
+      } else {
+        txBuilder.addInput(payment.OutPoint, payment.Owner);
+      }
       stasInputIdxs.push(txBuilder.Inputs.length - 1);
     }
 
@@ -757,8 +761,7 @@ export class DstasBundleFactory {
   ): OutPoint => {
     const output = tx.Outputs[vout];
     const owner = output.Address ?? fallbackAddress;
-
-    return new OutPoint(
+    const outPoint = new OutPoint(
       tx.Id,
       vout,
       output.LockingScript,
@@ -766,6 +769,9 @@ export class DstasBundleFactory {
       owner,
       output.ScriptType,
     );
+
+    outPoint.Transaction = tx;
+    return outPoint;
   };
 
   private getStasOutPoint = (

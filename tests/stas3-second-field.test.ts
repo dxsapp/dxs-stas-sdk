@@ -108,6 +108,17 @@ describe("stas3 second field", () => {
     expect(() => buildSwapActionData(cyclic)).toThrow("cyclic next reference");
   });
 
+  test("rejects zero rateDenominator in swap leg", () => {
+    expect(() =>
+      buildSwapActionData({
+        requestedScriptHash: fromHex("11".repeat(32)),
+        requestedPkh: fromHex("22".repeat(20)),
+        rateNumerator: 1,
+        rateDenominator: 0,
+      }),
+    ).toThrow("rateDenominator must be > 0 when rateNumerator is non-zero");
+  });
+
   test("encodes action second field", () => {
     const encoded = encodeActionData({
       kind: "action",

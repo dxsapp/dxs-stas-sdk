@@ -32,6 +32,9 @@ If you are integrating this SDK through an AI coding agent, start with:
 
 An `OutPoint` represents a spendable UTXO: txid, vout, locking script, satoshis, and owner address.
 
+`LockingScript` is the canonical property name in API objects.
+`LockignScript` is kept as a deprecated compatibility alias and will be removed in the next major release.
+
 ## Example: build a DSTAS issue + transfer flow
 
 ```ts

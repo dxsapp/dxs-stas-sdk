@@ -409,4 +409,118 @@ describe("DstasBundleFactory spendType flags", () => {
     expect(result.transactions).toBeDefined();
     expect(result.transactions!.length).toBeGreaterThan(0);
   });
+
+  test("merge service tx uses addStasMergeInput path", async () => {
+    const stasWallet =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
+    const feeWallet =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/1");
+
+    const createSourceTx = (txIdSeed: string, satoshis: number) => {
+      const fundingScript = new P2pkhBuilder(feeWallet.Address).toBytes();
+      const fundingOutPoint = makeOutPoint(
+        txIdSeed,
+        satoshis,
+        feeWallet.Address,
+        ScriptType.p2pkh,
+        fundingScript,
+      );
+
+      const lockingScript = ScriptBuilder.fromTokens(
+        buildStas3FreezeMultisigTokens({
+          ownerPkh,
+          actionData: null,
+          redemptionPkh,
+          frozen: false,
+          flags: buildStas3Flags({ freezable: true }),
+          serviceFields: [freezeAuthorityPkh],
+          optionalData: [],
+        }),
+        ScriptType.dstas,
+      );
+
+      const txBuilder = TransactionBuilder.init().addInput(
+        fundingOutPoint,
+        feeWallet,
+      );
+      txBuilder.Outputs.push(new OutputBuilder(lockingScript, satoshis));
+      return TransactionReader.readHex(txBuilder.sign().toHex());
+    };
+
+    const tx1 = createSourceTx("55".repeat(32), 600);
+    const tx2 = createSourceTx("66".repeat(32), 400);
+
+    const feeOutPoint = makeOutPoint(
+      "77".repeat(32),
+      100000,
+      feeWallet.Address,
+      ScriptType.p2pkh,
+      new P2pkhBuilder(feeWallet.Address).toBytes(),
+    );
+
+    const getStasUtxoSet = async () => [
+      new OutPoint(
+        tx1.Id,
+        0,
+        tx1.Outputs[0].LockingScript,
+        tx1.Outputs[0].Satoshis,
+        stasWallet.Address,
+        ScriptType.dstas,
+      ),
+      new OutPoint(
+        tx2.Id,
+        0,
+        tx2.Outputs[0].LockingScript,
+        tx2.Outputs[0].Satoshis,
+        stasWallet.Address,
+        ScriptType.dstas,
+      ),
+    ];
+    const getFundingUtxo = async () => feeOutPoint;
+    const getTransactions = async () => {
+      const map: Record<string, ReturnType<typeof TransactionReader.readHex>> = {
+        [tx1.Id]: tx1,
+        [tx2.Id]: tx2,
+      };
+      return map;
+    };
+
+    const buildUnlockingScript = createSpy((args: UnlockingArgs) => {
+      if (args.isMerge) {
+        expect(args.txBuilder.Inputs[args.inputIndex].Merge).toBe(true);
+      }
+
+      return new Uint8Array();
+    });
+
+    const factory = new DstasBundleFactory(
+      stasWallet,
+      feeWallet,
+      getFundingUtxo,
+      getStasUtxoSet,
+      getTransactions,
+      () => ({
+        owner: ownerPkh,
+        actionData: null,
+        redemptionPkh,
+        frozen: false,
+        flags: buildStas3Flags({ freezable: true }),
+        serviceFields: [freezeAuthorityPkh],
+        optionalData: [],
+      }),
+      buildUnlockingScript,
+    );
+
+    const result = await factory.createTransferBundle(1000, {
+      m: 1,
+      addresses: [stasWallet.Address],
+    });
+
+    expect(result.transactions).toBeDefined();
+
+    const mergeCalls = buildUnlockingScript.calls
+      .map((x) => x[0])
+      .filter((x) => x.isMerge);
+    expect(mergeCalls.length).toBeGreaterThan(0);
+  });
 });

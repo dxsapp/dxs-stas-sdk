@@ -70,6 +70,13 @@ const encodeSwapCore = (spec: DstasSwapActionData): Bytes => {
     ensureU32(current.rateNumerator, "rateNumerator");
     ensureU32(current.rateDenominator, "rateDenominator");
 
+    // Keep swap-cancel sentinel compatible: numerator=0 and denominator=0.
+    if (current.rateDenominator === 0 && current.rateNumerator !== 0) {
+      throw new Error(
+        "rateDenominator must be > 0 when rateNumerator is non-zero",
+      );
+    }
+
     legs.push(current);
     current = current.next;
   }

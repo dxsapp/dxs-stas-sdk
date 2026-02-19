@@ -259,6 +259,16 @@ const validateStas3Amounts = (
     throw new Error("Input satoshis must be equal output satoshis");
 };
 
+const validateDestinationSatoshis = (destinations: TDstasDestination[]) => {
+  for (const [idx, destination] of destinations.entries()) {
+    if (!Number.isInteger(destination.Satoshis) || destination.Satoshis <= 0) {
+      throw new Error(
+        `Destination[${idx}] satoshis must be a positive integer, got ${destination.Satoshis}`,
+      );
+    }
+  }
+};
+
 const validateFundingAgainstScheme = (
   fundingPayment: TPayment,
   scheme: TokenScheme,
@@ -288,6 +298,7 @@ export const BuildDstasBaseTx = ({
   if (destinations.length === 0)
     throw new Error("At least one destination is required");
 
+  validateDestinationSatoshis(destinations);
   validateStas3Amounts(stasPayments, destinations);
 
   const txBuilder = TransactionBuilder.init();
@@ -346,6 +357,7 @@ export const BuildDstasIssueTxs = ({
   if (destinations.length === 0)
     throw new Error("At least one destination is required");
 
+  validateDestinationSatoshis(destinations);
   validateFundingAgainstScheme(fundingPayment, scheme);
 
   const totalIssueSatoshis = destinations.reduce(
