@@ -93,30 +93,45 @@ export const getNumberSize = (data: number): number =>
     : getVarIntLength(getMinimumRequiredByte(data)) +
       getMinimumRequiredByte(data);
 
-export const getMinimumRequiredByte = (value: number): number =>
-  value >= -128 && value <= 127
-    ? 1
-    : value >= -32768 && value <= 32767
-      ? 2
-      : value >= -8388608 && value <= 8388607
-        ? 3
-        : value >= -2147483648 && value <= 2147483647
-          ? 4
-          : value >= -549755813888 && value <= 549755813887
-            ? 5
-            : value >= -140737488355328 && value <= 140737488355327
-              ? 6
-              : value >= -36028797018963968 && value <= 36028797018963967 // TODO it's a bug  MAX_SAFE_INTEGER = 9007199254740991
-                ? 7
-                : 8;
+const asSafeInteger = (value: number): number => {
+  if (!Number.isInteger(value)) {
+    throw new Error(`value has a fractional component: ${value}`);
+  }
+
+  if (!Number.isSafeInteger(value)) {
+    throw new Error(
+      `value exceeds Number.MAX_SAFE_INTEGER bounds: ${value}`,
+    );
+  }
+
+  return value;
+};
+
+export const getMinimumRequiredByte = (value: number): number => {
+  const safeValue = asSafeInteger(value);
+  const big = BigInt(safeValue);
+
+  for (let bytes = 1; bytes <= 8; bytes++) {
+    const bits = BigInt(bytes * 8 - 1);
+    const min = -(BigInt(1) << bits);
+    const max = (BigInt(1) << bits) - BigInt(1);
+
+    if (big >= min && big <= max) {
+      return bytes;
+    }
+  }
+
+  return 8;
+};
 
 export const getNumberBytes = (value: number): Bytes => {
-  const size = getMinimumRequiredByte(value);
+  const safeValue = asSafeInteger(value);
+  const size = getMinimumRequiredByte(safeValue);
   const buffer = new Uint8Array(size);
   const sizeBits = BigInt(size * 8);
-  let big = BigInt(value);
+  let big = BigInt(safeValue);
 
-  if (value < 0) {
+  if (safeValue < 0) {
     big = (BigInt(1) << sizeBits) + big;
   }
 
