@@ -87,6 +87,41 @@ describe("DSTAS factory guards", () => {
     ).toThrow("duplicate public keys");
   });
 
+  test("authority multisig rejects invalid secp256k1 points", () => {
+    const issuer = new PrivateKey(fromHex("0b".padStart(64, "0")));
+    const issuerScript = new P2pkhBuilder(issuer.Address).toBytes();
+    const issuerOutPoint = new OutPoint(
+      "55".repeat(32),
+      0,
+      issuerScript,
+      5000,
+      issuer.Address,
+      ScriptType.p2pkh,
+    );
+
+    const scheme = new TokenScheme(
+      "InvalidPointAuth",
+      toHex(issuer.Address.Hash160),
+      "IPA",
+      1,
+      {
+        freeze: true,
+        freezeAuthority: {
+          m: 1,
+          publicKeys: [`02${"ff".repeat(32)}`],
+        },
+      },
+    );
+
+    expect(() =>
+      BuildDstasIssueTxs({
+        fundingPayment: { OutPoint: issuerOutPoint, Owner: issuer },
+        scheme,
+        destinations: [{ Satoshis: 100, To: issuer.Address }],
+      }),
+    ).toThrow("valid compressed secp256k1 point");
+  });
+
   test("authority multisig rejects more than 5 public keys", () => {
     const issuer = new PrivateKey(fromHex("09".padStart(64, "0")));
     const issuerScript = new P2pkhBuilder(issuer.Address).toBytes();

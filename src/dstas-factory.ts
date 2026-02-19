@@ -20,6 +20,7 @@ import { TransactionReader } from "./transaction/read/transaction-reader";
 import { FeeRate } from "./transaction-factory";
 import { hash160 } from "./hashes";
 import { LockingScriptReader } from "./script/read/locking-script-reader";
+import { Point } from "@noble/secp256k1";
 
 export type TDstasPayment = TPayment & {
   UnlockingScript?: Bytes;
@@ -111,6 +112,14 @@ const validateMultisigPublicKeys = (keys: string[], role: string) => {
 
     if (!isCompressedPubKey(key)) {
       throw new Error(`${role} public key must be a compressed SEC key`);
+    }
+
+    try {
+      Point.fromHex(normalized);
+    } catch {
+      throw new Error(
+        `${role} public key must be a valid compressed secp256k1 point`,
+      );
     }
 
     if (seen.has(normalized)) {
