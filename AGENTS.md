@@ -16,16 +16,16 @@ This file is the root onboarding entrypoint for AI coding agents working on this
 - `src/dstas*`, `src/script/*`, `tests/dstas*`, `tests/helpers/*`
   Canonical DSTAS implementation and verification surface.
 - `src/stas-bundle-factory.ts`, `src/transaction-factory.ts`
-  Legacy STAS compatibility surface. Do not use for new DSTAS work.
+  Older, lower-level STAS workflow surface. Do not use for new DSTAS work.
 - `src/bitcoin/*`, `src/buffer/*`, `src/security/*`, `src/transaction/*`
   Low-level core primitives shared by both protocol layers.
 
 ## Preferred implementation path
 
 - Prefer high-level DSTAS APIs first:
-  - `DstasBundleFactory` for multi-step payout/split/merge planning.
-  - `BuildDstas*` helpers for single-flow transactions.
-- Use legacy `stas*` APIs only for compatibility maintenance.
+  - `dstas.DstasBundleFactory` for multi-step payout/split/merge planning.
+  - `dstas.BuildDstas*` helpers for single-flow transactions.
+- Use the `stas` namespace only when you intentionally need the older, lower-level STAS workflow surface.
 
 ## Mandatory validation rule
 

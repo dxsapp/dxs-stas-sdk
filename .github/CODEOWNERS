@@ -1,0 +1,24 @@
+# Canonical DSTAS implementation and tests
+/src/dstas* @panagushin
+/src/script/ @panagushin
+/tests/dstas* @panagushin
+/tests/helpers/ @panagushin
+/tests/fixtures/ @panagushin
+
+# Shared low-level core
+/src/bitcoin/ @panagushin
+/src/buffer/ @panagushin
+/src/security/ @panagushin
+/src/transaction/ @panagushin
+
+# Older STAS workflow surface
+/src/stas-bundle-factory.ts @panagushin
+/src/transaction-factory.ts @panagushin
+
+# Repo governance/docs
+/AGENTS.md @panagushin
+/src/AGENTS.md @panagushin
+/tests/AGENTS.md @panagushin
+/README.md @panagushin
+/llms.txt @panagushin
+/docs/ @panagushin
