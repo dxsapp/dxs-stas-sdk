@@ -2,8 +2,8 @@ import { mkdirSync, writeFileSync } from "fs";
 import { dirname } from "path";
 import { verify as nobleVerify } from "@noble/secp256k1";
 import {
-  decomposeStas3LockingScript,
-  decomposeStas3UnlockingScript,
+  decomposeDstasLockingScript,
+  decomposeDstasUnlockingScript,
   evaluateScripts,
 } from "../../src/script";
 import { fromHex, toHex } from "../../src/bytes";
@@ -69,10 +69,10 @@ export const dumpTransferDebug = ({
   mkdirSync(dirname(outPath), { recursive: true });
 
   const transferTx = TransactionReader.readHex(transferTxHex);
-  const transferLockingDecomposition = decomposeStas3LockingScript(
+  const transferLockingDecomposition = decomposeDstasLockingScript(
     transferTx.Outputs[0].LockingScript,
   );
-  const transferUnlockingDecomposition = decomposeStas3UnlockingScript(
+  const transferUnlockingDecomposition = decomposeDstasUnlockingScript(
     transferTx.Inputs[0].UnlockingScript,
   );
 

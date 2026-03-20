@@ -17,7 +17,7 @@ Use the highest-level API that satisfies the task:
 
 Before code changes, verify expected behavior against:
 
-- `docs/DSTAS_0_0_8_SDK_SPEC.md`
+- `docs/DSTAS_SDK_SPEC.md`
 - `docs/DSTAS_SCRIPT_INVARIANTS.md`
 
 Critical invariant groups:
@@ -62,7 +62,7 @@ Minimal expectation in tests:
 When protocol behavior, API shape, or guarantees change, update:
 
 - `README.md` for user-facing API examples;
-- `docs/DSTAS_0_0_8_SDK_SPEC.md` for normative rules;
+- `docs/DSTAS_SDK_SPEC.md` for normative rules;
 - `docs/DSTAS_CONFORMANCE_MATRIX.md` for coverage mapping.
 
 If vectors changed intentionally, refresh fixtures and note it in PR summary.

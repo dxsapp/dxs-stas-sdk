@@ -6,7 +6,7 @@ This file is a fast onboarding entrypoint for AI coding agents working on this r
 
 1. `/Users/imighty/Code/dxs-stas-sdk/README.md` (public API and examples)
 2. `/Users/imighty/Code/dxs-stas-sdk/docs/AGENT_RUNBOOK.md` (task-oriented execution flow)
-3. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_0_0_8_SDK_SPEC.md` (normative protocol rules)
+3. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SDK_SPEC.md` (normative protocol rules)
 4. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SCRIPT_INVARIANTS.md` (script-level invariants)
 5. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_CONFORMANCE_MATRIX.md` (test mapping)
 

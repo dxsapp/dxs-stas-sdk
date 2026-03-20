@@ -61,7 +61,7 @@ const encodeSwapCore = (spec: DstasSwapActionData): Bytes => {
   let current: DstasSwapActionData | undefined = spec;
   while (current) {
     if (seen.has(current)) {
-      throw new Error("swap second field has cyclic next reference");
+      throw new Error("swap action data has cyclic next reference");
     }
     seen.add(current);
 
@@ -109,10 +109,10 @@ const decodeSwapCore = (
 
   while (nextOffset < bytes.length) {
     if (nextOffset + SWAP_LEG_SIZE > bytes.length) {
-      throw new Error("swap second field is truncated");
+      throw new Error("swap action data is truncated");
     }
     if (bytes[nextOffset] !== DstasActionKind.swap) {
-      throw new Error("swap second field must start with action=0x01");
+      throw new Error("swap action data must start with action=0x01");
     }
 
     const parsed: DstasSwapActionData = {
@@ -135,7 +135,7 @@ const decodeSwapCore = (
   }
 
   if (!first) {
-    throw new Error("swap second field is truncated");
+    throw new Error("swap action data is truncated");
   }
 
   return { parsed: first, nextOffset };
@@ -160,7 +160,7 @@ export const decodeActionData = (bytes: Bytes): ParsedActionData => {
   if (action === DstasActionKind.swap) {
     const decoded = decodeSwapCore(bytes, 0);
     if (decoded.nextOffset !== bytes.length) {
-      throw new Error("swap second field has trailing bytes");
+      throw new Error("swap action data has trailing bytes");
     }
     return decoded.parsed;
   }

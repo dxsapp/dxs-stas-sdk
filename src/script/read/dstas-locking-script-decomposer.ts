@@ -2,7 +2,7 @@ import { OpCode } from "../../bitcoin/op-codes";
 import { ScriptType } from "../../bitcoin/script-type";
 import { Bytes, equal, toHex } from "../../bytes";
 import { ScriptBuilder } from "../build/script-builder";
-import { buildStas3BaseTokens } from "../templates/stas3-freeze-multisig-base";
+import { buildDstasTemplateBaseTokens } from "../templates/dstas-locking-template-base";
 
 type RawChunk = {
   opcode: number;
@@ -15,7 +15,7 @@ export type DstasActionDataField =
   | { kind: "opcode"; opcode: number }
   | { kind: "data"; hex: string };
 
-export type Stas3LockingScriptDecomposition = {
+export type DstasLockingScriptDecomposition = {
   ownerHex?: string;
   ownerPkhHex?: string;
   actionData?: DstasActionDataField;
@@ -30,8 +30,8 @@ export type Stas3LockingScriptDecomposition = {
   errors: string[];
 };
 
-const STAS3_BASE_SCRIPT = ScriptBuilder.fromTokens(
-  buildStas3BaseTokens(),
+const DSTAS_TEMPLATE_BASE_SCRIPT = ScriptBuilder.fromTokens(
+  buildDstasTemplateBaseTokens(),
   ScriptType.unknown,
 ).toBytes();
 
@@ -82,10 +82,10 @@ const readRawChunk = (script: Bytes, offset: number): RawChunk | undefined => {
   return { opcode, start: offset, end: offset + 1 };
 };
 
-export const decomposeStas3LockingScript = (
+export const decomposeDstasLockingScript = (
   script: Bytes,
-): Stas3LockingScriptDecomposition => {
-  const result: Stas3LockingScriptDecomposition = {
+): DstasLockingScriptDecomposition => {
+  const result: DstasLockingScriptDecomposition = {
     baseMatched: false,
     serviceFieldHexes: [],
     optionalDataHexes: [],
@@ -114,20 +114,18 @@ export const decomposeStas3LockingScript = (
     : { kind: "opcode", opcode: second.opcode };
 
   const baseStart = second.end;
-  const baseEnd = baseStart + STAS3_BASE_SCRIPT.length;
+  const baseEnd = baseStart + DSTAS_TEMPLATE_BASE_SCRIPT.length;
   if (baseEnd > script.length) {
-    result.errors.push("script is shorter than STAS3 base template");
+    result.errors.push("script is shorter than DSTAS template base");
     return result;
   }
 
   result.baseMatched = equal(
     script.subarray(baseStart, baseEnd),
-    STAS3_BASE_SCRIPT,
+    DSTAS_TEMPLATE_BASE_SCRIPT,
   );
   if (!result.baseMatched) {
-    result.errors.push(
-      "script middle does not match STAS3 base template bytes",
-    );
+    result.errors.push("script middle does not match DSTAS template base");
     return result;
   }
 

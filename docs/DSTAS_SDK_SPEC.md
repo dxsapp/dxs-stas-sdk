@@ -1,4 +1,4 @@
-# DSTAS 0.0.8 SDK Specification (Normative)
+# DSTAS SDK Specification (Normative)
 
 This document defines the protocol behavior implemented and enforced by this SDK for Divisible STAS (`ScriptType.dstas`).
 

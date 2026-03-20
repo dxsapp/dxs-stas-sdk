@@ -9,9 +9,9 @@ import { TransactionReader } from "../src/transaction/read/transaction-reader";
 import { fromHex } from "../src/bytes";
 import { SourceTxRaw } from "./stas-transactios";
 import {
-  buildStas3Flags,
-  buildStas3FreezeMultisigTokens,
-} from "../src/script/build/stas3-freeze-multisig-builder";
+  buildDstasFlags,
+  buildDstasLockingTokens,
+} from "../src/script/build/dstas-locking-builder";
 import { ScriptBuilder } from "../src/script/build/script-builder";
 
 describe("address and outpoint", () => {
@@ -62,11 +62,11 @@ describe("address and outpoint", () => {
     ownerMultisigPreimage[1] = 0x02;
 
     const lockingScript = ScriptBuilder.fromTokens(
-      buildStas3FreezeMultisigTokens({
+      buildDstasLockingTokens({
         owner: ownerMultisigPreimage,
         actionData: null,
         redemptionPkh: fromHex(scheme.TokenId),
-        flags: buildStas3Flags({ freezable: true }),
+        flags: buildDstasFlags({ freezable: true }),
         serviceFields: [new Uint8Array(20)],
       }),
       ScriptType.dstas,

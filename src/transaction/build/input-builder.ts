@@ -108,12 +108,12 @@ export class InputBilder {
             .addData(this.resolveOutputOwnerField(output.LockingScript));
 
           if (output.LockingScript.ScriptType === ScriptType.dstas) {
-            const secondFieldToken = output.LockingScript._tokens[1];
+            const actionDataToken = output.LockingScript._tokens[1];
 
-            if (secondFieldToken?.Data) {
-              script.addData(secondFieldToken.Data);
-            } else if (secondFieldToken) {
-              script.addOpCode(secondFieldToken.OpCodeNum);
+            if (actionDataToken?.Data) {
+              script.addData(actionDataToken.Data);
+            } else if (actionDataToken) {
+              script.addOpCode(actionDataToken.OpCodeNum);
             } else {
               throw new Error(
                 "Divisible STAS output is missing second-field token in locking script",

@@ -1,6 +1,6 @@
 # dxs-stas-sdk
 
-TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS/STAS token scripts. It includes script builders/readers, transaction builders/parsers, DSTAS and STAS factories, and address/key utilities.
+TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS token scripts and a legacy STAS compatibility layer. It includes script builders/readers, transaction builders/parsers, DSTAS factories, legacy STAS factories, and address/key utilities.
 
 ## Binary types
 
@@ -26,7 +26,9 @@ If you are integrating this SDK through an AI coding agent, start with:
 
 - `AGENTS.md` (fast onboarding and guardrails)
 - `docs/AGENT_RUNBOOK.md` (task execution workflow)
-- `docs/DSTAS_0_0_8_SDK_SPEC.md` (normative protocol behavior)
+- `docs/DSTAS_SDK_SPEC.md` (normative protocol behavior)
+
+Use `docs/AGENT_HANDBOOK.md` only for historical archaeology. It is intentionally not a decision-making source.
 
 ## Concepts
 
@@ -348,7 +350,8 @@ const txHex = TransactionBuilder.init()
 
 - Construct and parse raw Bitcoin SV transactions.
 - Build and read scripts (P2PKH, OP_RETURN, DSTAS, STAS).
-- Create DSTAS and STAS token transactions.
+- Create DSTAS token transactions through canonical APIs.
+- Maintain older STAS integrations through compatibility APIs.
 - Work with keys, addresses, and standard hashing helpers.
 
 ## FAQ / common pitfalls
@@ -361,17 +364,31 @@ const txHex = TransactionBuilder.init()
 
 ## API overview (high level)
 
-| Area                    | Purpose                              | Key exports                                                                                           |
-| ----------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Bytes                   | Hex/UTF-8 helpers and byte utilities | `fromHex`, `toHex`, `utf8ToBytes`, `bytesToUtf8`, `concat`, `equal`                                   |
-| Bitcoin primitives      | Keys, addresses, transactions        | `PrivateKey`, `Address`, `Transaction`, `OutPoint`                                                    |
-| Script builders/readers | Build and parse scripts              | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader`                   |
-| Transaction building    | Assemble raw txs                     | `TransactionBuilder`, `TransactionReader`                                                             |
-| Token factories         | DSTAS/STAS workflows                 | `DstasBundleFactory`, `BuildDstasIssueTxs`, `BuildDstasTransferTx`, `BuildTransferTx`, `BuildSplitTx` |
+| Area                    | Purpose                              | Key exports                                                                                                    |
+| ----------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Bytes                   | Hex/UTF-8 helpers and byte utilities | `fromHex`, `toHex`, `utf8ToBytes`, `bytesToUtf8`, `concat`, `equal`                                            |
+| Bitcoin primitives      | Keys, addresses, transactions        | `PrivateKey`, `Address`, `Transaction`, `OutPoint`                                                             |
+| Script builders/readers | Build and parse scripts              | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader`                            |
+| Transaction building    | Assemble raw txs                     | `TransactionBuilder`, `TransactionReader`                                                                      |
+| DSTAS factories         | Canonical DSTAS workflows            | `DstasBundleFactory`, `BuildDstasIssueTxs`, `BuildDstasTransferTx`, `BuildDstasFreezeTx`, `BuildDstasRedeemTx` |
+| Legacy STAS factories   | Compatibility maintenance only       | `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, `BuildRedeemTx`, `StasBundleFactory`                        |
 
-## Strict mode (optional hardening)
+## Strict mode
 
-Strict mode is opt-in and keeps legacy runtime behavior unchanged until enabled.
+Some hardening defaults are already enabled out of the box:
+
+- `strictTxParse: true`
+- `strictFeeRateValidation: true`
+
+Other strict checks remain opt-in because they are more compatibility-sensitive:
+
+- `strictOutPointValidation`
+- `strictPresetUnlockingScript`
+- `strictMultisigKeys`
+- `strictScriptReader`
+- `strictScriptEvaluation`
+
+Use `configureStrictMode(...)` to tighten behavior further:
 
 ```ts
 import { configureStrictMode } from "dxs-stas-sdk";

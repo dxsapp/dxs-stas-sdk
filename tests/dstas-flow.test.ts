@@ -13,14 +13,14 @@ import {
   evaluateScripts,
   evaluateTransactionHex,
   buildSwapActionData,
-  decomposeStas3LockingScript,
-  decomposeStas3UnlockingScript,
+  decomposeDstasLockingScript,
+  decomposeDstasUnlockingScript,
 } from "../src/script";
 import { ScriptBuilder } from "../src/script/build/script-builder";
 import {
-  buildStas3Flags,
-  buildStas3FreezeMultisigTokens,
-} from "../src/script/build/stas3-freeze-multisig-builder";
+  buildDstasFlags,
+  buildDstasLockingTokens,
+} from "../src/script/build/dstas-locking-builder";
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
 import { fromHex, toHex } from "../src/bytes";
 import { OutPoint, ScriptType } from "../src/bitcoin";
@@ -105,12 +105,12 @@ const buildDstasLockingScriptForOwnerField = ({
   confiscationAuthorityServiceField?: Uint8Array;
   frozen?: boolean;
 }) => {
-  const tokens = buildStas3FreezeMultisigTokens({
+  const tokens = buildDstasLockingTokens({
     owner: ownerField,
     actionData: null,
     redemptionPkh: fromHex(tokenIdHex),
     frozen,
-    flags: buildStas3Flags({ freezable, confiscatable }),
+    flags: buildDstasFlags({ freezable, confiscatable }),
     serviceFields: [
       ...(freezable ? [authorityServiceField] : []),
       ...(confiscatable
@@ -122,13 +122,13 @@ const buildDstasLockingScriptForOwnerField = ({
   return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
 };
 
-const computeStas30RequestedScriptHash = (
+const computeDstasRequestedScriptHash = (
   lockingScript: ScriptBuilder,
 ): Uint8Array => {
   const tokens = lockingScript._tokens;
   if (tokens.length < 3) {
     throw new Error(
-      "Divisible STAS locking script must include owner + second field",
+      "Divisible STAS locking script must include owner + action data",
     );
   }
   const tail = ScriptBuilder.fromTokens(tokens.slice(2), ScriptType.unknown);
@@ -199,10 +199,10 @@ const buildOwnerMultisigUnlockingScript = ({
     script.addNumber(output.Satoshis).addData(ownerField);
 
     if (output.LockingScript.ScriptType === ScriptType.dstas) {
-      const secondFieldToken = output.LockingScript._tokens[1];
-      if (secondFieldToken?.Data) script.addData(secondFieldToken.Data);
-      else if (secondFieldToken) script.addOpCode(secondFieldToken.OpCodeNum);
-      else throw new Error("Divisible STAS output missing second field");
+      const actionDataToken = output.LockingScript._tokens[1];
+      if (actionDataToken?.Data) script.addData(actionDataToken.Data);
+      else if (actionDataToken) script.addOpCode(actionDataToken.OpCodeNum);
+      else throw new Error("Divisible STAS output missing action data");
     }
 
     if (output.LockingScript.ScriptType === ScriptType.p2pkh) hasChange = true;
@@ -278,15 +278,15 @@ describe("dstas flow", () => {
   const createSwapContext = ({
     satoshisA = 100,
     satoshisB = 100,
-    secondFieldA,
-    secondFieldB,
+    actionDataA,
+    actionDataB,
     frozenA = false,
     frozenB = false,
   }: {
     satoshisA?: number;
     satoshisB?: number;
-    secondFieldA: ReturnType<typeof buildSwapActionData> | null;
-    secondFieldB: ReturnType<typeof buildSwapActionData> | null;
+    actionDataA: ReturnType<typeof buildSwapActionData> | null;
+    actionDataB: ReturnType<typeof buildSwapActionData> | null;
     frozenA?: boolean;
     frozenB?: boolean;
   }) => {
@@ -322,7 +322,7 @@ describe("dstas flow", () => {
         {
           Satoshis: satoshisA,
           To: bob.Address,
-          ActionData: secondFieldA,
+          ActionData: actionDataA,
           Frozen: frozenA,
         },
       ],
@@ -335,7 +335,7 @@ describe("dstas flow", () => {
         {
           Satoshis: satoshisB,
           To: cat.Address,
-          ActionData: secondFieldB,
+          ActionData: actionDataB,
           Frozen: frozenB,
         },
       ],
@@ -402,8 +402,8 @@ describe("dstas flow", () => {
   test("reference transfer (P2PKH): stas input validates with preimage-derived prevout", () => {
     const txHex = readFileSync(referenceTransferTxPath, "utf8").trim();
     const tx = TransactionReader.readHex(txHex);
-    const unlock = decomposeStas3UnlockingScript(tx.Inputs[0].UnlockingScript);
-    const lock = decomposeStas3LockingScript(tx.Outputs[0].LockingScript);
+    const unlock = decomposeDstasUnlockingScript(tx.Inputs[0].UnlockingScript);
+    const lock = decomposeDstasLockingScript(tx.Outputs[0].LockingScript);
 
     const preimage = fromHex(unlock.preimageHex!);
     const reader = new ByteReader(preimage);
@@ -525,7 +525,7 @@ describe("dstas flow", () => {
   test("real funding: swap cancel flow is valid", () => {
     const fixture = createRealFundingFlowFixture();
 
-    const swapSecondField = buildSwapActionData({
+    const swapActionData = buildSwapActionData({
       requestedScriptHash: new Uint8Array(32),
       requestedPkh: fixture.bob.Address.Hash160,
       rateNumerator: 0,
@@ -542,7 +542,7 @@ describe("dstas flow", () => {
         {
           Satoshis: 100,
           To: fixture.bob.Address,
-          ActionData: swapSecondField,
+          ActionData: swapActionData,
         },
       ],
       feeRate: FeeRate,
@@ -581,7 +581,7 @@ describe("dstas flow", () => {
         {
           Satoshis: stasOutPoint.Satoshis,
           To: fixture.bob.Address,
-          ActionData: swapSecondField,
+          ActionData: swapActionData,
         },
       ],
       Scheme: fixture.scheme,
@@ -650,9 +650,9 @@ describe("dstas flow", () => {
       confiscationAuthorityServiceField: authorityB,
       frozen: false,
     });
-    const requestedHashForA = computeStas30RequestedScriptHash(sampleBTail);
+    const requestedHashForA = computeDstasRequestedScriptHash(sampleBTail);
 
-    const secondFieldA = buildSwapActionData({
+    const actionDataA = buildSwapActionData({
       requestedScriptHash: requestedHashForA,
       requestedPkh: bob.Address.Hash160,
       rateNumerator: 1,
@@ -663,7 +663,7 @@ describe("dstas flow", () => {
       fundingPayment: { OutPoint: fundingA, Owner: bob },
       scheme: schemeA,
       destinations: [
-        { Satoshis: 100, To: bob.Address, ActionData: secondFieldA },
+        { Satoshis: 100, To: bob.Address, ActionData: actionDataA },
       ],
       feeRate: FeeRate,
     });
@@ -753,8 +753,8 @@ describe("dstas flow", () => {
       { allowOpReturn: true },
     );
     const swapTx = TransactionReader.readHex(swapTxHex);
-    const out0 = decomposeStas3LockingScript(swapTx.Outputs[0].LockingScript);
-    const out1 = decomposeStas3LockingScript(swapTx.Outputs[1].LockingScript);
+    const out0 = decomposeDstasLockingScript(swapTx.Outputs[0].LockingScript);
+    const out1 = decomposeDstasLockingScript(swapTx.Outputs[1].LockingScript);
     expect(swapEval.success).toBe(true);
     expect(swapEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
     expect(swapEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(true);
@@ -810,16 +810,16 @@ describe("dstas flow", () => {
       frozen: false,
     });
 
-    const requestedHashForA = computeStas30RequestedScriptHash(sampleBTail);
-    const requestedHashForB = computeStas30RequestedScriptHash(sampleATail);
+    const requestedHashForA = computeDstasRequestedScriptHash(sampleBTail);
+    const requestedHashForB = computeDstasRequestedScriptHash(sampleATail);
 
-    const secondFieldA = buildSwapActionData({
+    const actionDataA = buildSwapActionData({
       requestedScriptHash: requestedHashForA,
       requestedPkh: bob.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 1,
     });
-    const secondFieldB = buildSwapActionData({
+    const actionDataB = buildSwapActionData({
       requestedScriptHash: requestedHashForB,
       requestedPkh: cat.Address.Hash160,
       rateNumerator: 1,
@@ -830,7 +830,7 @@ describe("dstas flow", () => {
       fundingPayment: { OutPoint: fundingA, Owner: bob },
       scheme: schemeA,
       destinations: [
-        { Satoshis: 100, To: bob.Address, ActionData: secondFieldA },
+        { Satoshis: 100, To: bob.Address, ActionData: actionDataA },
       ],
       feeRate: FeeRate,
     });
@@ -838,7 +838,7 @@ describe("dstas flow", () => {
       fundingPayment: { OutPoint: fundingB, Owner: cat },
       scheme: schemeB,
       destinations: [
-        { Satoshis: 100, To: cat.Address, ActionData: secondFieldB },
+        { Satoshis: 100, To: cat.Address, ActionData: actionDataB },
       ],
       feeRate: FeeRate,
     });
@@ -926,8 +926,8 @@ describe("dstas flow", () => {
     );
 
     const swapTx = TransactionReader.readHex(swapTxHex);
-    const out0 = decomposeStas3LockingScript(swapTx.Outputs[0].LockingScript);
-    const out1 = decomposeStas3LockingScript(swapTx.Outputs[1].LockingScript);
+    const out0 = decomposeDstasLockingScript(swapTx.Outputs[0].LockingScript);
+    const out1 = decomposeDstasLockingScript(swapTx.Outputs[1].LockingScript);
 
     expect(swapEval.success).toBe(true);
     expect(swapEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
@@ -966,8 +966,8 @@ describe("dstas flow", () => {
       confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
-    const secondFieldA = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+    const actionDataA = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleBTail),
       requestedPkh: bob.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 2,
@@ -976,8 +976,8 @@ describe("dstas flow", () => {
     const ctx = createSwapContext({
       satoshisA: 100,
       satoshisB: 100,
-      secondFieldA,
-      secondFieldB: null,
+      actionDataA,
+      actionDataB: null,
     });
 
     const swapTxHex = BuildDstasTransferSwapTx({
@@ -1067,14 +1067,14 @@ describe("dstas flow", () => {
       confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
-    const secondFieldA = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+    const actionDataA = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleBTail),
       requestedPkh: bob.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 2,
     });
-    const secondFieldB = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleATail),
+    const actionDataB = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleATail),
       requestedPkh: cat.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 1,
@@ -1082,8 +1082,8 @@ describe("dstas flow", () => {
     const ctx = createSwapContext({
       satoshisA: 100,
       satoshisB: 100,
-      secondFieldA,
-      secondFieldB,
+      actionDataA,
+      actionDataB,
     });
 
     const swapTxHex = BuildDstasSwapSwapTx({
@@ -1121,7 +1121,7 @@ describe("dstas flow", () => {
           confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
           confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
-          actionData: secondFieldB,
+          actionData: actionDataB,
         }),
       ],
       feeRate: FeeRate,
@@ -1170,8 +1170,8 @@ describe("dstas flow", () => {
       confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
-    const secondFieldA = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+    const actionDataA = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleBTail),
       requestedPkh: bob.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 2,
@@ -1179,8 +1179,8 @@ describe("dstas flow", () => {
     const ctx = createSwapContext({
       satoshisA: 100,
       satoshisB: 100,
-      secondFieldA,
-      secondFieldB: null,
+      actionDataA,
+      actionDataB: null,
     });
 
     const swapTxHex = BuildDstasTransferSwapTx({
@@ -1218,7 +1218,7 @@ describe("dstas flow", () => {
           confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
           confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
-          actionData: secondFieldA,
+          actionData: actionDataA,
         }),
         swapDestination({
           satoshis: 60,
@@ -1280,14 +1280,14 @@ describe("dstas flow", () => {
       confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
-    const secondFieldA = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+    const actionDataA = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleBTail),
       requestedPkh: bob.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 2,
     });
-    const secondFieldB = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleATail),
+    const actionDataB = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleATail),
       requestedPkh: cat.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 1,
@@ -1295,8 +1295,8 @@ describe("dstas flow", () => {
     const ctx = createSwapContext({
       satoshisA: 100,
       satoshisB: 100,
-      secondFieldA,
-      secondFieldB,
+      actionDataA,
+      actionDataB,
     });
 
     const swapTxHex = BuildDstasSwapSwapTx({
@@ -1334,7 +1334,7 @@ describe("dstas flow", () => {
           confiscatable: ctx.schemeA.Confiscation,
           authorityServiceField: hash160(ctx.cat.PublicKey),
           confiscationAuthorityServiceField: hash160(ctx.cat.PublicKey),
-          actionData: secondFieldA,
+          actionData: actionDataA,
         }),
         swapDestination({
           satoshis: 60,
@@ -1344,7 +1344,7 @@ describe("dstas flow", () => {
           confiscatable: ctx.schemeB.Confiscation,
           authorityServiceField: hash160(ctx.bob.PublicKey),
           confiscationAuthorityServiceField: hash160(ctx.bob.PublicKey),
-          actionData: secondFieldB,
+          actionData: actionDataB,
         }),
       ],
       feeRate: FeeRate,
@@ -1392,8 +1392,8 @@ describe("dstas flow", () => {
       confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
-    const secondFieldA = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+    const actionDataA = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleBTail),
       requestedPkh: bob.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 1,
@@ -1401,8 +1401,8 @@ describe("dstas flow", () => {
     const ctx = createSwapContext({
       satoshisA: 100,
       satoshisB: 100,
-      secondFieldA,
-      secondFieldB: null,
+      actionDataA,
+      actionDataB: null,
       frozenA: true,
     });
 
@@ -1483,14 +1483,14 @@ describe("dstas flow", () => {
       confiscationAuthorityServiceField: hash160(bob.PublicKey),
       frozen: false,
     });
-    const secondFieldA = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleBTail),
+    const actionDataA = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleBTail),
       requestedPkh: bob.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 1,
     });
-    const secondFieldB = buildSwapActionData({
-      requestedScriptHash: computeStas30RequestedScriptHash(sampleATail),
+    const actionDataB = buildSwapActionData({
+      requestedScriptHash: computeDstasRequestedScriptHash(sampleATail),
       requestedPkh: cat.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 1,
@@ -1498,8 +1498,8 @@ describe("dstas flow", () => {
     const ctx = createSwapContext({
       satoshisA: 100,
       satoshisB: 100,
-      secondFieldA,
-      secondFieldB,
+      actionDataA,
+      actionDataB,
       frozenB: true,
     });
 
@@ -1552,7 +1552,7 @@ describe("dstas flow", () => {
       { allowOpReturn: true },
     );
 
-    const unlock = decomposeStas3UnlockingScript(
+    const unlock = decomposeDstasUnlockingScript(
       transferTx.Inputs[0].UnlockingScript,
     );
 
@@ -1990,7 +1990,7 @@ describe("dstas flow", () => {
 
   test("real funding: swap-marked -> freeze -> confiscate is valid", () => {
     const fixture = createRealFundingFlowFixture();
-    const swapSecondField = buildSwapActionData({
+    const swapActionData = buildSwapActionData({
       requestedScriptHash: fromHex("11".repeat(32)),
       requestedPkh: fixture.bob.Address.Hash160,
       rateNumerator: 1,
@@ -2012,7 +2012,7 @@ describe("dstas flow", () => {
         {
           Satoshis: fixture.stasOutPoint.Satoshis,
           To: fixture.alice.Address,
-          ActionData: swapSecondField,
+          ActionData: swapActionData,
         },
       ],
       Scheme: fixture.scheme,
@@ -2042,7 +2042,7 @@ describe("dstas flow", () => {
         {
           Satoshis: swapMarkedOutPoint.Satoshis,
           To: fixture.alice.Address,
-          ActionData: swapSecondField,
+          ActionData: swapActionData,
           Frozen: true,
         },
       ],
@@ -2074,7 +2074,7 @@ describe("dstas flow", () => {
         {
           Satoshis: frozenSwapOutPoint.Satoshis,
           To: fixture.bob.Address,
-          ActionData: swapSecondField,
+          ActionData: swapActionData,
           Frozen: false,
         },
       ],

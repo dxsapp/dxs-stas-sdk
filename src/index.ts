@@ -3,12 +3,16 @@ export * from "./buffer";
 export * from "./bytes";
 export * from "./binary";
 export * from "./script";
-export * from "./stas-bundle-factory";
-export * from "./transaction";
-export * from "./transaction-factory";
+
+// Canonical public surface for new integrations is DSTAS-first.
 export * from "./dstas-factory";
+export * from "./transaction";
+
+// Legacy STAS exports remain for compatibility maintenance only.
+export * from "./stas-bundle-factory";
+export * from "./transaction-factory";
 export {
-  AvgFeeForStas30Merge,
+  AvgFeeForDstasMerge,
   TDstasFundingUtxoRequest,
   TDstasGetUtxoFunction,
   TDstasGetFundingUtxoFunction,

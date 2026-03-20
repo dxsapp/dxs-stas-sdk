@@ -2,7 +2,7 @@ import { Wallet } from "../src/bitcoin/wallet";
 import { OutPoint } from "../src/bitcoin/out-point";
 import { ScriptType } from "../src/bitcoin/script-type";
 import { P2pkhBuilder } from "../src/script/build/p2pkh-builder";
-import { buildStas3Flags } from "../src/script/build/stas3-freeze-multisig-builder";
+import { buildDstasFlags } from "../src/script/build/dstas-locking-builder";
 import { BuildDstasBaseTx, BuildDstasIssueTxs } from "../src/dstas-factory";
 import { PrivateKey } from "../src/bitcoin/private-key";
 import { TokenScheme } from "../src/bitcoin/token-scheme";
@@ -41,7 +41,7 @@ describe("DSTAS factory guards", () => {
               actionData: null,
               redemptionPkh: wallet.Address.Hash160,
               frozen: false,
-              flags: buildStas3Flags({ freezable: false }),
+              flags: buildDstasFlags({ freezable: false }),
               serviceFields: [],
               optionalData: [],
             },
@@ -230,7 +230,7 @@ describe("DSTAS factory guards", () => {
               actionData: null,
               redemptionPkh: wallet.Address.Hash160,
               frozen: false,
-              flags: buildStas3Flags({}),
+              flags: buildDstasFlags({}),
               serviceFields: [],
               optionalData: [],
             },

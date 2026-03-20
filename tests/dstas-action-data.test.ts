@@ -7,7 +7,7 @@ import {
   encodeActionData,
 } from "../src/script";
 
-describe("stas3 second field", () => {
+describe("dstas action data", () => {
   test("encodes and decodes single swap leg", () => {
     const requestedScriptHash = fromHex("11".repeat(32));
     const requestedPkh = fromHex("22".repeat(20));
@@ -119,7 +119,7 @@ describe("stas3 second field", () => {
     ).toThrow("rateDenominator must be > 0 when rateNumerator is non-zero");
   });
 
-  test("encodes action second field", () => {
+  test("encodes action action data", () => {
     const encoded = encodeActionData({
       kind: "action",
       action: DstasActionKind.freeze,

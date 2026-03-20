@@ -9,18 +9,18 @@ For transaction-level flow invariants, see `/Users/imighty/Code/dxs-stas-sdk/doc
 The ASM template has variable placeholders:
 
 - `<owner address/MPKH - 20 bytes>`
-- `<2nd variable field>`
+- `<action data>`
 - `OP_RETURN <"redemption address"/"protocol ID" - 20 bytes> <flags field> <service data per each flag> <optional data field/s - upto around 4.2GB size>`
 
-The SDK injects these fields in `src/script/build/stas3-freeze-multisig-builder.ts`.
+The SDK injects these fields in `src/script/build/dstas-locking-builder.ts`.
 
 ## How Base Tokens Are Built
 
-- Source of truth: `src/script/templates/stas3-freeze-multisig.ts`.
-- Runtime base extraction: `src/script/templates/stas3-freeze-multisig-base.ts` parses the ASM once and caches the base token list.
+- Source of truth: `src/script/templates/dstas-locking-template.ts`.
+- Runtime base extraction: `src/script/templates/dstas-locking-template-base.ts` parses the ASM once and caches the base token list.
 - This keeps the SDK aligned with template updates without manual opcode-table regeneration.
 
-## 2nd Variable Field (Action Data / Freeze Marker)
+## Action Data Field (Freeze Marker)
 
 - Empty action field, not frozen: `OP_0`.
 - Empty action field, frozen: `OP_2`.
@@ -58,16 +58,16 @@ The SDK enforces `serviceFields.length` to match enabled bits exactly.
 
 ## Builder API
 
-- `buildStas3FreezeMultisigTokens(params)`
-- `buildStas3FreezeMultisigScript(params)`
-- `buildStas3FreezeMultisigAsm(params)`
+- `buildDstasLockingTokens(params)`
+- `buildDstasLockingScript(params)`
+- `buildDstasLockingAsm(params)`
 
 ## Example
 
 ```ts
-import { buildStas3FreezeMultisigScript, fromHex } from "dxs-stas-sdk";
+import { buildDstasLockingScript, fromHex } from "dxs-stas-sdk";
 
-const script = buildStas3FreezeMultisigScript({
+const script = buildDstasLockingScript({
   ownerPkh: fromHex("2f2ec98dfa6429a028536a6c9451f702daa3a333"),
   redemptionPkh: fromHex("b4ab0fffa02223a8a40d9e7f7823e61b38625382"),
   actionData: null,

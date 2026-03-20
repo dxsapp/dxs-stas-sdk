@@ -8,7 +8,7 @@ export class ScriptToken {
   Data?: Bytes;
   DataLength: number = 0;
   IsReceiverId: boolean = false;
-  IsSecondField: boolean = false;
+  IsActionData: boolean = false;
   IsRedemptionId: boolean = false;
   IsFlagsField: boolean = false;
 
@@ -47,7 +47,7 @@ export class ScriptToken {
       : new ScriptToken(from.OpCodeNum, from.OpCode);
 
     token.IsReceiverId = from.IsReceiverId;
-    token.IsSecondField = from.IsSecondField;
+    token.IsActionData = from.IsActionData;
     token.IsRedemptionId = from.IsRedemptionId;
     token.IsFlagsField = from.IsFlagsField;
 

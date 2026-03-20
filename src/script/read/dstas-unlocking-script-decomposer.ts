@@ -8,7 +8,7 @@ type RawChunk = {
   data?: Bytes;
 };
 
-export type Stas3UnlockingScriptDecomposition = {
+export type DstasUnlockingScriptDecomposition = {
   parsed: boolean;
   errors: string[];
   firstOutputSatoshis?: number;
@@ -101,10 +101,10 @@ const parseNumberChunk = (chunk: RawChunk): number | undefined => {
   return undefined;
 };
 
-export const decomposeStas3UnlockingScript = (
+export const decomposeDstasUnlockingScript = (
   script: Bytes,
-): Stas3UnlockingScriptDecomposition => {
-  const result: Stas3UnlockingScriptDecomposition = {
+): DstasUnlockingScriptDecomposition => {
+  const result: DstasUnlockingScriptDecomposition = {
     parsed: false,
     errors: [],
     noteHexes: [],
@@ -126,7 +126,7 @@ export const decomposeStas3UnlockingScript = (
   }
 
   if (chunks.length < 9) {
-    result.errors.push("too few chunks for STAS3 unlocking layout");
+    result.errors.push("too few chunks for DSTAS unlocking layout");
     return result;
   }
 

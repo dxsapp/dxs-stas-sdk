@@ -9,10 +9,10 @@ import { ScriptType } from "./bitcoin/script-type";
 import { Bytes, fromHex, toHex } from "./bytes";
 import {
   ActionDataInput,
-  Stas3FreezeMultisigParams,
-  buildStas3Flags,
-  buildStas3FreezeMultisigTokens,
-} from "./script/build/stas3-freeze-multisig-builder";
+  DstasLockingParams,
+  buildDstasFlags,
+  buildDstasLockingTokens,
+} from "./script/build/dstas-locking-builder";
 import { ScriptBuilder } from "./script/build/script-builder";
 import { TransactionBuilder } from "./transaction/build/transaction-builder";
 import { OutputBuilder } from "./transaction/build/output-builder";
@@ -28,7 +28,7 @@ export type TDstasPayment = TPayment & {
 
 export type TDstasDestinationByLockingParams = {
   Satoshis: number;
-  LockingParams: Stas3FreezeMultisigParams;
+  LockingParams: DstasLockingParams;
 };
 
 export type TDstasDestinationByScheme = {
@@ -74,13 +74,13 @@ export type TBuildDstasIssueTxsResult = {
 const resolveUnlockingScript = (payment: TDstasPayment): Bytes | undefined =>
   payment.UnlockingScript;
 
-const buildStas3LockingScriptBuilder = (params: Stas3FreezeMultisigParams) => {
-  const tokens = buildStas3FreezeMultisigTokens(params);
+const buildDstasLockingScriptBuilder = (params: DstasLockingParams) => {
+  const tokens = buildDstasLockingTokens(params);
   return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
 };
 
 const deriveFlagsFromScheme = (scheme: TokenScheme): Bytes =>
-  buildStas3Flags({
+  buildDstasFlags({
     freezable: scheme.Freeze,
     confiscatable: scheme.Confiscation,
   });
@@ -189,7 +189,7 @@ const deriveServiceFieldsFromScheme = (scheme: TokenScheme): Bytes[] => {
 const resolveLockingParams = (
   dest: TDstasDestination,
   schemeFromRequest?: TokenScheme,
-): Stas3FreezeMultisigParams => {
+): DstasLockingParams => {
   if ("LockingParams" in dest) return dest.LockingParams;
 
   const scheme = schemeFromRequest;
@@ -245,7 +245,7 @@ const resolveLockingParams = (
   };
 };
 
-const validateStas3Amounts = (
+const validateDstasAmounts = (
   stasPayments: TDstasPayment[],
   destinations: TDstasDestination[],
 ) => {
@@ -299,7 +299,7 @@ export const BuildDstasBaseTx = ({
     throw new Error("At least one destination is required");
 
   validateDestinationSatoshis(destinations);
-  validateStas3Amounts(stasPayments, destinations);
+  validateDstasAmounts(stasPayments, destinations);
 
   const txBuilder = TransactionBuilder.init();
   const stasInputIdxs: number[] = [];
@@ -316,7 +316,7 @@ export const BuildDstasBaseTx = ({
   txBuilder.addInput(feePayment.OutPoint, feePayment.Owner);
 
   for (const dest of destinations) {
-    const lockingScript = buildStas3LockingScriptBuilder(
+    const lockingScript = buildDstasLockingScriptBuilder(
       resolveLockingParams(dest, Scheme),
     );
     txBuilder.Outputs.push(new OutputBuilder(lockingScript, dest.Satoshis));
@@ -414,7 +414,7 @@ export const BuildDstasIssueTxs = ({
     .addInput(contractChangeOutPoint, fundingPayment.Owner);
 
   for (const dest of destinations) {
-    const lockingScript = buildStas3LockingScriptBuilder(
+    const lockingScript = buildDstasLockingScriptBuilder(
       resolveLockingParams(dest, scheme),
     );
     issueBuilder.Outputs.push(new OutputBuilder(lockingScript, dest.Satoshis));
@@ -437,7 +437,7 @@ export const BuildDstasIssueTxs = ({
 // Explicit semantic wrappers for readability
 export type TBuildDstasFreezeTxRequest = TBuildDstasBaseTxRequest;
 /**
- * Freeze: provide STAS3 unlocking scripts that encode spending-type=2
+ * Freeze: provide DSTAS unlocking scripts that encode spending-type=2
  * and authority/signature fields as required by the template.
  */
 export const BuildDstasFreezeTx = (request: TBuildDstasFreezeTxRequest) =>
@@ -445,7 +445,7 @@ export const BuildDstasFreezeTx = (request: TBuildDstasFreezeTxRequest) =>
 
 export type TBuildDstasUnfreezeTxRequest = TBuildDstasBaseTxRequest;
 /**
- * Unfreeze: provide STAS3 unlocking scripts that encode spending-type=2
+ * Unfreeze: provide DSTAS unlocking scripts that encode spending-type=2
  * and authority/signature fields as required by the template.
  */
 export const BuildDstasUnfreezeTx = (request: TBuildDstasUnfreezeTxRequest) =>
@@ -453,7 +453,7 @@ export const BuildDstasUnfreezeTx = (request: TBuildDstasUnfreezeTxRequest) =>
 
 export type TBuildDstasSwapTxRequest = TBuildDstasBaseTxRequest;
 /**
- * Swap/cancel: provide STAS3 unlocking scripts that encode spending-type=4
+ * Swap/cancel: provide DSTAS unlocking scripts that encode spending-type=4
  * (or the issuer-defined swap variant).
  */
 export const BuildDstasSwapTx = (request: TBuildDstasSwapTxRequest) =>
@@ -461,7 +461,7 @@ export const BuildDstasSwapTx = (request: TBuildDstasSwapTxRequest) =>
 
 export type TBuildDstasConfiscateTxRequest = TBuildDstasBaseTxRequest;
 /**
- * Confiscation: provide STAS3 unlocking scripts that encode spending-type=3
+ * Confiscation: provide DSTAS unlocking scripts that encode spending-type=3
  * and confiscation authority signature fields as required by the template.
  */
 export const BuildDstasConfiscateTx = (
@@ -527,7 +527,7 @@ const toSwapFlowDestination = (
       owner: value.Owner,
       actionData: value.ActionData !== undefined ? value.ActionData : null,
       redemptionPkh: fromHex(value.TokenIdHex),
-      flags: buildStas3Flags({
+      flags: buildDstasFlags({
         freezable: value.Freezable,
         confiscatable: value.Confiscatable === true,
       }),
@@ -611,7 +611,7 @@ export const BuildDstasSwapFlowTx = ({
 
 export type TBuildDstasMultisigTxRequest = TBuildDstasBaseTxRequest;
 /**
- * Multisig: provide STAS3 unlocking scripts that include the required
+ * Multisig: provide DSTAS unlocking scripts that include the required
  * M-of-N signatures and any protocol-specific fields.
  */
 export const BuildDstasMultisigTx = (request: TBuildDstasMultisigTxRequest) =>

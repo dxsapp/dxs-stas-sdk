@@ -4,12 +4,12 @@ import { OpCode } from "../../bitcoin/op-codes";
 import { ScriptType } from "../../bitcoin/script-type";
 import { ScriptBuilder } from "./script-builder";
 import { ScriptToken } from "../script-token";
-import { buildStas3BaseTokens } from "../templates/stas3-freeze-multisig-base";
+import { buildDstasTemplateBaseTokens } from "../templates/dstas-locking-template-base";
 import {
   DstasActionData,
   DstasSwapActionData,
   encodeActionData,
-} from "../stas3-second-field";
+} from "../dstas-action-data";
 
 export type ActionDataInput =
   | Bytes
@@ -17,23 +17,23 @@ export type ActionDataInput =
   | null
   | DstasSwapActionData
   | DstasActionData;
-export type Stas3FlagsInput = {
+export type DstasFlagsInput = {
   freezable?: boolean;
   confiscatable?: boolean;
 };
 
-export type Stas3FreezeMultisigParams = {
+export type DstasLockingParams = {
   owner?: Bytes;
   ownerPkh?: Bytes;
   actionData: ActionDataInput;
   redemptionPkh: Bytes;
   frozen?: boolean;
-  flags?: Bytes | Stas3FlagsInput | null;
+  flags?: Bytes | DstasFlagsInput | null;
   serviceFields?: Bytes[];
   optionalData?: Bytes[];
 };
 
-export const buildStas3Flags = (flags?: Stas3FlagsInput): Bytes => {
+export const buildDstasFlags = (flags?: DstasFlagsInput): Bytes => {
   const result = new Uint8Array(1);
   if (flags?.freezable) result[0] |= 0x01;
   if (flags?.confiscatable) result[0] |= 0x02;
@@ -59,7 +59,7 @@ const ensureLength = (value: Bytes, expected: number, name: string) => {
   }
 };
 
-const resolveOwner = (params: Stas3FreezeMultisigParams): Bytes => {
+const resolveOwner = (params: DstasLockingParams): Bytes => {
   const owner = params.owner ?? params.ownerPkh;
   if (!owner || owner.length === 0) {
     throw new Error("owner must be provided");
@@ -104,7 +104,7 @@ const buildActionDataToken = (
 };
 
 const buildFlagsToken = (
-  flags?: Bytes | Stas3FlagsInput | null,
+  flags?: Bytes | DstasFlagsInput | null,
 ): ScriptToken => {
   const fallback = new Uint8Array([0x00]);
   const encoded =
@@ -113,7 +113,7 @@ const buildFlagsToken = (
         ? fallback
         : flags
       : flags
-        ? buildStas3Flags(flags)
+        ? buildDstasFlags(flags)
         : fallback;
 
   if (encoded.length > 75) {
@@ -128,8 +128,8 @@ const buildDataTokens = (values?: Bytes[]): ScriptToken[] => {
   return values.map((v) => ScriptToken.fromBytes(v));
 };
 
-export const buildStas3FreezeMultisigTokens = (
-  params: Stas3FreezeMultisigParams,
+export const buildDstasLockingTokens = (
+  params: DstasLockingParams,
 ): ScriptToken[] => {
   const frozen = params.frozen === true;
 
@@ -150,7 +150,7 @@ export const buildStas3FreezeMultisigTokens = (
     );
   }
 
-  const baseTokens = buildStas3BaseTokens();
+  const baseTokens = buildDstasTemplateBaseTokens();
   const tokens: ScriptToken[] = [ownerToken, actionDataToken, ...baseTokens];
 
   tokens.push(redemptionToken, flagsToken, ...serviceTokens, ...optionalTokens);
@@ -158,16 +158,16 @@ export const buildStas3FreezeMultisigTokens = (
   return tokens;
 };
 
-export const buildStas3FreezeMultisigScript = (
-  params: Stas3FreezeMultisigParams,
+export const buildDstasLockingScript = (
+  params: DstasLockingParams,
 ): Bytes => {
-  const tokens = buildStas3FreezeMultisigTokens(params);
+  const tokens = buildDstasLockingTokens(params);
   return ScriptBuilder.fromTokens(tokens, ScriptType.unknown).toBytes();
 };
 
-export const buildStas3FreezeMultisigAsm = (
-  params: Stas3FreezeMultisigParams,
+export const buildDstasLockingAsm = (
+  params: DstasLockingParams,
 ): string => {
-  const tokens = buildStas3FreezeMultisigTokens(params);
+  const tokens = buildDstasLockingTokens(params);
   return ScriptBuilder.fromTokens(tokens, ScriptType.unknown).toAsm();
 };

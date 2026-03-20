@@ -3,7 +3,7 @@ import { ScriptType } from "../src/bitcoin/script-type";
 import { fromHex, toHex, utf8ToBytes } from "../src/bytes";
 import { P2mpkhBuilder } from "../src/script/build/p2mpkh-builder";
 import { P2stasBuilder } from "../src/script/build/p2stas-builder";
-import { buildStas3FreezeMultisigScript } from "../src/script/build/stas3-freeze-multisig-builder";
+import { buildDstasLockingScript } from "../src/script/build/dstas-locking-builder";
 import {
   LockingScriptReader,
   buildSwapActionData,
@@ -100,7 +100,7 @@ describe("locking script reader", () => {
     const owner = fromHex("0011223344556677889900112233445566778899");
     const redemption = fromHex("e3b111de8fec527b41f4189e313638075d96ccd6");
     const optional = utf8ToBytes("hello-dstas");
-    const script = buildStas3FreezeMultisigScript({
+    const script = buildDstasLockingScript({
       ownerPkh: owner,
       actionData: fromHex("00"),
       redemptionPkh: redemption,
@@ -127,7 +127,7 @@ describe("locking script reader", () => {
     const authority = fromHex("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
     const optional = utf8ToBytes("note");
 
-    const script = buildStas3FreezeMultisigScript({
+    const script = buildDstasLockingScript({
       ownerPkh: owner,
       actionData: null,
       redemptionPkh: redemption,
@@ -153,7 +153,7 @@ describe("locking script reader", () => {
       "cccccccccccccccccccccccccccccccccccccccc",
     );
 
-    const script = buildStas3FreezeMultisigScript({
+    const script = buildDstasLockingScript({
       ownerPkh: owner,
       actionData: null,
       redemptionPkh: redemption,
@@ -180,7 +180,7 @@ describe("locking script reader", () => {
       "2222222222222222222222222222222222222222",
     );
 
-    const script = buildStas3FreezeMultisigScript({
+    const script = buildDstasLockingScript({
       ownerPkh: owner,
       actionData: null,
       redemptionPkh: redemption,
@@ -200,7 +200,7 @@ describe("locking script reader", () => {
     );
   });
 
-  test("parses dstas swap second field", () => {
+  test("parses dstas swap action data", () => {
     const owner = fromHex("1111222233334444555566667777888899990000");
     const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     const swapSecond = buildSwapActionData({
@@ -210,7 +210,7 @@ describe("locking script reader", () => {
       rateDenominator: 100,
     });
 
-    const script = buildStas3FreezeMultisigScript({
+    const script = buildDstasLockingScript({
       ownerPkh: owner,
       actionData: swapSecond,
       redemptionPkh: redemption,

@@ -12,9 +12,9 @@ import { hash160, hash256 } from "../src/hashes";
 import { P2pkhBuilder } from "../src/script/build/p2pkh-builder";
 import { ScriptBuilder } from "../src/script/build/script-builder";
 import {
-  buildStas3Flags,
-  buildStas3FreezeMultisigTokens,
-} from "../src/script/build/stas3-freeze-multisig-builder";
+  buildDstasFlags,
+  buildDstasLockingTokens,
+} from "../src/script/build/dstas-locking-builder";
 import { evaluateTransactionHex } from "../src/script";
 import { BuildDstasIssueTxs, BuildDstasTransferTx } from "../src/dstas-factory";
 import { FeeRate } from "../src/transaction-factory";
@@ -66,12 +66,12 @@ const buildDstasLockingScript = (
   scheme: TokenScheme,
   frozen: boolean,
 ) => {
-  const tokens = buildStas3FreezeMultisigTokens({
+  const tokens = buildDstasLockingTokens({
     ownerPkh: owner.Hash160,
     actionData: null,
     redemptionPkh: fromHex(scheme.TokenId),
     frozen,
-    flags: buildStas3Flags({ freezable: scheme.Freeze }),
+    flags: buildDstasFlags({ freezable: scheme.Freeze }),
     serviceFields: [buildAuthorityServiceField(scheme)],
     optionalData: [],
   });
@@ -115,11 +115,11 @@ const buildAuthorityUnlockingScript = ({
       .addData(output.LockingScript.ToAddress.Hash160);
 
     if (output.LockingScript.ScriptType === ScriptType.dstas) {
-      const secondFieldToken = output.LockingScript._tokens[1];
-      if (secondFieldToken?.Data) {
-        script.addData(secondFieldToken.Data);
-      } else if (secondFieldToken) {
-        script.addOpCode(secondFieldToken.OpCodeNum);
+      const actionDataToken = output.LockingScript._tokens[1];
+      if (actionDataToken?.Data) {
+        script.addData(actionDataToken.Data);
+      } else if (actionDataToken) {
+        script.addOpCode(actionDataToken.OpCodeNum);
       } else {
         throw new Error("Divisible STAS output missing second-field token");
       }

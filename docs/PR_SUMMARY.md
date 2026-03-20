@@ -9,11 +9,11 @@
   - one/two remainders
   - frozen-input rejection
 - Added owner multisig support for Divisible STAS locking path and tests for `3-of-5` owner spending.
-- Added second-field codec support and requested-script-hash integration from updated protocol notes.
+- Added action-data codec support and requested-script-hash integration from updated protocol notes.
 - Captured and verified `optionalData` continuity invariant:
   - if an asset leg is issued with `optionalData`, descendant DSTAS outputs must preserve it byte-exact;
   - dropping/changing it causes script validation failure;
-  - `requestedScriptHash` hash-domain includes optionalData (tail from after second field to script end).
+  - `requestedScriptHash` hash-domain includes optionalData (tail from after action data to script end).
 - Switched redemption path to updated P2MPKH-compatible handling and aligned issuer UTXO assumptions.
 - Refined unlocking layout handling for with-change/no-change and multi-input merge payload in evaluation path.
 - Hardened `unlockingScriptSize()` as deterministic upper-bound for multisig authority path (without signing iterations).
@@ -25,9 +25,9 @@
 - `src/dstas-bundle-factory.ts`
 - `src/transaction/build/input-builder.ts`
 - `src/script/read/locking-script-reader.ts`
-- `src/script/read/stas3-locking-script-decomposer.ts`
-- `src/script/read/stas3-unlocking-script-decomposer.ts`
-- `src/script/stas3-second-field.ts`
+- `src/script/read/dstas-locking-script-decomposer.ts`
+- `src/script/read/dstas-unlocking-script-decomposer.ts`
+- `src/script/dstas-action-data.ts`
 - `tests/dstas-flow.test.ts`
 - `tests/dstas-multisig-authority-flow.test.ts`
 - `tests/dstas-bundle-factory.test.ts`

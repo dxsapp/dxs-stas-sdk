@@ -10,9 +10,9 @@ import { ScriptType } from "../src/bitcoin/script-type";
 import { Address } from "../src/bitcoin/address";
 import { fromHex } from "../src/bytes";
 import {
-  buildStas3Flags,
-  buildStas3FreezeMultisigTokens,
-} from "../src/script/build/stas3-freeze-multisig-builder";
+  buildDstasFlags,
+  buildDstasLockingTokens,
+} from "../src/script/build/dstas-locking-builder";
 import { TransactionReader } from "../src/transaction/read/transaction-reader";
 import { ScriptBuilder } from "../src/script/build/script-builder";
 import { TransactionBuilder } from "../src/transaction/build/transaction-builder";
@@ -91,7 +91,7 @@ const makeFactory = (
     actionData: null,
     redemptionPkh,
     frozen: false,
-    flags: buildStas3Flags({ freezable: true }),
+    flags: buildDstasFlags({ freezable: true }),
     serviceFields: [freezeAuthorityPkh],
     optionalData: [],
   }));
@@ -315,12 +315,12 @@ describe("DstasBundleFactory spendType flags", () => {
       );
 
       const lockingScript = ScriptBuilder.fromTokens(
-        buildStas3FreezeMultisigTokens({
+        buildDstasLockingTokens({
           owner: ownerFieldBytes,
           actionData: null,
           redemptionPkh,
           frozen: false,
-          flags: buildStas3Flags({ freezable: true }),
+          flags: buildDstasFlags({ freezable: true }),
           serviceFields: [freezeAuthorityPkh],
           optionalData: [],
         }),
@@ -394,7 +394,7 @@ describe("DstasBundleFactory spendType flags", () => {
         actionData: null,
         redemptionPkh,
         frozen: false,
-        flags: buildStas3Flags({ freezable: true }),
+        flags: buildDstasFlags({ freezable: true }),
         serviceFields: [freezeAuthorityPkh],
         optionalData: [],
       }),
@@ -427,12 +427,12 @@ describe("DstasBundleFactory spendType flags", () => {
       );
 
       const lockingScript = ScriptBuilder.fromTokens(
-        buildStas3FreezeMultisigTokens({
+        buildDstasLockingTokens({
           ownerPkh,
           actionData: null,
           redemptionPkh,
           frozen: false,
-          flags: buildStas3Flags({ freezable: true }),
+          flags: buildDstasFlags({ freezable: true }),
           serviceFields: [freezeAuthorityPkh],
           optionalData: [],
         }),
@@ -507,7 +507,7 @@ describe("DstasBundleFactory spendType flags", () => {
         actionData: null,
         redemptionPkh,
         frozen: false,
-        flags: buildStas3Flags({ freezable: true }),
+        flags: buildDstasFlags({ freezable: true }),
         serviceFields: [freezeAuthorityPkh],
         optionalData: [],
       }),

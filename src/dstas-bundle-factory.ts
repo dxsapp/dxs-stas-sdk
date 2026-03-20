@@ -11,13 +11,13 @@ import { TransactionBuilder, TransactionReader } from "./transaction";
 import { OutputBuilder } from "./transaction/build/output-builder";
 import { FeeRate } from "./transaction-factory";
 import {
-  Stas3FreezeMultisigParams,
-  buildStas3FreezeMultisigScript,
-} from "./script/build/stas3-freeze-multisig-builder";
+  DstasLockingParams,
+  buildDstasLockingScript,
+} from "./script/build/dstas-locking-builder";
 import { ScriptBuilder } from "./script/build/script-builder";
 import { ScriptReader } from "./script/read/script-reader";
 
-export const AvgFeeForStas30Merge = 500;
+export const AvgFeeForDstasMerge = 500;
 
 export type TDstasFundingUtxoRequest = {
   utxoIdsToSpend: string[];
@@ -73,7 +73,7 @@ export type TDstasLockingParamsBuilder = (args: {
   outputIndex: number;
   outputCount: number;
   isChange: boolean;
-}) => Stas3FreezeMultisigParams;
+}) => DstasLockingParams;
 
 export type TDstasUnlockingScriptBuilder = (args: {
   txBuilder: TransactionBuilder;
@@ -90,7 +90,7 @@ export type TDstasPayment = TPayment & {
 
 export type TDstasDestination = {
   Satoshis: number;
-  LockingParams: Stas3FreezeMultisigParams;
+  LockingParams: DstasLockingParams;
 };
 
 export class DstasBundleFactory {
@@ -412,7 +412,7 @@ export class DstasBundleFactory {
         txOutputs,
         spendType,
       );
-      const txRaw = this.buildStas30Tx({
+      const txRaw = this.buildDstasTx({
         stasPayments: [{ OutPoint: currentStas, Owner: this.stasWallet }],
         feePayment: { OutPoint: currentFee, Owner: this.feeWallet },
         destinations,
@@ -537,7 +537,7 @@ export class DstasBundleFactory {
             "transfer",
           );
 
-          const txRaw = this.buildStas30Tx({
+          const txRaw = this.buildDstasTx({
             stasPayments: [stasPayment],
             feePayment,
             destinations,
@@ -607,7 +607,7 @@ export class DstasBundleFactory {
             "merge",
           );
 
-          const txRaw = this.buildStas30Tx({
+          const txRaw = this.buildDstasTx({
             stasPayments: [
               { OutPoint: outPoint1, Owner: this.stasWallet },
               { OutPoint: outPoint2, Owner: this.stasWallet },
@@ -633,7 +633,7 @@ export class DstasBundleFactory {
     return { mergeTransactions, mergeFeeUtxo: feePayment.OutPoint, stasUtxo };
   };
 
-  private buildStas30Tx = (params: {
+  private buildDstasTx = (params: {
     stasPayments: TDstasPayment[];
     feePayment: TPayment;
     destinations: TDstasDestination[];
@@ -747,9 +747,9 @@ export class DstasBundleFactory {
   };
 
   private buildDstasLockingScriptBuilder = (
-    params: Stas3FreezeMultisigParams,
+    params: DstasLockingParams,
   ) => {
-    const scriptBytes = buildStas3FreezeMultisigScript(params);
+    const scriptBytes = buildDstasLockingScript(params);
     const tokens = ScriptReader.read(scriptBytes);
     return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
   };

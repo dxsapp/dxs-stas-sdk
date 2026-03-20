@@ -23,4 +23,4 @@ All binary inputs and outputs now use `Uint8Array` instead of `Buffer`.
 
 - All public APIs now accept/return `Uint8Array`.
 - If a dependency returns `Buffer`, treat it as `Uint8Array` and do not call `Buffer` methods on it.
-- STAS 3.0 builders and the script evaluator are byte-based; ASM helpers (`toAsm`, `fromAsm`) remain available for inspection only.
+- DSTAS builders and the script evaluator are byte-based; ASM helpers (`toAsm`, `fromAsm`) remain available for inspection only.

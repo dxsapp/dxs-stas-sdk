@@ -3,10 +3,10 @@ import { OutPoint } from "../src/bitcoin/out-point";
 import { ScriptType } from "../src/bitcoin/script-type";
 import { ScriptBuilder } from "../src/script/build/script-builder";
 import {
-  buildStas3Flags,
-  buildStas3FreezeMultisigTokens,
-} from "../src/script/build/stas3-freeze-multisig-builder";
-import { buildSwapActionData } from "../src/script/stas3-second-field";
+  buildDstasFlags,
+  buildDstasLockingTokens,
+} from "../src/script/build/dstas-locking-builder";
+import { buildSwapActionData } from "../src/script/dstas-action-data";
 import { ResolveDstasSwapMode } from "../src/dstas-factory";
 import { fromHex } from "../src/bytes";
 
@@ -20,12 +20,12 @@ const makeDstasOutPoint = (
   owner: Wallet,
   actionData: Uint8Array | null,
 ): OutPoint => {
-  const tokens = buildStas3FreezeMultisigTokens({
+  const tokens = buildDstasLockingTokens({
     owner: owner.Address.Hash160,
     actionData,
     redemptionPkh: tokenId,
     frozen: false,
-    flags: buildStas3Flags({ freezable: false }),
+    flags: buildDstasFlags({ freezable: false }),
     serviceFields: [],
     optionalData: [],
   });

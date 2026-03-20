@@ -698,7 +698,7 @@ const vectors: ConformanceVector[] = [
     expectedSuccess: true,
     run: () => {
       const fixture = createRealFundingFlowFixture();
-      const swapSecondField = buildSwapActionData({
+      const swapActionData = buildSwapActionData({
         requestedScriptHash: new Uint8Array(32),
         requestedPkh: fixture.bob.Address.Hash160,
         rateNumerator: 0,
@@ -715,7 +715,7 @@ const vectors: ConformanceVector[] = [
           {
             Satoshis: 100,
             To: fixture.bob.Address,
-            ActionData: swapSecondField,
+            ActionData: swapActionData,
           },
         ],
       });
@@ -753,7 +753,7 @@ const vectors: ConformanceVector[] = [
           {
             Satoshis: stasOutPoint.Satoshis,
             To: fixture.bob.Address,
-            ActionData: swapSecondField,
+            ActionData: swapActionData,
           },
         ],
         Scheme: fixture.scheme,

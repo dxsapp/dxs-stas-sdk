@@ -2,7 +2,7 @@ import { Address } from "../../bitcoin/address";
 import { OpCode } from "../../bitcoin/op-codes";
 import { ScriptType } from "../../bitcoin/script-type";
 import { Bytes, bytesToUtf8, fromHex, toHex } from "../../bytes";
-import { buildStas3BaseTokens } from "../templates/stas3-freeze-multisig-base";
+import { buildDstasTemplateBaseTokens } from "../templates/dstas-locking-template-base";
 import {
   getP2stasTokens,
   nullDataTokens,
@@ -12,7 +12,7 @@ import {
 import { ScriptToken } from "../script-token";
 import { BaseScriptReader } from "./base-script-reader";
 import { ScriptReadToken } from "./script-read-token";
-import { ParsedActionData, decodeActionData } from "../stas3-second-field";
+import { ParsedActionData, decodeActionData } from "../dstas-action-data";
 
 type DetectContext = {
   Result: boolean;
@@ -82,7 +82,7 @@ export class LockingScriptReader extends BaseScriptReader {
     },
   ];
 
-  private dstasBaseTokens = buildStas3BaseTokens();
+  private dstasBaseTokens = buildDstasTemplateBaseTokens();
 
   private dstasCtx: DstasDetectContext = {
     Result: true,
