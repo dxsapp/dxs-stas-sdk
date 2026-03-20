@@ -158,16 +158,12 @@ export const buildDstasLockingTokens = (
   return tokens;
 };
 
-export const buildDstasLockingScript = (
-  params: DstasLockingParams,
-): Bytes => {
+export const buildDstasLockingScript = (params: DstasLockingParams): Bytes => {
   const tokens = buildDstasLockingTokens(params);
   return ScriptBuilder.fromTokens(tokens, ScriptType.unknown).toBytes();
 };
 
-export const buildDstasLockingAsm = (
-  params: DstasLockingParams,
-): string => {
+export const buildDstasLockingAsm = (params: DstasLockingParams): string => {
   const tokens = buildDstasLockingTokens(params);
   return ScriptBuilder.fromTokens(tokens, ScriptType.unknown).toAsm();
 };

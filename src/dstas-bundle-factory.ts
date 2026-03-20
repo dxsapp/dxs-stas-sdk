@@ -746,9 +746,7 @@ export class DstasBundleFactory {
       throw new Error("Input satoshis must be equal output satoshis");
   };
 
-  private buildDstasLockingScriptBuilder = (
-    params: DstasLockingParams,
-  ) => {
+  private buildDstasLockingScriptBuilder = (params: DstasLockingParams) => {
     const scriptBytes = buildDstasLockingScript(params);
     const tokens = ScriptReader.read(scriptBytes);
     return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
