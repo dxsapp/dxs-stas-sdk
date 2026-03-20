@@ -18,5 +18,5 @@ Scoped guidance for `/Users/imighty/Code/dxs-stas-sdk/src`.
 - New protocol work belongs in DSTAS files, not in the older STAS workflow surface.
 - If a DSTAS change requires touching low-level core, keep behavior covered by script-level tests.
 - Do not introduce new `stas30`, `Stas3`, version-tagged, or `second field` terminology.
-  Use `DSTAS` and `actionData`.
+  Use `DSTAS` and `actionData`; never use `second field`.
 - Do not add new code against deprecated `LockignScript`; use `LockingScript` only.

@@ -23,9 +23,10 @@ This file is the root onboarding entrypoint for AI coding agents working on this
 ## Preferred implementation path
 
 - Prefer high-level DSTAS APIs first:
-  - `dstas.DstasBundleFactory` for multi-step payout/split/merge planning.
-  - `dstas.BuildDstas*` helpers for single-flow transactions.
-- Use the `stas` namespace only when you intentionally need the older, lower-level STAS workflow surface.
+  - `dxs-stas-sdk/dstas` subpath for protocol-facing flow imports.
+  - `DstasBundleFactory` for multi-step payout/split/merge planning.
+  - `BuildDstas*` helpers for single-flow transactions.
+- Use `dxs-stas-sdk/stas` only when you intentionally need the older, lower-level STAS workflow surface.
 
 ## Mandatory validation rule
 

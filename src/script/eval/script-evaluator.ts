@@ -148,7 +148,6 @@ const encodeScriptNum = (value: bigint): Bytes => {
   return new Uint8Array(result);
 };
 
-const toBigInt = (value: Bytes): bigint => decodeScriptNum(value);
 const fromBigInt = (value: bigint): Bytes => encodeScriptNum(value);
 
 const pushBool = (stack: Bytes[], value: boolean) => {
@@ -335,7 +334,7 @@ const buildSighashPreimage = (
           ),
         );
 
-  let outputsHash = new Uint8Array(32);
+  let outputsHash: Uint8Array = new Uint8Array(32);
   if (baseType === SignatureHashType.SIGHASH_ALL) {
     const outputsSize = tx.Outputs.reduce(
       (sum, out) => sum + outputSize(out),
@@ -1093,17 +1092,19 @@ class ScriptInterpreter {
         );
         const msg = hash256(preimage);
 
-        let ok = false;
-        try {
-          ok =
-            signature.length > 0 &&
-            nobleVerify(signature, msg, pubKey, {
-              prehash: false,
-              format: "compact",
-            });
-        } catch {
-          ok = false;
-        }
+        const ok = (() => {
+          try {
+            return (
+              signature.length > 0 &&
+              nobleVerify(signature, msg, pubKey, {
+                prehash: false,
+                format: "compact",
+              })
+            );
+          } catch {
+            return false;
+          }
+        })();
 
         if (opcode === OpCode.OP_CHECKSIGVERIFY) {
           if (!ok) throw new ScriptEvalError("OP_CHECKSIGVERIFY failed");

@@ -25,7 +25,7 @@ TypeScript SDK for building and validating Bitcoin SV transaction flows, includi
 - `src/dstas-bundle-factory.ts`
 - `src/script/eval/script-evaluator.ts`
 
-## Protocol namespaces
+## Protocol subpaths
 
-- `dstas`: canonical Divisible STAS flow API
-- `stas`: older, lower-level STAS flow API
+- `dxs-stas-sdk/dstas`: canonical Divisible STAS flow API
+- `dxs-stas-sdk/stas`: older, lower-level STAS flow API
