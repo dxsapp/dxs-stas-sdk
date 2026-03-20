@@ -17,9 +17,6 @@ TypeScript SDK for building and validating Bitcoin SV transaction flows, includi
 ## Additional references
 
 - [DSTAS Locking Template Notes](docs/DSTAS_LOCKING_TEMPLATE_NOTES.md)
-- [Migration Notes](docs/MIGRATION.md)
-
-Do not use `docs/AGENT_HANDBOOK.md` as a decision source. It is historical context only and may drift.
 
 ## Code entry points
 

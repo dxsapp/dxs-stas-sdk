@@ -28,8 +28,6 @@ If you are integrating this SDK through an AI coding agent, start with:
 - `docs/AGENT_RUNBOOK.md` (task execution workflow)
 - `docs/DSTAS_SDK_SPEC.md` (normative protocol behavior)
 
-Use `docs/AGENT_HANDBOOK.md` only for historical archaeology. It is intentionally not a decision-making source.
-
 ## Concepts
 
 An `OutPoint` represents a spendable UTXO: txid, vout, locking script, satoshis, and owner address.

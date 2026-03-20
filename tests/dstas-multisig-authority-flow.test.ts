@@ -121,7 +121,7 @@ const buildAuthorityUnlockingScript = ({
       } else if (actionDataToken) {
         script.addOpCode(actionDataToken.OpCodeNum);
       } else {
-        throw new Error("Divisible STAS output missing second-field token");
+        throw new Error("Divisible STAS output missing action-data token");
       }
     }
 

@@ -116,7 +116,7 @@ export class InputBilder {
               script.addOpCode(actionDataToken.OpCodeNum);
             } else {
               throw new Error(
-                "Divisible STAS output is missing second-field token in locking script",
+                "Divisible STAS output is missing action-data token in locking script",
               );
             }
           } else if (

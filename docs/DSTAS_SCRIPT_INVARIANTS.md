@@ -79,13 +79,13 @@ Swap exchanges ownership across two independent assets.
   `assetA in == assetA out`, `assetB in == assetB out`.
 - Freeze rule:
   Frozen STAS inputs are not swappable.
-- Second-field rule:
+- Action-data rule:
   Principal swap outputs use neutral action marker (`OP_FALSE`).
-  Remainder outputs inherit second-field context from their origin leg.
+  Remainder outputs inherit action-data context from their origin leg.
 - Requested-script-hash rule:
   For swap action-data, `requestedScriptHash` is computed as `SHA256(lockingScriptTail)`,
   where `lockingScriptTail` is all locking-script bytes starting immediately after the
-  second variable field and up to the end of the locking script.
+  action-data variable field and up to the end of the locking script.
   This includes base template bytes, redemption field, flags, service fields, and optional data.
 
 ## 6. Confiscation

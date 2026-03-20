@@ -1,6 +1,6 @@
 # AGENTS
 
-This file is a fast onboarding entrypoint for AI coding agents working on this repository.
+This file is the root onboarding entrypoint for AI coding agents working on this repository.
 
 ## Read order
 
@@ -9,6 +9,16 @@ This file is a fast onboarding entrypoint for AI coding agents working on this r
 3. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SDK_SPEC.md` (normative protocol rules)
 4. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SCRIPT_INVARIANTS.md` (script-level invariants)
 5. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_CONFORMANCE_MATRIX.md` (test mapping)
+6. Scoped guidance in `/Users/imighty/Code/dxs-stas-sdk/src/AGENTS.md` and `/Users/imighty/Code/dxs-stas-sdk/tests/AGENTS.md` when working in those paths
+
+## Repository zones
+
+- `src/dstas*`, `src/script/*`, `tests/dstas*`, `tests/helpers/*`
+  Canonical DSTAS implementation and verification surface.
+- `src/stas-bundle-factory.ts`, `src/transaction-factory.ts`
+  Legacy STAS compatibility surface. Do not use for new DSTAS work.
+- `src/bitcoin/*`, `src/buffer/*`, `src/security/*`, `src/transaction/*`
+  Low-level core primitives shared by both protocol layers.
 
 ## Preferred implementation path
 
