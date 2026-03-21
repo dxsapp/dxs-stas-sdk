@@ -3,7 +3,19 @@ import { readFileSync } from "fs";
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 
 describe("package exports", () => {
-  test("declares dstas and stas subpath exports", () => {
+  test("declares only root plus protocol subpath exports", () => {
+    expect(Object.keys(pkg.exports)).toEqual([
+      ".",
+      "./dstas",
+      "./stas",
+      "./package.json",
+    ]);
+    expect(pkg.exports["."]).toEqual({
+      types: "./dist/index.d.ts",
+      import: "./dist/index.js",
+      require: "./dist/index.js",
+      default: "./dist/index.js",
+    });
     expect(pkg.exports["./dstas"]).toEqual({
       types: "./dist/dstas.d.ts",
       import: "./dist/dstas.js",

@@ -1,15 +1,7 @@
 import { execFileSync } from "child_process";
-import { basename } from "path";
-import {
-  mkdtempSync,
-  mkdirSync,
-  renameSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "fs";
+import { basename, dirname, join, resolve } from "path";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { dirname, join, resolve } from "path";
 import { randomUUID } from "crypto";
 import { fileURLToPath } from "url";
 
@@ -50,30 +42,6 @@ const packPackage = () => {
 
 const prepareConsumer = (tarballPath: string) => {
   const consumerDir = mkdtempSync(join(tmpdir(), "dxs-stas-sdk-consumer-"));
-  const nodeModulesDir = join(consumerDir, "node_modules");
-  mkdirSync(nodeModulesDir, { recursive: true });
-
-  symlinkSync(
-    join(repoRoot, "node_modules", "@noble"),
-    join(nodeModulesDir, "@noble"),
-    "dir",
-  );
-  symlinkSync(
-    join(repoRoot, "node_modules", "@scure"),
-    join(nodeModulesDir, "@scure"),
-    "dir",
-  );
-
-  execFileSync(
-    process.platform === "win32" ? "tar.exe" : "tar",
-    ["-xzf", tarballPath, "-C", nodeModulesDir],
-    { stdio: "pipe" },
-  );
-  renameSync(
-    join(nodeModulesDir, "package"),
-    join(nodeModulesDir, "dxs-stas-sdk"),
-  );
-
   writeFileSync(
     join(consumerDir, "package.json"),
     JSON.stringify(
@@ -83,11 +51,27 @@ const prepareConsumer = (tarballPath: string) => {
     ),
   );
 
+  execFileSync(
+    npmBin,
+    [
+      "install",
+      "--ignore-scripts",
+      "--no-package-lock",
+      "--no-audit",
+      "--no-fund",
+      tarballPath,
+    ],
+    {
+      cwd: consumerDir,
+      stdio: "pipe",
+    },
+  );
+
   return consumerDir;
 };
 
 describe("package smoke", () => {
-  test("packs only consumer files and resolves root/dstas/stas from the built tarball", () => {
+  test("packs only consumer files and resolves root/dstas/stas from a clean install", () => {
     const { packDir, tarballPath, files, staleDist } = packPackage();
     let consumerDir = "";
 
@@ -125,10 +109,15 @@ describe("package smoke", () => {
         'const root = require("dxs-stas-sdk");',
         'const dstas = require("dxs-stas-sdk/dstas");',
         'const stas = require("dxs-stas-sdk/stas");',
+        'assert.equal(typeof root.BuildDstasIssueTxs, "undefined");',
+        'assert.equal(typeof root.BuildTransferTx, "undefined");',
         'assert.equal(typeof root.dstas.BuildDstasIssueTxs, "function");',
         'assert.equal(typeof root.dstas.DstasBundleFactory, "function");',
         'assert.equal(typeof root.stas.BuildTransferTx, "function");',
         'assert.equal(typeof root.stas.StasBundleFactory, "function");',
+        'assert.equal(typeof root.PrivateKey, "function");',
+        'assert.equal(typeof root.TransactionBuilder, "function");',
+        'assert.equal(typeof root.LockingScriptReader, "function");',
         'assert.equal(typeof dstas.BuildDstasTransferTx, "function");',
         'assert.equal(typeof dstas.BuildDstasConfiscateTx, "function");',
         'assert.equal(typeof stas.BuildSplitTx, "function");',
@@ -145,8 +134,13 @@ describe("package smoke", () => {
         'import * as root from "dxs-stas-sdk";',
         'import * as dstas from "dxs-stas-sdk/dstas";',
         'import * as stas from "dxs-stas-sdk/stas";',
+        'assert.equal(typeof root.BuildDstasIssueTxs, "undefined");',
+        'assert.equal(typeof root.BuildTransferTx, "undefined");',
         'assert.equal(typeof root.dstas.BuildDstasIssueTxs, "function");',
         'assert.equal(typeof root.stas.BuildTransferTx, "function");',
+        'assert.equal(typeof root.PrivateKey, "function");',
+        'assert.equal(typeof root.TransactionBuilder, "function");',
+        'assert.equal(typeof root.LockingScriptReader, "function");',
         'assert.equal(typeof dstas.BuildDstasTransferTx, "function");',
         'assert.equal(typeof dstas.BuildDstasConfiscateTx, "function");',
         'assert.equal(typeof stas.BuildTransferTx, "function");',

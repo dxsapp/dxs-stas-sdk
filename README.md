@@ -1,6 +1,6 @@
 # dxs-stas-sdk
 
-TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS token scripts and a lower-level STAS workflow surface. Shared primitives live at the package root; protocol flow APIs are available through dedicated `dxs-stas-sdk/dstas` and `dxs-stas-sdk/stas` subpath exports.
+TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS token scripts and a lower-level STAS workflow surface. Use `dxs-stas-sdk/dstas` for canonical DSTAS flows, `dxs-stas-sdk/stas` for the older STAS workflow surface, and `dxs-stas-sdk` root imports only for shared primitives.
 
 ## Binary types
 
@@ -20,19 +20,19 @@ All binary inputs/outputs are `Uint8Array` (no Node.js `Buffer` in the public AP
 npm install dxs-stas-sdk
 ```
 
-## AI Agent onboarding
+## Quick start import rules
+
+- `dxs-stas-sdk/dstas`: canonical DSTAS issue/transfer/freeze/confiscation/redeem/swap flows
+- `dxs-stas-sdk/stas`: older STAS transaction helpers
+- `dxs-stas-sdk`: shared primitives such as `PrivateKey`, `OutPoint`, `TransactionBuilder`, `LockingScriptReader`, and byte/hash helpers
+
+## AI agent onboarding
 
 If you are integrating this SDK through an AI coding agent, start with:
 
-- `AGENTS.md` (fast onboarding and guardrails)
-- `docs/AGENT_RUNBOOK.md` (task execution workflow)
-- `docs/DSTAS_SDK_SPEC.md` (normative protocol behavior)
-
-## Protocol imports
-
-- Prefer `dxs-stas-sdk/dstas` for canonical DSTAS flows.
-- Use `dxs-stas-sdk/stas` only when you intentionally need the older, lower-level STAS workflow surface.
-- Keep `dxs-stas-sdk` root imports for shared primitives (`PrivateKey`, `OutPoint`, `TransactionBuilder`, script readers, hashing helpers).
+- `AGENTS.md`
+- `docs/AGENT_RUNBOOK.md`
+- `docs/DSTAS_SDK_SPEC.md`
 
 ## Concepts
 
@@ -307,14 +307,6 @@ const txHex = BuildTransferTx({
 });
 ```
 
-## What this library is for
-
-- Construct and parse raw Bitcoin SV transactions.
-- Build and read scripts (P2PKH, OP_RETURN, DSTAS, STAS).
-- Create DSTAS token transactions through the canonical `dxs-stas-sdk/dstas` subpath.
-- Use `dxs-stas-sdk/stas` only for the older, lower-level STAS workflow surface.
-- Work with keys, addresses, and standard hashing helpers.
-
 ## FAQ / common pitfalls
 
 - You typically need two inputs for STAS flows: one STAS UTXO and one fee-paying UTXO. (see: src/transaction-factory.ts:22-221)
@@ -323,32 +315,20 @@ const txHex = BuildTransferTx({
 - `Address.fromBase58` only accepts mainnet prefixes. (see: src/bitcoin/address.ts:26-31)
 - STAS script classification relies on known token templates; unknown scripts will classify as `unknown`. (see: src/bitcoin/transaction-output.ts:21-103, src/script/script-samples.ts:5-26)
 
-## API overview (high level)
-
-| Area                    | Purpose                               | Key exports                                                                                                        |
-| ----------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Bytes                   | Hex/UTF-8 helpers and byte utilities  | `fromHex`, `toHex`, `utf8ToBytes`, `bytesToUtf8`, `concat`, `equal`                                                |
-| Bitcoin primitives      | Keys, addresses, transactions         | `PrivateKey`, `Address`, `Transaction`, `OutPoint`                                                                 |
-| Script builders/readers | Build and parse scripts               | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader`                                |
-| Transaction building    | Assemble raw txs                      | `TransactionBuilder`, `TransactionReader`                                                                          |
-| Root package            | Shared primitives and low-level tools | `PrivateKey`, `Address`, `OutPoint`, `TransactionBuilder`, `ScriptReader`, `hash160`                               |
-| `dxs-stas-sdk/dstas`    | Canonical DSTAS workflows             | `DstasBundleFactory`, `BuildDstasIssueTxs`, `BuildDstasTransferTx`, `BuildDstasFreezeTx`, `BuildDstasConfiscateTx` |
-| `dxs-stas-sdk/stas`     | Older STAS workflow surface           | `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, `BuildRedeemTx`, `StasBundleFactory`                            |
-
 ## Strict mode
 
-Some hardening defaults are already enabled out of the box:
+These hardening defaults are already enabled out of the box:
 
 - `strictTxParse: true`
+- `strictOutPointValidation: true`
 - `strictFeeRateValidation: true`
+- `strictScriptReader: true`
+- `strictScriptEvaluation: true`
 
 Other strict checks remain opt-in because they are more compatibility-sensitive:
 
-- `strictOutPointValidation`
 - `strictPresetUnlockingScript`
 - `strictMultisigKeys`
-- `strictScriptReader`
-- `strictScriptEvaluation`
 
 Use `configureStrictMode(...)` to tighten behavior further:
 
