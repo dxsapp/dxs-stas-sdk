@@ -119,6 +119,27 @@ describe("strict mode hardening", () => {
     );
   });
 
+  test("strictScriptReader throws on malformed PUSHDATA2 and PUSHDATA4 headers", () => {
+    const malformed2 = new Uint8Array([OpCode.OP_PUSHDATA2, 0x02]);
+    const malformed4 = new Uint8Array([
+      OpCode.OP_PUSHDATA4,
+      0x01,
+      0x00,
+      0x00,
+    ]);
+
+    expect(ScriptReader.read(malformed2)).toEqual([]);
+    expect(ScriptReader.read(malformed4)).toEqual([]);
+
+    configureStrictMode({ strictScriptReader: true });
+    expect(() => ScriptReader.read(malformed2)).toThrow(
+      "Malformed pushdata at offset 0",
+    );
+    expect(() => ScriptReader.read(malformed4)).toThrow(
+      "Malformed pushdata at offset 0",
+    );
+  });
+
   test("strictOutPointValidation rejects script type mismatch", () => {
     const from = issuerPrivateKey.Address;
 

@@ -10,6 +10,7 @@ import {
   DstasSwapActionData,
   encodeActionData,
 } from "../dstas-action-data";
+import { assertSupportedIdentityField } from "../identity-field";
 
 export type ActionDataInput =
   | Bytes
@@ -64,6 +65,7 @@ const resolveOwner = (params: DstasLockingParams): Bytes => {
   if (!owner || owner.length === 0) {
     throw new Error("owner must be provided");
   }
+  assertSupportedIdentityField(owner, "owner");
   return owner;
 };
 
@@ -148,6 +150,9 @@ export const buildDstasLockingTokens = (
     throw new Error(
       `serviceFields count ${serviceTokens.length} does not match flags requirements ${expectedServiceFieldsCount}`,
     );
+  }
+  for (const serviceField of params.serviceFields ?? []) {
+    assertSupportedIdentityField(serviceField, "service field");
   }
 
   const baseTokens = buildDstasTemplateBaseTokens();

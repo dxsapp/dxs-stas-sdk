@@ -13,6 +13,10 @@ import { ScriptToken } from "../script-token";
 import { BaseScriptReader } from "./base-script-reader";
 import { ScriptReadToken } from "./script-read-token";
 import { ParsedActionData, decodeActionData } from "../dstas-action-data";
+import {
+  isSupportedIdentityField,
+  sameBytesOrShape,
+} from "../identity-field";
 
 type DetectContext = {
   Result: boolean;
@@ -41,21 +45,6 @@ type DstasDetectContext = {
   Flags?: Bytes;
   ServiceFields: Bytes[];
   OptionalData: Bytes[];
-};
-
-const tryDecodeActionData = (
-  data: Bytes | undefined,
-): ParsedActionData | undefined => {
-  if (!data) return undefined;
-  try {
-    return decodeActionData(data);
-  } catch {
-    return {
-      kind: "unknown",
-      action: data[0] ?? 0,
-      payload: data.subarray(1),
-    };
-  }
 };
 
 export class LockingScriptReader extends BaseScriptReader {
@@ -173,10 +162,7 @@ export class LockingScriptReader extends BaseScriptReader {
   }
 
   private sameToken(expected: ScriptToken, actual: ScriptReadToken): boolean {
-    return (
-      expected.OpCodeNum === actual.OpCodeNum &&
-      expected.DataLength === actual.Data.length
-    );
+    return sameBytesOrShape(expected, actual);
   }
 
   private addData(data: Bytes): void {
@@ -189,7 +175,7 @@ export class LockingScriptReader extends BaseScriptReader {
 
     switch (this.dstasCtx.Stage) {
       case "owner": {
-        if (!this.isPushData(token)) {
+        if (!this.isPushData(token) || !isSupportedIdentityField(token.Data)) {
           this.dstasCtx.Result = false;
           return;
         }
@@ -257,6 +243,10 @@ export class LockingScriptReader extends BaseScriptReader {
           this.dstasCtx.ServiceFields.length <
           this.dstasCtx.ExpectedServiceFieldsCount
         ) {
+          if (!isSupportedIdentityField(token.Data)) {
+            this.dstasCtx.Result = false;
+            return;
+          }
           this.dstasCtx.ServiceFields.push(token.Data);
         } else {
           this.dstasCtx.OptionalData.push(token.Data);
@@ -285,6 +275,16 @@ export class LockingScriptReader extends BaseScriptReader {
     )
       return;
 
+    let actionDataParsed: ParsedActionData | undefined;
+    if (this.dstasCtx.ActionDataRaw) {
+      try {
+        actionDataParsed = decodeActionData(this.dstasCtx.ActionDataRaw);
+      } catch {
+        this.dstasCtx.Result = false;
+        return;
+      }
+    }
+
     this.ScriptTypeOverride = ScriptType.dstas;
     if (this.dstasCtx.Owner.length === 20) {
       this.Address = new Address(this.dstasCtx.Owner);
@@ -293,7 +293,7 @@ export class LockingScriptReader extends BaseScriptReader {
       Owner: this.dstasCtx.Owner,
       ActionDataRaw: this.dstasCtx.ActionDataRaw,
       ActionDataOpCode: this.dstasCtx.ActionDataOpCode,
-      ActionDataParsed: tryDecodeActionData(this.dstasCtx.ActionDataRaw),
+      ActionDataParsed: actionDataParsed,
       Redemption: this.dstasCtx.Redemption,
       Flags: this.dstasCtx.Flags,
       FreezeEnabled: this.dstasCtx.FreezeEnabled,

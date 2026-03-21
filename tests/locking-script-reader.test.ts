@@ -3,7 +3,12 @@ import { ScriptType } from "../src/bitcoin/script-type";
 import { fromHex, toHex, utf8ToBytes } from "../src/bytes";
 import { P2mpkhBuilder } from "../src/script/build/p2mpkh-builder";
 import { P2stasBuilder } from "../src/script/build/p2stas-builder";
-import { buildDstasLockingScript } from "../src/script/build/dstas-locking-builder";
+import {
+  buildDstasLockingScript,
+  buildDstasLockingTokens,
+} from "../src/script/build/dstas-locking-builder";
+import { ScriptBuilder } from "../src/script/build/script-builder";
+import { ScriptToken } from "../src/script/script-token";
 import {
   LockingScriptReader,
   buildSwapActionData,
@@ -11,6 +16,7 @@ import {
   getSymbol,
   getTokenId,
 } from "../src/script";
+import { ScriptReader } from "../src/script/read/script-reader";
 
 describe("locking script reader", () => {
   test("detects p2pkh and extracts address", () => {
@@ -50,6 +56,16 @@ describe("locking script reader", () => {
     expect(reader.ScriptType).toBe(ScriptType.nullData);
     expect(reader.Data).toHaveLength(1);
     expect(toHex(reader.Data![0])).toBe("4c05aabb");
+  });
+
+  test("keeps malformed ScriptReader and LockingScriptReader behavior intentionally different", () => {
+    const broken = fromHex("006a4c05aabb");
+
+    expect(ScriptReader.read(broken)).toEqual([]);
+
+    const reader = LockingScriptReader.read(broken);
+    expect(reader.ScriptType).toBe(ScriptType.nullData);
+    expect(reader.Data).toHaveLength(1);
   });
 
   test("extracts p2stas helper fields", () => {
@@ -223,5 +239,117 @@ describe("locking script reader", () => {
     if (reader.Dstas?.ActionDataParsed?.kind !== "swap") return;
     expect(reader.Dstas.ActionDataParsed.rateNumerator).toBe(1);
     expect(reader.Dstas.ActionDataParsed.rateDenominator).toBe(100);
+  });
+
+  test("rejects dstas near-match script when fixed template bytes differ but length matches", () => {
+    const owner = fromHex("1111222233334444555566667777888899990000");
+    const redemption = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    const script = buildDstasLockingScript({
+      ownerPkh: owner,
+      actionData: null,
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x00]),
+    });
+
+    const mutated = new Uint8Array(script);
+    const needle = fromHex(
+      "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+    );
+    const replace = fromHex(
+      "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81799",
+    );
+    const idx = toHex(mutated).indexOf(toHex(needle));
+    expect(idx).toBeGreaterThanOrEqual(0);
+    mutated.set(replace, idx / 2);
+
+    const reader = LockingScriptReader.read(mutated);
+    expect(reader.ScriptType).toBe(ScriptType.unknown);
+  });
+
+  test("rejects dstas script with malformed owner field shape", () => {
+    const owner = fromHex("11".repeat(20));
+    const redemption = fromHex("aa".repeat(20));
+    const script = buildDstasLockingScript({
+      ownerPkh: owner,
+      actionData: null,
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x00]),
+    });
+
+    // Build a malformed script by bypassing builder-side validation.
+    const malformed = new Uint8Array(script);
+    const malformedOwner = fromHex("22".repeat(21));
+    malformed[0] = malformedOwner.length;
+    malformed.set(malformedOwner, 1);
+
+    const reader = LockingScriptReader.read(malformed);
+    expect(reader.ScriptType).toBe(ScriptType.unknown);
+  });
+
+  test("builder rejects malformed owner field shape", () => {
+    expect(() =>
+      buildDstasLockingScript({
+        owner: fromHex("11".repeat(21)),
+        actionData: null,
+        redemptionPkh: fromHex("aa".repeat(20)),
+        flags: new Uint8Array([0x00]),
+      }),
+    ).toThrow("owner must be either 20-byte PKH or canonical MPKH preimage");
+  });
+
+  test("rejects dstas script with malformed service field shape", () => {
+    const owner = fromHex("11".repeat(20));
+    const redemption = fromHex("aa".repeat(20));
+    const validServiceField = fromHex("22".repeat(20));
+    const tokens = buildDstasLockingTokens({
+      ownerPkh: owner,
+      actionData: null,
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x01]),
+      serviceFields: [validServiceField],
+    });
+    const malformedField = fromHex("33".repeat(21));
+    const malformedTokens = tokens.map((token) => ScriptToken.fromScriptToken(token));
+    malformedTokens[malformedTokens.length - 1] = ScriptToken.fromBytes(
+      malformedField,
+    );
+    const malformed = ScriptBuilder.fromTokens(
+      malformedTokens,
+      ScriptType.unknown,
+    ).toBytes();
+
+    const reader = LockingScriptReader.read(malformed);
+    expect(reader.ScriptType).toBe(ScriptType.unknown);
+  });
+
+  test("builder rejects malformed service field shape", () => {
+    expect(() =>
+      buildDstasLockingScript({
+        ownerPkh: fromHex("11".repeat(20)),
+        actionData: null,
+        redemptionPkh: fromHex("aa".repeat(20)),
+        flags: new Uint8Array([0x01]),
+        serviceFields: [fromHex("22".repeat(21))],
+      }),
+    ).toThrow(
+      "service field must be either 20-byte PKH or canonical MPKH preimage",
+    );
+  });
+
+  test("rejects dstas script with malformed structured actionData", () => {
+    const owner = fromHex("11".repeat(20));
+    const redemption = fromHex("aa".repeat(20));
+    const malformedSwap = fromHex("01" + "11".repeat(10));
+
+    const script = buildDstasLockingScript({
+      ownerPkh: owner,
+      actionData: malformedSwap,
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x00]),
+    });
+
+    const reader = LockingScriptReader.read(script);
+    expect(reader.ScriptType).toBe(ScriptType.unknown);
+    expect(reader.Dstas).toBeUndefined();
   });
 });

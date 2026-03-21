@@ -133,4 +133,35 @@ describe("dstas action data", () => {
     expect(parsed.action).toBe(DstasActionKind.freeze);
     expect(toHex(parsed.payload ?? new Uint8Array(0))).toBe("aa55");
   });
+
+  test("rejects truncated swap leg", () => {
+    const truncated = fromHex("01" + "11".repeat(16));
+    expect(() => decodeActionData(truncated)).toThrow(
+      "swap action data is truncated",
+    );
+  });
+
+  test("rejects swap payload with trailing garbage", () => {
+    const valid = buildSwapActionData({
+      requestedScriptHash: fromHex("11".repeat(32)),
+      requestedPkh: fromHex("22".repeat(20)),
+      rateNumerator: 1,
+      rateDenominator: 1,
+    });
+    const malformed = new Uint8Array(valid.length + 1);
+    malformed.set(valid);
+    malformed[malformed.length - 1] = DstasActionKind.freeze;
+
+    expect(() => decodeActionData(malformed)).toThrow(
+      "swap action data is truncated",
+    );
+  });
+
+  test("preserves unknown action kind as opaque payload", () => {
+    const parsed = decodeActionData(fromHex("7faa55"));
+    expect(parsed.kind).toBe("unknown");
+    if (parsed.kind !== "unknown") return;
+    expect(parsed.action).toBe(0x7f);
+    expect(toHex(parsed.payload)).toBe("aa55");
+  });
 });
