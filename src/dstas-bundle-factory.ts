@@ -228,6 +228,7 @@ export class DstasBundleFactory {
     const initialEstimatedFeeSatoshis = this.estimateBundleFeeUpperBound(
       transactionsCount,
       stasUtxos.length,
+      outputs.length,
     );
     const firstFundingUtxo = await this.getFundingUtxo({
       utxoIdsToSpend,
@@ -306,8 +307,19 @@ export class DstasBundleFactory {
   private estimateBundleFeeUpperBound = (
     transactionsCount: number,
     stasInputCount: number,
+    outputsCount: number,
   ): number =>
-    Math.max(1200, transactionsCount * 3000 + stasInputCount * 500 + 300);
+    Math.max(
+      1200,
+      Math.ceil(
+        (transactionsCount * 1400 +
+          stasInputCount * 500 +
+          outputsCount * 160 +
+          500) *
+          FeeRate *
+          1.5,
+      ),
+    );
 
   private isInsufficientFeeError = (error: unknown): boolean => {
     if (!(error instanceof Error)) return false;
@@ -361,7 +373,8 @@ export class DstasBundleFactory {
     transactions: string[];
     feeOutPoint: OutPoint;
   } => {
-    const queue = outputs.slice();
+    let cursor = 0;
+    let remainingTotal = outputs.reduce((sum, x) => sum + x.satoshis, 0);
     const transactions: string[] = [];
     const selfRecipient: TDstasRecipient = {
       m: 1,
@@ -371,16 +384,18 @@ export class DstasBundleFactory {
     let currentStas = stasUtxo;
     let currentFee = feeUtxo;
 
-    while (queue.length > 0) {
-      const remainingTotal = queue.reduce((sum, x) => sum + x.satoshis, 0);
+    while (cursor < outputs.length) {
       if (remainingTotal !== currentStas.Satoshis) {
         throw new Error(
           "Transfer planner invariant failed: remaining outputs must match current STAS input",
         );
       }
 
-      const isFinal = queue.length <= 4;
-      const transferOutputs = isFinal ? queue : queue.slice(0, 3);
+      const remainingCount = outputs.length - cursor;
+      const isFinal = remainingCount <= 4;
+      const transferOutputs = isFinal
+        ? outputs.slice(cursor)
+        : outputs.slice(cursor, cursor + 3);
       const sentSatoshis = transferOutputs.reduce(
         (sum, x) => sum + x.satoshis,
         0,
@@ -431,8 +446,8 @@ export class DstasBundleFactory {
       }
 
       currentStas = this.outPointFromTransaction(tx, changeOutputIndex);
-
-      queue.splice(0, transferOutputs.length);
+      cursor += transferOutputs.length;
+      remainingTotal -= sentSatoshis;
     }
 
     return {

@@ -1,5 +1,6 @@
 import {
   DstasBundleFactory,
+  TDstasFundingUtxoRequest,
   TDstasRecipient,
   TDstasUnlockingScriptBuilder,
 } from "../src/dstas-bundle-factory";
@@ -28,6 +29,7 @@ const freezeAuthorityPkh = fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 type TestFactory = {
   factory: DstasBundleFactory;
   buildUnlockingScript: SpyFn<[UnlockingArgs], Uint8Array>;
+  getFundingUtxo: SpyFn<[TDstasFundingUtxoRequest], Promise<OutPoint>>;
   recipient: TDstasRecipient;
 };
 
@@ -59,6 +61,7 @@ const makeOutPoint = (
 const makeFactory = (
   stasSatoshis = 1000,
   feeSatoshis = 100000,
+  unlockingScriptLength = 0,
 ): TestFactory => {
   const stasWallet =
     Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
@@ -83,7 +86,9 @@ const makeFactory = (
   );
 
   const getStasUtxoSet = createSpy(async () => [stasOutPoint]);
-  const getFundingUtxo = createSpy(async () => feeOutPoint);
+  const getFundingUtxo = createSpy(async (_request: TDstasFundingUtxoRequest) =>
+    feeOutPoint,
+  );
   const getTransactions = createSpy(async () => ({}));
 
   const buildLockingParams = createSpy(() => ({
@@ -96,8 +101,8 @@ const makeFactory = (
     optionalData: [],
   }));
 
-  const buildUnlockingScript = createSpy(
-    (_args: UnlockingArgs) => new Uint8Array(),
+  const buildUnlockingScript = createSpy((_args: UnlockingArgs) =>
+    new Uint8Array(unlockingScriptLength).fill(0x51),
   );
 
   const factory = new DstasBundleFactory(
@@ -115,7 +120,7 @@ const makeFactory = (
     addresses: [stasWallet.Address],
   };
 
-  return { factory, buildUnlockingScript, recipient };
+  return { factory, buildUnlockingScript, getFundingUtxo, recipient };
 };
 
 describe("DstasBundleFactory spendType flags", () => {
@@ -229,7 +234,10 @@ describe("DstasBundleFactory spendType flags", () => {
 
   test("transfer() supports large recipient bundle (~100 tx plan)", async () => {
     const recipientsCount = 301;
-    const { factory, recipient } = makeFactory(recipientsCount, 1_000_000);
+    const { factory, getFundingUtxo, recipient } = makeFactory(
+      recipientsCount,
+      1_000_000,
+    );
     const outputs = Array.from({ length: recipientsCount }, () => ({
       recipient,
       satoshis: 1,
@@ -243,6 +251,10 @@ describe("DstasBundleFactory spendType flags", () => {
 
     expect(result.transactions).toBeDefined();
     expect(result.transactions!.length).toBe(100);
+    expect(getFundingUtxo.calls).toHaveLength(1);
+    expect(getFundingUtxo.calls[0]![0].estimatedFeeSatoshis).toBeLessThan(
+      50000,
+    );
 
     const txs = result.transactions!.map((x) => TransactionReader.readHex(x));
     for (let i = 0; i < txs.length; i++) {
@@ -256,6 +268,28 @@ describe("DstasBundleFactory spendType flags", () => {
         expect(nullDataCount).toBe(0);
       }
     }
+  });
+
+  test("transfer() handles signer-heavy bundles without extra funding retries", async () => {
+    const recipientsCount = 151;
+    const { factory, getFundingUtxo, recipient } = makeFactory(
+      recipientsCount,
+      1_000_000,
+      256,
+    );
+    const outputs = Array.from({ length: recipientsCount }, () => ({
+      recipient,
+      satoshis: 1,
+    }));
+
+    const result = await factory.transfer({
+      outputs,
+    });
+
+    expect(result.transactions).toBeDefined();
+    expect(result.transactions!.length).toBeGreaterThan(1);
+    expect(getFundingUtxo.calls).toHaveLength(1);
+    expect(getFundingUtxo.calls[0]![0].estimatedFeeSatoshis).toBeGreaterThan(0);
   });
 
   test("transfer() rejects invalid output satoshis", async () => {
