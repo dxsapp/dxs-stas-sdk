@@ -75,7 +75,7 @@ let dstasTokens: ScriptToken[] | null = null;
 export const getP2stasTokens = () => {
   if (stasTokens === null) {
     stasTokens = ScriptReader.read(fromHex(p2stasSampleHex));
-    stasTokens[2].IsReceiverId = true;
+    stasTokens[2] = ScriptToken.forSample(20, 20, true);
   }
 
   return stasTokens;

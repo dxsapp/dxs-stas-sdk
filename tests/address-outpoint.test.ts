@@ -57,9 +57,37 @@ describe("address and outpoint", () => {
       },
     );
 
-    const ownerMultisigPreimage = new Uint8Array(35);
-    ownerMultisigPreimage[0] = 0x21;
-    ownerMultisigPreimage[1] = 0x02;
+    const buildOwnerMultisigField = (m: number, keys: Uint8Array[]) => {
+      const n = keys.length;
+      const bytes = new Uint8Array(1 + n * (1 + 33) + 1);
+      let offset = 0;
+      bytes[offset++] = m & 0xff;
+      for (const key of keys) {
+        bytes[offset++] = 0x21;
+        bytes.set(key, offset);
+        offset += key.length;
+      }
+      bytes[offset] = n & 0xff;
+      return bytes;
+    };
+
+    const ownerMultisigPreimage = buildOwnerMultisigField(2, [
+      new PrivateKey(
+        fromHex(
+          "77b1b7d5bfe1288d94f829baba86d503e1a06b571aaa5d36820be19ef2fe520e",
+        ),
+      ).PublicKey,
+      new PrivateKey(
+        fromHex(
+          "b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368",
+        ),
+      ).PublicKey,
+      new PrivateKey(
+        fromHex(
+          "1f1c5a9f4e1c1d5d6f7b8a9c0b1c2d3e4f5061728394a5b6c7d8e9fafbfcfdfe",
+        ),
+      ).PublicKey,
+    ]);
 
     const lockingScript = ScriptBuilder.fromTokens(
       buildDstasLockingTokens({
