@@ -90,9 +90,7 @@ export class OutPointFull extends OutPoint {
         output.ScriptType === ScriptType.p2mpkh) &&
       !output.Address
     ) {
-      throw new Error(
-        "p2pkh and p2mpkh outputs must expose address",
-      );
+      throw new Error("p2pkh and p2mpkh outputs must expose address");
     }
 
     super(

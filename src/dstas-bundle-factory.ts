@@ -727,9 +727,7 @@ export class DstasBundleFactory {
     return outPoint;
   };
 
-  private getStasOutPoint = (
-    tx: Transaction,
-  ): OutPoint => {
+  private getStasOutPoint = (tx: Transaction): OutPoint => {
     const index = tx.Outputs.findIndex(
       (output) =>
         output.ScriptType !== ScriptType.p2pkh &&
