@@ -297,12 +297,20 @@ export const BuildDstasBaseTx = ({
     feeRate,
     omitChangeOutput,
     isMerge: stasPayments.length > 1,
-    configureStasInput: ({ txBuilder, inputIndex, payment }) => {
+    configureStasInput: ({ phase, txBuilder, inputIndex, payment }) => {
       txBuilder.Inputs[inputIndex].DstasSpendingType = spendingType ?? 1;
       const unlocking = resolveUnlockingScript(payment);
       if (unlocking) {
         txBuilder.Inputs[inputIndex].AllowPresetUnlockingScript = true;
-        txBuilder.Inputs[inputIndex].UnlockingScript = unlocking;
+        if (phase === "estimate") {
+          txBuilder.Inputs[inputIndex].PresetUnlockingScriptSizeHint =
+            unlocking.length;
+          txBuilder.Inputs[inputIndex].UnlockingScript = undefined;
+        } else {
+          txBuilder.Inputs[inputIndex].PresetUnlockingScriptSizeHint =
+            undefined;
+          txBuilder.Inputs[inputIndex].UnlockingScript = unlocking;
+        }
       }
     },
   });

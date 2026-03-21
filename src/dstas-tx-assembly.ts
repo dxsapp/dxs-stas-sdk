@@ -4,6 +4,7 @@ import {
   DstasLockingParams,
   buildDstasLockingTokens,
 } from "./script/build/dstas-locking-builder";
+import { P2pkhBuilder } from "./script/build/p2pkh-builder";
 import { ScriptBuilder } from "./script/build/script-builder";
 import { FeeRate } from "./transaction-factory";
 import { ScriptType } from "./bitcoin/script-type";
@@ -18,6 +19,8 @@ export type TDstasAssemblyDestination = {
   Satoshis: number;
   LockingParams: DstasLockingParams;
 };
+
+type TDstasConfigurePhase = "estimate" | "finalize";
 
 export const buildDstasLockingScriptBuilder = (params: DstasLockingParams) => {
   const tokens = buildDstasLockingTokens(params);
@@ -60,6 +63,7 @@ export const buildSignedDstasTransaction = ({
   omitChangeOutput?: boolean;
   isMerge?: boolean;
   configureStasInput?: (args: {
+    phase: TDstasConfigurePhase;
     txBuilder: TransactionBuilder;
     inputIndex: number;
     payment: TDstasAssemblyPayment;
@@ -100,29 +104,44 @@ export const buildSignedDstasTransaction = ({
   }
 
   const feeOutputIdx = txBuilder.Outputs.length;
+  let changeOutput: OutputBuilder | undefined;
 
   if (note) {
     txBuilder.addNullDataOutput(note);
   }
 
   if (!omitChangeOutput) {
-    txBuilder.addChangeOutputWithFee(
-      feePayment.OutPoint.Address,
+    changeOutput = new OutputBuilder(
+      new P2pkhBuilder(feePayment.OutPoint.Address),
       feePayment.OutPoint.Satoshis,
-      feeRate,
-      feeOutputIdx,
     );
+    txBuilder.Outputs.splice(feeOutputIdx, 0, changeOutput);
   }
 
-  stasInputIdxs.forEach((inputIndex, stasInputIndex) => {
-    configureStasInput?.({
-      txBuilder,
-      inputIndex,
-      payment: stasPayments[stasInputIndex],
-      stasInputIndex,
-      isMerge,
+  const runConfigure = (phase: TDstasConfigurePhase) => {
+    stasInputIdxs.forEach((inputIndex, stasInputIndex) => {
+      configureStasInput?.({
+        phase,
+        txBuilder,
+        inputIndex,
+        payment: stasPayments[stasInputIndex],
+        stasInputIndex,
+        isMerge,
+      });
     });
-  });
+  };
+
+  runConfigure("estimate");
+
+  if (!omitChangeOutput) {
+    const fee = txBuilder.getFee(feeRate);
+    if (fee >= feePayment.OutPoint.Satoshis) {
+      throw new Error(`Insufficient satoshis to pay fee`);
+    }
+    changeOutput!.Satoshis = feePayment.OutPoint.Satoshis - fee;
+  }
+
+  runConfigure("finalize");
 
   return txBuilder.sign().toHex();
 };

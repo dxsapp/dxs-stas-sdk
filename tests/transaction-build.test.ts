@@ -135,8 +135,7 @@ describe("testing transaction builder", () => {
     const hintedBuilder = TransactionBuilder.init()
       .addInput(outPoint, issuerPrivateKey)
       .addP2PkhOutput(destinationSatoshis, aliceAddress);
-    hintedBuilder.Inputs[0].PresetUnlockingScriptSizeHint =
-      unlockingHintLength;
+    hintedBuilder.Inputs[0].PresetUnlockingScriptSizeHint = unlockingHintLength;
     hintedBuilder.addChangeOutputWithFee(
       from,
       outPoint.Satoshis - destinationSatoshis,
