@@ -276,6 +276,83 @@ describe("dstas flow", () => {
     expect(evalResult.success).toBe(true);
   });
 
+  test("real funding: lowercase scheme field takes precedence over Scheme alias", () => {
+    const fixture = createRealFundingFlowFixture();
+    const alternateScheme = new TokenScheme(
+      `${fixture.scheme.Name} Alias`,
+      fixture.scheme.TokenId,
+      "ALIAS",
+      fixture.scheme.SatoshisPerToken,
+      {
+        freeze: !fixture.scheme.Freeze,
+        confiscation: !fixture.scheme.Confiscation,
+        isDivisible: fixture.scheme.IsDivisible,
+        freezeAuthority: fixture.scheme.FreezeAuthority,
+        confiscationAuthority: fixture.scheme.ConfiscationAuthority,
+      },
+    );
+
+    const lowercaseCanonicalTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.alice.Address,
+      },
+      omitChangeOutput: true,
+    });
+    const aliasOnlyTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: alternateScheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.alice.Address,
+      },
+      omitChangeOutput: true,
+    });
+    const bothFieldsTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      scheme: fixture.scheme,
+      Scheme: alternateScheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.alice.Address,
+      },
+      omitChangeOutput: true,
+    });
+
+    const evalResult = evaluateTransactionHex(
+      bothFieldsTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(bothFieldsTxHex).toBe(lowercaseCanonicalTxHex);
+    expect(bothFieldsTxHex).not.toBe(aliasOnlyTxHex);
+    expect(evalResult.success).toBe(true);
+  });
+
   test("real funding: owner-multisig can spend token with m-of-n unlocking", () => {
     const fixture = createRealFundingFlowFixture();
     const ownerPubKeys = [
