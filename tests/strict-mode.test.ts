@@ -128,6 +128,8 @@ describe("strict mode hardening", () => {
       0x00,
     ]);
 
+    expect(ScriptReader.decode(malformed2, 0)).toBeNull();
+    expect(ScriptReader.decode(malformed4, 0)).toBeNull();
     expect(ScriptReader.read(malformed2)).toEqual([]);
     expect(ScriptReader.read(malformed4)).toEqual([]);
 
@@ -207,6 +209,26 @@ describe("strict mode hardening", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain("Opcode count exceeds strict limit");
+  });
+
+  test("strict script evaluation enforces max element size", () => {
+    const tx = TransactionReader.readHex(TransferNoNoteRaw);
+    const oversizedElement = new Uint8Array(9);
+    oversizedElement.fill(0x01);
+    const unlocking = new Uint8Array([oversizedElement.length, ...oversizedElement]);
+
+    const result = evaluateScripts(
+      unlocking,
+      new Uint8Array(),
+      { tx, inputIndex: 0, prevOutputs: [] },
+      {
+        strict: true,
+        maxElementSizeBytes: 8,
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("Script element exceeds strict limit");
   });
 
   test("strict script element limit defaults to 1MB", () => {

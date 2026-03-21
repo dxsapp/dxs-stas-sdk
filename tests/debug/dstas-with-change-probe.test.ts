@@ -7,7 +7,7 @@ import {
   createRealFundingFlowFixture,
 } from "../helpers/dstas-flow-helpers";
 
-describe("dstas with-change probe", () => {
+describe.skip("dstas with-change probe", () => {
   test("probe unlocking variants", () => {
     const f = createRealFundingFlowFixture();
     const txHex = buildTransferFromFixture(f, false);

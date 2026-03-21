@@ -157,6 +157,27 @@ describe("dstas action data", () => {
     );
   });
 
+  test("rejects truncated second swap leg boundary", () => {
+    const valid = buildSwapActionData({
+      requestedScriptHash: fromHex("11".repeat(32)),
+      requestedPkh: fromHex("22".repeat(20)),
+      rateNumerator: 1,
+      rateDenominator: 1,
+      next: {
+        kind: "swap",
+        requestedScriptHash: fromHex("33".repeat(32)),
+        requestedPkh: fromHex("44".repeat(20)),
+        rateNumerator: 2,
+        rateDenominator: 3,
+      },
+    });
+    const malformed = valid.subarray(0, valid.length - 7);
+
+    expect(() => decodeActionData(malformed)).toThrow(
+      "swap action data is truncated",
+    );
+  });
+
   test("preserves unknown action kind as opaque payload", () => {
     const parsed = decodeActionData(fromHex("7faa55"));
     expect(parsed.kind).toBe("unknown");
