@@ -310,10 +310,11 @@ describe("locking script reader", () => {
       serviceFields: [validServiceField],
     });
     const malformedField = fromHex("33".repeat(21));
-    const malformedTokens = tokens.map((token) => ScriptToken.fromScriptToken(token));
-    malformedTokens[malformedTokens.length - 1] = ScriptToken.fromBytes(
-      malformedField,
+    const malformedTokens = tokens.map((token) =>
+      ScriptToken.fromScriptToken(token),
     );
+    malformedTokens[malformedTokens.length - 1] =
+      ScriptToken.fromBytes(malformedField);
     const malformed = ScriptBuilder.fromTokens(
       malformedTokens,
       ScriptType.unknown,

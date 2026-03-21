@@ -13,10 +13,7 @@ import { ScriptToken } from "../script-token";
 import { BaseScriptReader } from "./base-script-reader";
 import { ScriptReadToken } from "./script-read-token";
 import { ParsedActionData, decodeActionData } from "../dstas-action-data";
-import {
-  isSupportedIdentityField,
-  sameBytesOrShape,
-} from "../identity-field";
+import { isSupportedIdentityField, sameBytesOrShape } from "../identity-field";
 
 type DetectContext = {
   Result: boolean;
