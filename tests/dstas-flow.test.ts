@@ -231,6 +231,51 @@ describe("dstas flow", () => {
     expect(tx.Outputs[0].Address).toBeDefined();
   });
 
+  test("real funding: transfer accepts lowercase scheme field", () => {
+    const fixture = createRealFundingFlowFixture();
+    const canonicalTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.alice.Address,
+      },
+      omitChangeOutput: true,
+    });
+    const aliasTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        To: fixture.alice.Address,
+      },
+      omitChangeOutput: true,
+    });
+
+    const evalResult = evaluateTransactionHex(
+      canonicalTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(canonicalTxHex).toBe(aliasTxHex);
+    expect(evalResult.success).toBe(true);
+  });
+
   test("real funding: owner-multisig can spend token with m-of-n unlocking", () => {
     const fixture = createRealFundingFlowFixture();
     const ownerPubKeys = [

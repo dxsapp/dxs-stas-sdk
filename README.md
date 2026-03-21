@@ -95,7 +95,7 @@ const transferTxHex = BuildDstasTransferTx({
   stasPayment: { OutPoint: stasOut, Owner: bob },
   feePayment: { OutPoint: feeOut, Owner: bob },
   destination: { Satoshis: 100, To: alice.Address },
-  Scheme: scheme,
+  scheme,
   note: [utf8ToBytes("DSTAS"), utf8ToBytes("transfer")],
 });
 ```

@@ -53,6 +53,10 @@ export type TBuildDstasBaseTxRequest = {
   stasPayments: TDstasPayment[];
   feePayment: TPayment;
   destinations: TDstasDestination[];
+  scheme?: TokenScheme;
+  /**
+   * @deprecated Use `scheme` instead.
+   */
   Scheme?: TokenScheme;
   spendingType?: number;
   note?: Bytes[];
@@ -263,16 +267,22 @@ const validateFundingAgainstScheme = (
   }
 };
 
+const resolveDstasScheme = (
+  request: Pick<TBuildDstasBaseTxRequest, "scheme" | "Scheme">,
+) => request.scheme ?? request.Scheme;
+
 export const BuildDstasBaseTx = ({
   stasPayments,
   feePayment,
   destinations,
+  scheme,
   Scheme,
   spendingType,
   note,
   feeRate = FeeRate,
   omitChangeOutput = false,
 }: TBuildDstasBaseTxRequest) => {
+  const resolvedScheme = resolveDstasScheme({ scheme, Scheme });
   if (stasPayments.length === 0)
     throw new Error("At least one STAS input is required");
   if (stasPayments.length > 2)
@@ -284,7 +294,7 @@ export const BuildDstasBaseTx = ({
   const resolvedDestinations: TDstasAssemblyDestination[] = destinations.map(
     (destination) => ({
       Satoshis: destination.Satoshis,
-      LockingParams: resolveLockingParams(destination, Scheme),
+      LockingParams: resolveLockingParams(destination, resolvedScheme),
     }),
   );
 
@@ -583,6 +593,10 @@ export type TBuildDstasTransferTxRequest = {
   stasPayment: TDstasPayment;
   feePayment: TPayment;
   destination: TDstasDestination;
+  scheme?: TokenScheme;
+  /**
+   * @deprecated Use `scheme` instead.
+   */
   Scheme?: TokenScheme;
   note?: Bytes[];
   feeRate?: number;
@@ -593,6 +607,7 @@ export const BuildDstasTransferTx = ({
   stasPayment,
   feePayment,
   destination,
+  scheme,
   Scheme,
   note,
   feeRate,
@@ -602,6 +617,7 @@ export const BuildDstasTransferTx = ({
     stasPayments: [stasPayment],
     feePayment,
     destinations: [destination],
+    scheme,
     Scheme,
     note,
     feeRate,
@@ -612,6 +628,10 @@ export type TBuildDstasSplitTxRequest = {
   stasPayment: TDstasPayment;
   feePayment: TPayment;
   destinations: TDstasDestination[];
+  scheme?: TokenScheme;
+  /**
+   * @deprecated Use `scheme` instead.
+   */
   Scheme?: TokenScheme;
   note?: Bytes[];
   feeRate?: number;
@@ -621,6 +641,7 @@ export const BuildDstasSplitTx = ({
   stasPayment,
   feePayment,
   destinations,
+  scheme,
   Scheme,
   note,
   feeRate,
@@ -629,6 +650,7 @@ export const BuildDstasSplitTx = ({
     stasPayments: [stasPayment],
     feePayment,
     destinations,
+    scheme,
     Scheme,
     note,
     feeRate,
@@ -638,6 +660,10 @@ export type TBuildDstasMergeTxRequest = {
   stasPayments: [TDstasPayment, TDstasPayment];
   feePayment: TPayment;
   destinations: TDstasDestination[];
+  scheme?: TokenScheme;
+  /**
+   * @deprecated Use `scheme` instead.
+   */
   Scheme?: TokenScheme;
   note?: Bytes[];
   feeRate?: number;
@@ -647,6 +673,7 @@ export const BuildDstasMergeTx = ({
   stasPayments,
   feePayment,
   destinations,
+  scheme,
   Scheme,
   note,
   feeRate,
@@ -659,6 +686,7 @@ export const BuildDstasMergeTx = ({
     stasPayments,
     feePayment,
     destinations,
+    scheme,
     Scheme,
     note,
     feeRate,
