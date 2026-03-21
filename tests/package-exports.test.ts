@@ -6,6 +6,7 @@ describe("package exports", () => {
   test("declares only root plus protocol subpath exports", () => {
     expect(Object.keys(pkg.exports)).toEqual([
       ".",
+      "./bsv",
       "./dstas",
       "./stas",
       "./package.json",
@@ -15,6 +16,12 @@ describe("package exports", () => {
       import: "./dist/index.js",
       require: "./dist/index.js",
       default: "./dist/index.js",
+    });
+    expect(pkg.exports["./bsv"]).toEqual({
+      types: "./dist/bsv.d.ts",
+      import: "./dist/bsv.js",
+      require: "./dist/bsv.js",
+      default: "./dist/bsv.js",
     });
     expect(pkg.exports["./dstas"]).toEqual({
       types: "./dist/dstas.d.ts",

@@ -76,9 +76,9 @@ const buildRedeemTx = ({
   const feeOutputIdx = txBuilder.Outputs.length;
   txBuilder.Inputs[0].DstasSpendingType = spendingType;
 
-  return txBuilder
+    return txBuilder
     .addChangeOutputWithFee(
-      feeOutPoint.Address,
+      feeOutPoint.Address!,
       feeOutPoint.Satoshis,
       FeeRate,
       feeOutputIdx,

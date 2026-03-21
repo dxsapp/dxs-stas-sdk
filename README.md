@@ -1,6 +1,6 @@
 # dxs-stas-sdk
 
-TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS token scripts and a lower-level STAS workflow surface. Use `dxs-stas-sdk/dstas` for canonical DSTAS flows, `dxs-stas-sdk/stas` for the older STAS workflow surface, and `dxs-stas-sdk` root imports only for shared primitives.
+TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS token scripts and a lower-level STAS workflow surface. Use `dxs-stas-sdk/dstas` for canonical DSTAS flows, `dxs-stas-sdk/stas` for the older STAS workflow surface, and `dxs-stas-sdk/bsv` for low-level blockchain primitives. Root imports expose only the `dstas`, `stas`, and `bsv` namespaces.
 
 ## Binary types
 
@@ -24,7 +24,8 @@ npm install dxs-stas-sdk
 
 - `dxs-stas-sdk/dstas`: canonical DSTAS issue/transfer/freeze/confiscation/redeem/swap flows
 - `dxs-stas-sdk/stas`: older STAS transaction helpers
-- `dxs-stas-sdk`: shared primitives such as `PrivateKey`, `OutPoint`, `TransactionBuilder`, `LockingScriptReader`, and byte/hash helpers
+- `dxs-stas-sdk`: namespace-only root entrypoint for `dstas`, `stas`, and `bsv`
+- `dxs-stas-sdk/bsv`: low-level blockchain primitives, byte/hash helpers, transaction tooling, and script readers/builders
 
 ## AI agent onboarding
 
@@ -44,8 +45,9 @@ An `OutPoint` represents a spendable UTXO: txid, vout, locking script, satoshis,
 ## Example: build a DSTAS issue + transfer flow
 
 ```ts
-import { BuildDstasIssueTxs, BuildDstasTransferTx } from "dxs-stas-sdk/dstas";
-import {
+import { bsv, dstas } from "dxs-stas-sdk";
+
+const {
   OutPoint,
   PrivateKey,
   TokenScheme,
@@ -53,7 +55,7 @@ import {
   toHex,
   utf8ToBytes,
   fromHex,
-} from "dxs-stas-sdk";
+} = bsv;
 
 const bob = new PrivateKey(
   fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
@@ -80,7 +82,7 @@ const scheme = new TokenScheme(
 const sourceTx = TransactionReader.readHex("<funding-tx-hex>");
 const fundingOut = OutPoint.fromTransaction(sourceTx, 0);
 
-const { issueTxHex } = BuildDstasIssueTxs({
+const { issueTxHex } = dstas.BuildDstasIssueTxs({
   fundingPayment: { OutPoint: fundingOut, Owner: bob },
   scheme,
   destinations: [{ Satoshis: 100, To: bob.Address }],
@@ -91,7 +93,7 @@ const issueTx = TransactionReader.readHex(issueTxHex);
 const stasOut = OutPoint.fromTransaction(issueTx, 0);
 const feeOut = OutPoint.fromTransaction(issueTx, 1);
 
-const transferTxHex = BuildDstasTransferTx({
+const transferTxHex = dstas.BuildDstasTransferTx({
   stasPayment: { OutPoint: stasOut, Owner: bob },
   feePayment: { OutPoint: feeOut, Owner: bob },
   destination: { Satoshis: 100, To: alice.Address },
@@ -103,8 +105,9 @@ const transferTxHex = BuildDstasTransferTx({
 ## Example: high-level DSTAS payouts with `DstasBundleFactory`
 
 ```ts
-import { DstasBundleFactory, DstasSpendType } from "dxs-stas-sdk/dstas";
-import {
+import { bsv, dstas } from "dxs-stas-sdk";
+
+const {
   Address,
   LockingScriptReader,
   OutPoint,
@@ -114,7 +117,9 @@ import {
   hash160,
   toHex,
   utf8ToBytes,
-} from "dxs-stas-sdk";
+} = bsv;
+
+const { DstasBundleFactory, DstasSpendType } = dstas;
 
 const stasWallet =
   Wallet.fromMnemonic("<mnemonic>").deriveWallet("m/44'/236'/0'/0/0");
@@ -221,14 +226,16 @@ Notes:
 ## Example: build a simple P2PKH transaction
 
 ```ts
-import {
+import { bsv } from "dxs-stas-sdk";
+
+const {
   Address,
   OutPoint,
   PrivateKey,
   ScriptType,
   TransactionBuilder,
   fromHex,
-} from "dxs-stas-sdk";
+} = bsv;
 
 const pk = new PrivateKey(
   fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
@@ -267,8 +274,9 @@ const txWithSequence = TransactionBuilder.init()
 ## Example: build a STAS transfer transaction
 
 ```ts
-import { BuildTransferTx } from "dxs-stas-sdk/stas";
-import {
+import { bsv, stas } from "dxs-stas-sdk";
+
+const {
   Address,
   OutPoint,
   PrivateKey,
@@ -277,7 +285,7 @@ import {
   TransactionReader,
   fromHex,
   utf8ToBytes,
-} from "dxs-stas-sdk";
+} = bsv;
 
 const issuer = new PrivateKey(
   fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
@@ -298,7 +306,7 @@ const prevTx = TransactionReader.readHex("<issue-tx-hex>");
 const stasOut = OutPoint.fromTransaction(prevTx, 0);
 const feeOut = OutPoint.fromTransaction(prevTx, 1);
 
-const txHex = BuildTransferTx({
+const txHex = stas.BuildTransferTx({
   tokenScheme,
   stasPayment: { OutPoint: stasOut, Owner: alice },
   feePayment: { OutPoint: feeOut, Owner: issuer },
@@ -311,7 +319,7 @@ const txHex = BuildTransferTx({
 
 - You typically need two inputs for STAS flows: one STAS UTXO and one fee-paying UTXO. (see: src/transaction-factory.ts:22-221)
 - `OutPoint.TxId` is big-endian hex, but when serialized into a transaction it is reversed (little-endian). (see: src/transaction/build/input-builder.ts:123-130, src/transaction/read/transaction-reader.ts:24-33)
-- Use `Uint8Array` everywhere; helpers are in `fromHex`, `toHex`, `utf8ToBytes`, and `bytesToUtf8`. (see: src/bytes.ts:1-38)
+- Use `Uint8Array` everywhere; helpers are in `bsv.fromHex`, `bsv.toHex`, `bsv.utf8ToBytes`, and `bsv.bytesToUtf8`. (see: src/bytes.ts:1-38)
 - `Address.fromBase58` only accepts mainnet prefixes. (see: src/bitcoin/address.ts:26-31)
 - STAS script classification relies on known token templates; unknown scripts will classify as `unknown`. (see: src/bitcoin/transaction-output.ts:21-103, src/script/script-samples.ts:5-26)
 
@@ -333,9 +341,9 @@ Other strict checks remain opt-in because they are more compatibility-sensitive:
 Use `configureStrictMode(...)` to tighten behavior further:
 
 ```ts
-import { configureStrictMode } from "dxs-stas-sdk";
+import { bsv } from "dxs-stas-sdk";
 
-configureStrictMode({
+bsv.configureStrictMode({
   strictTxParse: true,
   strictOutPointValidation: true,
   strictFeeRateValidation: true,

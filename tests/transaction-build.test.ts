@@ -86,7 +86,7 @@ describe("testing transaction builder", () => {
       .addInput(fundingOutPoint, issuerPrivateKey)
       .addStasOutputByScheme(tokenScheme, stasOutPoint.Satoshis, aliceAddress)
       .addChangeOutputWithFee(
-        fundingOutPoint.Address,
+        fundingOutPoint.Address!,
         fundingOutPoint.Satoshis,
         0.05,
       )
@@ -379,7 +379,7 @@ describe("testing transaction builder", () => {
       .addInput(stasOutPoint, alicePrivateKey)
       .addStasOutputByScheme(tokenScheme, stasOutPoint.Satoshis, aliceAddress)
       .addChangeOutputWithFee(
-        fundingOutPoint.Address,
+        fundingOutPoint.Address!,
         fundingOutPoint.Satoshis,
         0.05,
       )
@@ -410,7 +410,7 @@ describe("testing transaction builder", () => {
       ]);
 
     txBuilder.addChangeOutputWithFee(
-      fundingOutPoint.Address,
+      fundingOutPoint.Address!,
       fundingOutPoint.Satoshis,
       0.05,
       2,
@@ -435,7 +435,7 @@ describe("testing transaction builder", () => {
       .addNullDataOutput([utf8ToBytes("DXS"), utf8ToBytes("Redeem test")]);
 
     txBuilder.addChangeOutputWithFee(
-      fundingOutPoint.Address,
+      fundingOutPoint.Address!,
       fundingOutPoint.Satoshis,
       0.05,
       1,

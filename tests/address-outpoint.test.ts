@@ -40,7 +40,7 @@ describe("address and outpoint", () => {
     expect(outPoint.Vout).toBe(0);
     expect(outPoint.Satoshis).toBe(tx.Outputs[0].Satoshis);
     expect(outPoint.ScriptType).toBe(ScriptType.p2pkh);
-    expect(outPoint.Address.Value).toBe("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
+    expect(outPoint.Address!.Value).toBe("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
     expect(outPoint.toString()).toBe(`${tx.Id}:0`);
   });
 
@@ -108,8 +108,9 @@ describe("address and outpoint", () => {
       0,
     );
 
-    expect(() => OutPoint.fromTransaction(tx, 0)).toThrow(
-      "Output does not expose address",
-    );
+    const outPoint = OutPoint.fromTransaction(tx, 0);
+
+    expect(outPoint.ScriptType).toBe(ScriptType.dstas);
+    expect(outPoint.Address).toBeUndefined();
   });
 });

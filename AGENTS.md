@@ -17,8 +17,8 @@ This file is the root onboarding entrypoint for AI coding agents working on this
   Canonical DSTAS implementation and verification surface.
 - `src/stas-bundle-factory.ts`, `src/transaction-factory.ts`
   Older, lower-level STAS workflow surface. Do not use for new DSTAS work.
-- `src/bitcoin/*`, `src/buffer/*`, `src/security/*`, `src/transaction/*`
-  Low-level core primitives shared by both protocol layers.
+- `src/bsv.ts`, `src/bitcoin/*`, `src/buffer/*`, `src/security/*`, `src/transaction/*`
+  Low-level core primitives shared by both protocol layers and exposed through the `bsv` namespace.
 
 ## Preferred implementation path
 
@@ -26,6 +26,7 @@ This file is the root onboarding entrypoint for AI coding agents working on this
   - `dxs-stas-sdk/dstas` subpath for protocol-facing flow imports.
   - `DstasBundleFactory` for multi-step payout/split/merge planning.
   - `BuildDstas*` helpers for single-flow transactions.
+- Use `dxs-stas-sdk/bsv` when you need the low-level blockchain toolkit namespace.
 - Use `dxs-stas-sdk/stas` only when you intentionally need the older, lower-level STAS workflow surface.
 
 ## Mandatory validation rule
