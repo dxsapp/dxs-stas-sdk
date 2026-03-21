@@ -28,6 +28,7 @@ export class InputBilder {
   Merge: boolean;
   UnlockingScript?: Bytes;
   AllowPresetUnlockingScript = false;
+  PresetUnlockingScriptSizeHint?: number;
   AuthoritySignaturesCount?: number;
   AuthorityPubKeysCount?: number;
   DstasSpendingType = 1;
@@ -264,6 +265,18 @@ export class InputBilder {
   unlockingScriptSize = (): number => {
     if (this.UnlockingScript !== undefined) {
       return estimateChunkSize(this.UnlockingScript.length);
+    }
+
+    if (this.PresetUnlockingScriptSizeHint !== undefined) {
+      if (!Number.isInteger(this.PresetUnlockingScriptSizeHint)) {
+        throw new Error("Preset unlocking script size hint must be an integer");
+      }
+      if (this.PresetUnlockingScriptSizeHint <= 0) {
+        throw new Error(
+          "Preset unlocking script size hint must be greater than zero",
+        );
+      }
+      return estimateChunkSize(this.PresetUnlockingScriptSizeHint);
     }
     const singleSigTailSize =
       1 + // OP_PUSH

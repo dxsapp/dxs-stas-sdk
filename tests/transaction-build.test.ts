@@ -118,6 +118,48 @@ describe("testing transaction builder", () => {
     expect(tx.Inputs[0].Sequence).toBe(0xfffffffe);
   });
 
+  test("addChangeOutputWithFee respects preset unlocking size hint before final signing", () => {
+    const from = issuerPrivateKey.Address;
+    const outPoint = new OutPoint(
+      "bb".repeat(32),
+      1,
+      fromHex("76a914e3b111de8fec527b41f4189e313638075d96ccd688ac"),
+      100_000,
+      from,
+      ScriptType.p2pkh,
+    );
+    const unlockingHintLength = 256;
+    const destinationSatoshis = 1_000;
+    const feeRate = 0.1;
+
+    const hintedBuilder = TransactionBuilder.init()
+      .addInput(outPoint, issuerPrivateKey)
+      .addP2PkhOutput(destinationSatoshis, aliceAddress);
+    hintedBuilder.Inputs[0].PresetUnlockingScriptSizeHint =
+      unlockingHintLength;
+    hintedBuilder.addChangeOutputWithFee(
+      from,
+      outPoint.Satoshis - destinationSatoshis,
+      feeRate,
+    );
+
+    const referenceBuilder = TransactionBuilder.init()
+      .addInput(outPoint, issuerPrivateKey)
+      .addP2PkhOutput(destinationSatoshis, aliceAddress);
+    referenceBuilder.Inputs[0].UnlockingScript = new Uint8Array(
+      unlockingHintLength,
+    );
+    referenceBuilder.addChangeOutputWithFee(
+      from,
+      outPoint.Satoshis - destinationSatoshis,
+      feeRate,
+    );
+
+    expect(hintedBuilder.Outputs[1].Satoshis).toBe(
+      referenceBuilder.Outputs[1].Satoshis,
+    );
+  });
+
   test("build STAS transfer transaction", () => {
     const sourceTx = TransactionReader.readHex(IssueTxRaw);
     const stasOutPoint = OutPoint.fromTransaction(sourceTx, 0);
