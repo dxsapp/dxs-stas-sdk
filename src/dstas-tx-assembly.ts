@@ -112,7 +112,7 @@ export const buildSignedDstasTransaction = ({
 
   if (!omitChangeOutput) {
     changeOutput = new OutputBuilder(
-      new P2pkhBuilder(feePayment.OutPoint.Address),
+      new P2pkhBuilder(feePayment.OutPoint.Address!),
       feePayment.OutPoint.Satoshis,
     );
     txBuilder.Outputs.splice(feeOutputIdx, 0, changeOutput);
@@ -178,7 +178,7 @@ export const buildSignedDstasIssueTransaction = ({
 
   const feeOutputIdx = txBuilder.Outputs.length;
   txBuilder.addChangeOutputWithFee(
-    contractChangeOutPoint.OutPoint.Address,
+    contractChangeOutPoint.OutPoint.Address!,
     contractChangeOutPoint.OutPoint.Satoshis,
     feeRate,
     feeOutputIdx,

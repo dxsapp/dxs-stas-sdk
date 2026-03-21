@@ -186,7 +186,7 @@ export const buildRedeemTx = ({
   stasOwner: PrivateKey | Wallet;
   feeOutPoint: OutPoint;
   feeOwner: PrivateKey | Wallet;
-  redeemAddress: OutPoint["Address"];
+  redeemAddress: Address;
   spendingType?: number;
 }) => {
   const txBuilder = TransactionBuilder.init()
@@ -199,7 +199,7 @@ export const buildRedeemTx = ({
 
   return txBuilder
     .addChangeOutputWithFee(
-      feeOutPoint.Address,
+      feeOutPoint.Address!,
       feeOutPoint.Satoshis,
       FeeRate,
       feeOutputIdx,

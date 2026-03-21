@@ -259,7 +259,7 @@ const validateFundingAgainstScheme = (
   fundingPayment: TPayment,
   scheme: TokenScheme,
 ) => {
-  const issuerTokenId = toHex(fundingPayment.OutPoint.Address.Hash160);
+  const issuerTokenId = toHex(fundingPayment.OutPoint.Address!.Hash160);
   if (issuerTokenId.toLowerCase() !== scheme.TokenId.toLowerCase()) {
     throw new Error(
       `scheme.TokenId must match issuer address hash160 (${issuerTokenId})`,
@@ -351,11 +351,11 @@ export const BuildDstasIssueTxs = ({
 
   const contractTxHex = TransactionBuilder.init()
     .addInput(fundingPayment.OutPoint, fundingPayment.Owner)
-    .addP2PkhOutput(totalIssueSatoshis, fundingPayment.OutPoint.Address, [
+    .addP2PkhOutput(totalIssueSatoshis, fundingPayment.OutPoint.Address!, [
       scheme.toBytes(),
     ])
     .addChangeOutputWithFee(
-      fundingPayment.OutPoint.Address,
+      fundingPayment.OutPoint.Address!,
       contractChangeBudget,
       feeRate,
     )

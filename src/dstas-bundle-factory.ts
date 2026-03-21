@@ -487,23 +487,20 @@ export class DstasBundleFactory {
     if (stasUtxos.length === 1) return { mergeFeeUtxo, stasUtxo: stasUtxos[0] };
 
     const mergeTransactions: string[] = [];
-    const utxos = stasUtxos.map(({ TxId, Vout, Address: outPointAddress }) => ({
+    const utxos = stasUtxos.map(({ TxId, Vout }) => ({
       TxId,
       Vout,
-      outPointAddress,
     }));
     const txIds = Array.from(new Set(stasUtxos.map(({ TxId }) => TxId)));
     const sourceTransactions = await this.getTransactions(txIds);
     const mergeLevels: OutPoint[][] = [[]];
 
-    for (const { TxId, Vout, outPointAddress } of utxos) {
+    for (const { TxId, Vout } of utxos) {
       const tx = sourceTransactions[TxId];
 
       if (!tx) throw new Error(`Transaction ${TxId} not found`);
 
-      mergeLevels[0].push(
-        this.outPointFromTransaction(tx, Vout, outPointAddress),
-      );
+      mergeLevels[0].push(this.outPointFromTransaction(tx, Vout));
     }
 
     const feePayment: TPayment = {
@@ -551,10 +548,10 @@ export class DstasBundleFactory {
           });
           const tx = TransactionReader.readHex(txRaw);
 
-          newLevel.push(this.getStasOutPoint(tx, outPoint.Address));
+          newLevel.push(this.getStasOutPoint(tx));
           mergeTransactions.push(txRaw);
 
-          stasUtxo = this.getStasOutPoint(tx, outPoint.Address);
+          stasUtxo = this.getStasOutPoint(tx);
           feePayment.OutPoint = this.getFeeOutPoint(tx);
         }
       } else {
@@ -624,10 +621,10 @@ export class DstasBundleFactory {
           });
           const tx = TransactionReader.readHex(txRaw);
 
-          newLevel.push(this.getStasOutPoint(tx, outPoint1.Address));
+          newLevel.push(this.getStasOutPoint(tx));
           mergeTransactions.push(txRaw);
 
-          stasUtxo = this.getStasOutPoint(tx, outPoint1.Address);
+          stasUtxo = this.getStasOutPoint(tx);
           feePayment.OutPoint = this.getFeeOutPoint(tx);
         }
       }
@@ -714,23 +711,15 @@ export class DstasBundleFactory {
   private outPointFromTransaction = (
     tx: Transaction,
     vout: number,
-    fallbackAddress?: Address,
   ): OutPoint => {
     const output = tx.Outputs[vout];
-    const owner = output.Address ?? fallbackAddress;
-
-    if (!owner) {
-      throw new Error(
-        "STAS output does not expose address and no fallback owner was provided",
-      );
-    }
 
     const outPoint = new OutPoint(
       tx.Id,
       vout,
       output.LockingScript,
       output.Satoshis,
-      owner,
+      output.Address,
       output.ScriptType,
     );
 
@@ -740,7 +729,6 @@ export class DstasBundleFactory {
 
   private getStasOutPoint = (
     tx: Transaction,
-    fallbackAddress?: Address,
   ): OutPoint => {
     const index = tx.Outputs.findIndex(
       (output) =>
@@ -751,7 +739,7 @@ export class DstasBundleFactory {
 
     if (index === -1) throw new Error("STAS output not found");
 
-    return this.outPointFromTransaction(tx, index, fallbackAddress);
+    return this.outPointFromTransaction(tx, index);
   };
 
   private getFeeOutPoint = (tx: Transaction): OutPoint => {

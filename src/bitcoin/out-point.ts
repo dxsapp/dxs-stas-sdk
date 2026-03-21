@@ -11,7 +11,7 @@ export class OutPoint {
   Vout: number;
   private _lockingScript: Bytes;
   Satoshis: number;
-  Address: Address;
+  Address?: Address;
   ScriptType: ScriptType;
   Transaction?: Transaction;
 
@@ -20,7 +20,7 @@ export class OutPoint {
     vout: number,
     lockingScript: Bytes,
     satoshis: number,
-    address: Address,
+    address: Address | undefined,
     scriptType: ScriptType,
   ) {
     this.TxId = txId;
@@ -39,7 +39,7 @@ export class OutPoint {
         );
       }
 
-      if (reader.Address && reader.Address.Value !== address.Value) {
+      if (address && reader.Address && reader.Address.Value !== address.Value) {
         throw new Error(
           `OutPoint address mismatch: expected ${address.Value}, got ${reader.Address.Value}`,
         );
@@ -85,9 +85,13 @@ export class OutPointFull extends OutPoint {
     )
       throw new Error("p2pkh, p2mpkh, p2stas or dstas output must be provided");
 
-    if (!output.Address) {
+    if (
+      (output.ScriptType === ScriptType.p2pkh ||
+        output.ScriptType === ScriptType.p2mpkh) &&
+      !output.Address
+    ) {
       throw new Error(
-        "Output does not expose address (for example, DSTAS multisig owner). Build OutPoint manually.",
+        "p2pkh and p2mpkh outputs must expose address",
       );
     }
 

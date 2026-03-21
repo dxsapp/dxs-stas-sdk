@@ -40,7 +40,7 @@ export const BuildTransferTx = ({
 
   return txBuilder
     .addChangeOutputWithFee(
-      feePayment.OutPoint.Address,
+      feePayment.OutPoint.Address!,
       feePayment.OutPoint.Satoshis,
       feeRate,
       feeOutputIdx,
@@ -93,7 +93,7 @@ export const BuildSplitTx = ({
 
   return txBuilder
     .addChangeOutputWithFee(
-      feePayment.OutPoint.Address,
+      feePayment.OutPoint.Address!,
       feePayment.OutPoint.Satoshis,
       feeRate,
       feeOutputIdx,
@@ -125,7 +125,7 @@ export const BuildMergeTx = ({
   note,
   feeRate,
 }: TBuildMergeTxRequest) => {
-  if (outPoint1.Address.Value !== outPoint2.Address.Value)
+  if (outPoint1.Address!.Value !== outPoint2.Address!.Value)
     throw new Error("Both inputs have to belong to same address");
 
   const outputSatoshis =
@@ -157,7 +157,7 @@ export const BuildMergeTx = ({
 
   return txBuilder
     .addChangeOutputWithFee(
-      feePayment.OutPoint.Address,
+      feePayment.OutPoint.Address!,
       feePayment.OutPoint.Satoshis,
       feeRate,
       feeOutputIdx,
@@ -185,7 +185,7 @@ export const BuildRedeemTx = ({
 }: TBuildRedeemTxRequest) => {
   const redeemAddress = Address.fromHash160Hex(tokenScheme.TokenId);
 
-  if (stasPayment.OutPoint.Address.Value !== redeemAddress.Value)
+  if (stasPayment.OutPoint.Address!.Value !== redeemAddress.Value)
     throw new Error("Only owner of redeem address can redeem STAS tokens");
 
   if ((splitDestinations?.length ?? 0) > 3)
@@ -220,7 +220,7 @@ export const BuildRedeemTx = ({
 
   return txBuilder
     .addChangeOutputWithFee(
-      feePayment.OutPoint.Address,
+      feePayment.OutPoint.Address!,
       feePayment.OutPoint.Satoshis,
       feeRate,
       feeOutputIdx,
