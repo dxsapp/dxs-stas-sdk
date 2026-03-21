@@ -13,7 +13,6 @@ import {
   buildDstasFlags,
 } from "./script/build/dstas-locking-builder";
 import { TransactionBuilder } from "./transaction/build/transaction-builder";
-import { OutputBuilder } from "./transaction/build/output-builder";
 import { TransactionReader } from "./transaction/read/transaction-reader";
 import { FeeRate } from "./transaction-factory";
 import { hash160 } from "./hashes";
@@ -22,7 +21,7 @@ import { Point } from "@noble/secp256k1";
 import {
   TDstasAssemblyDestination,
   TDstasAssemblyPayment,
-  buildDstasLockingScriptBuilder,
+  buildSignedDstasIssueTransaction,
   buildSignedDstasTransaction,
 } from "./dstas-tx-assembly";
 
@@ -377,27 +376,22 @@ export const BuildDstasIssueTxs = ({
     ScriptType.p2pkh,
   );
 
-  const issueBuilder = TransactionBuilder.init()
-    .addInput(contractOutPoint, fundingPayment.Owner)
-    .addInput(contractChangeOutPoint, fundingPayment.Owner);
-
-  for (const dest of destinations) {
-    const lockingScript = buildDstasLockingScriptBuilder(
-      resolveLockingParams(dest, scheme),
-    );
-    issueBuilder.Outputs.push(new OutputBuilder(lockingScript, dest.Satoshis));
-  }
-
-  const feeOutputIdx = issueBuilder.Outputs.length;
-
-  issueBuilder.addChangeOutputWithFee(
-    contractChangeOutPoint.Address,
-    contractChangeOutPoint.Satoshis,
+  const issueTxHex = buildSignedDstasIssueTransaction({
+    contractOutPoint: {
+      OutPoint: contractOutPoint,
+      Owner: fundingPayment.Owner,
+    },
+    contractChangeOutPoint: {
+      OutPoint: contractChangeOutPoint,
+      Owner: fundingPayment.Owner,
+    },
+    contractOwner: fundingPayment.Owner,
+    destinations: destinations.map((dest) => ({
+      Satoshis: dest.Satoshis,
+      LockingParams: resolveLockingParams(dest, scheme),
+    })),
     feeRate,
-    feeOutputIdx,
-  );
-
-  const issueTxHex = issueBuilder.sign().toHex();
+  });
 
   return { contractTxHex, issueTxHex };
 };

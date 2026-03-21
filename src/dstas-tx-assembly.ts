@@ -145,3 +145,44 @@ export const buildSignedDstasTransaction = ({
 
   return txBuilder.sign().toHex();
 };
+
+export const buildSignedDstasIssueTransaction = ({
+  contractOutPoint,
+  contractChangeOutPoint,
+  contractOwner,
+  destinations,
+  feeRate = FeeRate,
+}: {
+  contractOutPoint: TPayment;
+  contractChangeOutPoint: TPayment;
+  contractOwner: TPayment["Owner"];
+  destinations: TDstasAssemblyDestination[];
+  feeRate?: number;
+}) => {
+  if (destinations.length === 0) {
+    throw new Error("At least one destination is required");
+  }
+
+  const txBuilder = TransactionBuilder.init()
+    .addInput(contractOutPoint.OutPoint, contractOwner)
+    .addInput(contractChangeOutPoint.OutPoint, contractOwner);
+
+  for (const destination of destinations) {
+    const lockingScript = buildDstasLockingScriptBuilder(
+      destination.LockingParams,
+    );
+    txBuilder.Outputs.push(
+      new OutputBuilder(lockingScript, destination.Satoshis),
+    );
+  }
+
+  const feeOutputIdx = txBuilder.Outputs.length;
+  txBuilder.addChangeOutputWithFee(
+    contractChangeOutPoint.OutPoint.Address,
+    contractChangeOutPoint.OutPoint.Satoshis,
+    feeRate,
+    feeOutputIdx,
+  );
+
+  return txBuilder.sign().toHex();
+};

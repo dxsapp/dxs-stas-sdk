@@ -136,6 +136,7 @@ describe("dstas flow", () => {
       resolveFromTx(fixture.contractTxHex),
       { allowOpReturn: true },
     );
+    const issueTx = TransactionReader.readHex(fixture.issueTxHex);
 
     expect(fixture.contractTx.Inputs.length).toBe(1);
     expect(fixture.contractTx.Outputs.length).toBe(2);
@@ -143,6 +144,8 @@ describe("dstas flow", () => {
     expect(fixture.issueTx.Outputs.length).toBe(2);
     expect(contractEval.success).toBe(true);
     expect(issueEval.success).toBe(true);
+    expect(issueTx.Outputs[0].ScriptType).toBe(ScriptType.dstas);
+    expect(issueTx.Outputs[1].ScriptType).toBe(ScriptType.p2pkh);
   });
 
   test("real funding: transfer no-change flow is valid", () => {
