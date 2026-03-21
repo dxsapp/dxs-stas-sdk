@@ -515,4 +515,413 @@ describe("dstas multisig authority flow", () => {
     expect(transfer2Eval.success).toBe(true);
     assertFeeInRange(transfer2TxHex, resolveFromTx(unfreezeTxHex), FeeRate, 2);
   });
+
+  test("dummy funding: freeze rejects insufficient authority signatures", () => {
+    const bob = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
+    const cat1 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/1");
+    const cat2 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/2");
+    const cat3 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/3");
+    const cat4 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/4");
+    const cat5 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/5");
+    const alice =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/6");
+
+    const fundingOutPoint = new OutPoint(
+      "12".repeat(32),
+      0,
+      new P2pkhBuilder(bob.Address).toBytes(),
+      20_000,
+      bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const authorityPubKeys = [
+      cat1.PublicKey,
+      cat2.PublicKey,
+      cat3.PublicKey,
+      cat4.PublicKey,
+      cat5.PublicKey,
+    ];
+
+    const scheme = new TokenScheme(
+      "Divisible STAS-MSIG-AUTH",
+      toHex(bob.Address.Hash160),
+      "S30M",
+      1,
+      {
+        freeze: true,
+        confiscation: false,
+        isDivisible: true,
+        freezeAuthority: {
+          m: 3,
+          publicKeys: authorityPubKeys.map((k) => toHex(k)),
+        },
+      },
+    );
+
+    const { contractTxHex, issueTxHex } = BuildDstasIssueTxs({
+      fundingPayment: {
+        OutPoint: fundingOutPoint,
+        Owner: bob,
+      },
+      scheme,
+      destinations: [
+        {
+          Satoshis: 100,
+          To: alice.Address,
+        },
+      ],
+    });
+    const issueTx = TransactionReader.readHex(issueTxHex);
+    const issueStasOutPoint = new OutPoint(
+      issueTx.Id,
+      0,
+      issueTx.Outputs[0].LockingScript,
+      issueTx.Outputs[0].Satoshis,
+      alice.Address,
+      ScriptType.dstas,
+    );
+    const issueFeeOutPoint = new OutPoint(
+      issueTx.Id,
+      1,
+      issueTx.Outputs[1].LockingScript,
+      issueTx.Outputs[1].Satoshis,
+      bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const transfer1TxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: issueStasOutPoint,
+        Owner: alice,
+      },
+      feePayment: {
+        OutPoint: issueFeeOutPoint,
+        Owner: bob,
+      },
+      Scheme: scheme,
+      destination: {
+        Satoshis: issueStasOutPoint.Satoshis,
+        To: bob.Address,
+      },
+    });
+    const transfer1Eval = evaluateTransactionHex(
+      transfer1TxHex,
+      resolveFromTx(issueTxHex),
+      { allowOpReturn: true },
+    );
+    expect(transfer1Eval.success).toBe(true);
+
+    const transfer1Tx = TransactionReader.readHex(transfer1TxHex);
+    const transfer1StasOutPoint = new OutPoint(
+      transfer1Tx.Id,
+      0,
+      transfer1Tx.Outputs[0].LockingScript,
+      transfer1Tx.Outputs[0].Satoshis,
+      bob.Address,
+      ScriptType.dstas,
+    );
+    const transfer1FeeOutPoint = new OutPoint(
+      transfer1Tx.Id,
+      1,
+      transfer1Tx.Outputs[1].LockingScript,
+      transfer1Tx.Outputs[1].Satoshis,
+      bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const freezeBuilder = TransactionBuilder.init()
+      .addInput(transfer1StasOutPoint, cat1)
+      .addInput(transfer1FeeOutPoint, bob);
+    freezeBuilder.Outputs.push(
+      new OutputBuilder(
+        buildDstasLockingScript(bob.Address, scheme, true),
+        transfer1StasOutPoint.Satoshis,
+      ),
+    );
+    prepareAuthorityUnlockingSize({
+      txBuilder: freezeBuilder,
+      stasInputIndex: 0,
+      spendingType: 2,
+      authoritySigners: [cat1, cat2],
+      authorityPubKeys,
+      authorityThreshold: 3,
+    });
+    freezeBuilder.addChangeOutputWithFee(
+      bob.Address,
+      transfer1FeeOutPoint.Satoshis,
+      FeeRate,
+      1,
+    );
+    finalizeAuthorityUnlocking({
+      txBuilder: freezeBuilder,
+      stasInputIndex: 0,
+      spendingType: 2,
+      authoritySigners: [cat1, cat2],
+      authorityPubKeys,
+      authorityThreshold: 3,
+    });
+    const freezeTxHex = freezeBuilder.sign().toHex();
+
+    const freezeEval = evaluateTransactionHex(
+      freezeTxHex,
+      resolveFromTx(transfer1TxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(freezeEval.success).toBe(false);
+    expect(freezeEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
+    );
+    expect(freezeEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      true,
+    );
+    expect(
+      evaluateTransactionHex(
+        contractTxHex,
+        (txId, vout) => {
+          if (txId !== fundingOutPoint.TxId || vout !== fundingOutPoint.Vout)
+            return undefined;
+          return {
+            lockingScript: fundingOutPoint.LockingScript,
+            satoshis: fundingOutPoint.Satoshis,
+          };
+        },
+        { allowOpReturn: true },
+      ).success,
+    ).toBe(true);
+  });
+
+  test("dummy funding: unfreeze rejects wrong authority signer set", () => {
+    const bob = Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
+    const cat1 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/1");
+    const cat2 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/2");
+    const cat3 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/3");
+    const cat4 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/4");
+    const cat5 =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/5");
+    const alice =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/6");
+    const rogue =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/7");
+
+    const fundingOutPoint = new OutPoint(
+      "13".repeat(32),
+      0,
+      new P2pkhBuilder(bob.Address).toBytes(),
+      20_000,
+      bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const authorityPubKeys = [
+      cat1.PublicKey,
+      cat2.PublicKey,
+      cat3.PublicKey,
+      cat4.PublicKey,
+      cat5.PublicKey,
+    ];
+
+    const scheme = new TokenScheme(
+      "Divisible STAS-MSIG-AUTH",
+      toHex(bob.Address.Hash160),
+      "S30M",
+      1,
+      {
+        freeze: true,
+        confiscation: false,
+        isDivisible: true,
+        freezeAuthority: {
+          m: 3,
+          publicKeys: authorityPubKeys.map((k) => toHex(k)),
+        },
+      },
+    );
+
+    const { issueTxHex } = BuildDstasIssueTxs({
+      fundingPayment: {
+        OutPoint: fundingOutPoint,
+        Owner: bob,
+      },
+      scheme,
+      destinations: [
+        {
+          Satoshis: 100,
+          To: alice.Address,
+        },
+      ],
+    });
+    const issueTx = TransactionReader.readHex(issueTxHex);
+    const issueStasOutPoint = new OutPoint(
+      issueTx.Id,
+      0,
+      issueTx.Outputs[0].LockingScript,
+      issueTx.Outputs[0].Satoshis,
+      alice.Address,
+      ScriptType.dstas,
+    );
+    const issueFeeOutPoint = new OutPoint(
+      issueTx.Id,
+      1,
+      issueTx.Outputs[1].LockingScript,
+      issueTx.Outputs[1].Satoshis,
+      bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const transfer1TxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: issueStasOutPoint,
+        Owner: alice,
+      },
+      feePayment: {
+        OutPoint: issueFeeOutPoint,
+        Owner: bob,
+      },
+      Scheme: scheme,
+      destination: {
+        Satoshis: issueStasOutPoint.Satoshis,
+        To: bob.Address,
+      },
+    });
+    const transfer1Eval = evaluateTransactionHex(
+      transfer1TxHex,
+      resolveFromTx(issueTxHex),
+      { allowOpReturn: true },
+    );
+    expect(transfer1Eval.success).toBe(true);
+
+    const transfer1Tx = TransactionReader.readHex(transfer1TxHex);
+    const transfer1StasOutPoint = new OutPoint(
+      transfer1Tx.Id,
+      0,
+      transfer1Tx.Outputs[0].LockingScript,
+      transfer1Tx.Outputs[0].Satoshis,
+      bob.Address,
+      ScriptType.dstas,
+    );
+    const transfer1FeeOutPoint = new OutPoint(
+      transfer1Tx.Id,
+      1,
+      transfer1Tx.Outputs[1].LockingScript,
+      transfer1Tx.Outputs[1].Satoshis,
+      bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const freezeBuilder = TransactionBuilder.init()
+      .addInput(transfer1StasOutPoint, cat1)
+      .addInput(transfer1FeeOutPoint, bob);
+    freezeBuilder.Outputs.push(
+      new OutputBuilder(
+        buildDstasLockingScript(bob.Address, scheme, true),
+        transfer1StasOutPoint.Satoshis,
+      ),
+    );
+    prepareAuthorityUnlockingSize({
+      txBuilder: freezeBuilder,
+      stasInputIndex: 0,
+      spendingType: 2,
+      authoritySigners: [cat1, cat3, cat5],
+      authorityPubKeys,
+      authorityThreshold: 3,
+    });
+    freezeBuilder.addChangeOutputWithFee(
+      bob.Address,
+      transfer1FeeOutPoint.Satoshis,
+      FeeRate,
+      1,
+    );
+    finalizeAuthorityUnlocking({
+      txBuilder: freezeBuilder,
+      stasInputIndex: 0,
+      spendingType: 2,
+      authoritySigners: [cat1, cat3, cat5],
+      authorityPubKeys,
+      authorityThreshold: 3,
+    });
+    const freezeTxHex = freezeBuilder.sign().toHex();
+
+    const freezeEval = evaluateTransactionHex(
+      freezeTxHex,
+      resolveFromTx(transfer1TxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(freezeEval.success).toBe(true);
+    expect(freezeEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      true,
+    );
+
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+    const frozenStasOutPoint = new OutPoint(
+      freezeTx.Id,
+      0,
+      freezeTx.Outputs[0].LockingScript,
+      freezeTx.Outputs[0].Satoshis,
+      bob.Address,
+      ScriptType.dstas,
+    );
+    const frozenFeeOutPoint = new OutPoint(
+      freezeTx.Id,
+      1,
+      freezeTx.Outputs[1].LockingScript,
+      freezeTx.Outputs[1].Satoshis,
+      bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const unfreezeBuilder = TransactionBuilder.init()
+      .addInput(frozenStasOutPoint, cat1)
+      .addInput(frozenFeeOutPoint, bob);
+    unfreezeBuilder.Outputs.push(
+      new OutputBuilder(
+        buildDstasLockingScript(bob.Address, scheme, false),
+        frozenStasOutPoint.Satoshis,
+      ),
+    );
+    prepareAuthorityUnlockingSize({
+      txBuilder: unfreezeBuilder,
+      stasInputIndex: 0,
+      spendingType: 2,
+      authoritySigners: [cat1, cat2, rogue],
+      authorityPubKeys,
+      authorityThreshold: 3,
+    });
+    unfreezeBuilder.addChangeOutputWithFee(
+      bob.Address,
+      frozenFeeOutPoint.Satoshis,
+      FeeRate,
+      1,
+    );
+    finalizeAuthorityUnlocking({
+      txBuilder: unfreezeBuilder,
+      stasInputIndex: 0,
+      spendingType: 2,
+      authoritySigners: [cat1, cat2, rogue],
+      authorityPubKeys,
+      authorityThreshold: 3,
+    });
+    const unfreezeTxHex = unfreezeBuilder.sign().toHex();
+
+    const unfreezeEval = evaluateTransactionHex(
+      unfreezeTxHex,
+      resolveFromTx(freezeTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(unfreezeEval.success).toBe(false);
+    expect(unfreezeEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
+    );
+  });
 });

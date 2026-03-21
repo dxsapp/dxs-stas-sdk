@@ -159,6 +159,43 @@ describe("dstas state flows", () => {
     );
   });
 
+  test("real funding: freeze without authority is rejected", () => {
+    const fixture = createRealFundingFlowFixture();
+
+    const freezeTxHex = BuildDstasFreezeTx({
+      stasPayments: [
+        {
+          OutPoint: fixture.stasOutPoint,
+          // Token owner is not the freeze authority.
+          Owner: fixture.alice,
+        },
+      ],
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: fixture.stasOutPoint.Satoshis,
+          To: fixture.alice.Address,
+          Frozen: true,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+
+    const freezeEval = evaluateTransactionHex(
+      freezeTxHex,
+      resolveFromTx(fixture.issueTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(freezeEval.success).toBe(false);
+    expect(freezeEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
+    );
+  });
+
   test("real funding: issue -> transfer -> confiscate is valid", () => {
     const fixture = createRealFundingFlowFixture();
 
@@ -595,6 +632,63 @@ describe("dstas state flows", () => {
     );
     expect(unfreezeEval.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
       true,
+    );
+  });
+
+  test("real funding: unfreeze without authority is rejected", () => {
+    const fixture = createRealFundingFlowFixture();
+    const freezeTxHex = buildFreezeFromFixture(fixture);
+    const freezeTx = TransactionReader.readHex(freezeTxHex);
+
+    const frozenStasOutPoint = new OutPoint(
+      freezeTx.Id,
+      0,
+      freezeTx.Outputs[0].LockingScript,
+      freezeTx.Outputs[0].Satoshis,
+      fixture.alice.Address,
+      ScriptType.dstas,
+    );
+
+    const feeOutPoint = new OutPoint(
+      freezeTx.Id,
+      1,
+      freezeTx.Outputs[1].LockingScript,
+      freezeTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const unfreezeTxHex = BuildDstasUnfreezeTx({
+      stasPayments: [
+        {
+          OutPoint: frozenStasOutPoint,
+          // Token owner is not the freeze/unfreeze authority.
+          Owner: fixture.alice,
+        },
+      ],
+      feePayment: {
+        OutPoint: feeOutPoint,
+        Owner: fixture.bob,
+      },
+      destinations: [
+        {
+          Satoshis: frozenStasOutPoint.Satoshis,
+          To: fixture.alice.Address,
+          Frozen: false,
+        },
+      ],
+      Scheme: fixture.scheme,
+    });
+
+    const unfreezeEval = evaluateTransactionHex(
+      unfreezeTxHex,
+      resolveFromTx(freezeTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(unfreezeEval.success).toBe(false);
+    expect(unfreezeEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
     );
   });
 

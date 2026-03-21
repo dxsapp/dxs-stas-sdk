@@ -318,6 +318,200 @@ describe("dstas flow", () => {
     );
   });
 
+  test("real funding: owner-multisig rejects insufficient signatures", () => {
+    const fixture = createRealFundingFlowFixture();
+    const ownerPubKeys = [
+      fixture.bob.PublicKey,
+      fixture.cat.PublicKey,
+      fixture.alice.PublicKey,
+    ];
+    const ownerThreshold = 2;
+    const ownerMlpkh = hash160(
+      buildMlpkhPreimage(ownerThreshold, ownerPubKeys),
+    );
+    const rogue = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/9");
+
+    const toOwnerMultisigTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        ToOwnerMultisig: {
+          m: ownerThreshold,
+          publicKeys: ownerPubKeys.map((x) => toHex(x)),
+        },
+      },
+    });
+
+    const prevTx = TransactionReader.readHex(toOwnerMultisigTxHex);
+    const stasOutPoint = new OutPoint(
+      prevTx.Id,
+      0,
+      prevTx.Outputs[0].LockingScript,
+      prevTx.Outputs[0].Satoshis,
+      new Address(ownerMlpkh),
+      ScriptType.dstas,
+    );
+    const feeOutPoint = new OutPoint(
+      prevTx.Id,
+      1,
+      prevTx.Outputs[1].LockingScript,
+      prevTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const authorityServiceField = hash160(fixture.cat.PublicKey);
+    const transferOutLock = buildDstasLockingScriptForOwnerField({
+      ownerField: fixture.bob.Address.Hash160,
+      tokenIdHex: fixture.scheme.TokenId,
+      freezable: fixture.scheme.Freeze,
+      confiscatable: fixture.scheme.Confiscation,
+      authorityServiceField,
+      confiscationAuthorityServiceField: authorityServiceField,
+      frozen: false,
+    });
+
+    const txBuilder = TransactionBuilder.init()
+      .addInput(stasOutPoint, fixture.bob)
+      .addInput(feeOutPoint, fixture.bob);
+
+    txBuilder.Outputs.push(
+      new OutputBuilder(transferOutLock, stasOutPoint.Satoshis),
+    );
+
+    txBuilder.Inputs[0].UnlockingScript = buildOwnerMultisigUnlockingScript({
+      txBuilder,
+      stasInputIndex: 0,
+      spendingType: 1,
+      signers: [fixture.bob],
+      pubKeys: ownerPubKeys,
+      threshold: ownerThreshold,
+    });
+
+    const spendTxHex = txBuilder.sign().toHex();
+    const evalResult = evaluateTransactionHex(
+      spendTxHex,
+      resolveFromTx(toOwnerMultisigTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(evalResult.success).toBe(false);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
+    );
+
+    // Ensure the second input remains valid; the failure is on the owner multisig path.
+    expect(evalResult.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      true,
+    );
+  });
+
+  test("real funding: owner-multisig rejects wrong signer set", () => {
+    const fixture = createRealFundingFlowFixture();
+    const ownerPubKeys = [
+      fixture.bob.PublicKey,
+      fixture.cat.PublicKey,
+      fixture.alice.PublicKey,
+    ];
+    const ownerThreshold = 2;
+    const ownerMlpkh = hash160(
+      buildMlpkhPreimage(ownerThreshold, ownerPubKeys),
+    );
+    const rogue = Wallet.fromMnemonic(
+      "group spy extend supreme monkey judge avocado cancel exit educate modify bubble",
+    ).deriveWallet("m/44'/236'/0'/0/9");
+
+    const toOwnerMultisigTxHex = BuildDstasTransferTx({
+      stasPayment: {
+        OutPoint: fixture.stasOutPoint,
+        Owner: fixture.alice,
+      },
+      feePayment: {
+        OutPoint: fixture.feeOutPoint,
+        Owner: fixture.bob,
+      },
+      Scheme: fixture.scheme,
+      destination: {
+        Satoshis: fixture.stasOutPoint.Satoshis,
+        ToOwnerMultisig: {
+          m: ownerThreshold,
+          publicKeys: ownerPubKeys.map((x) => toHex(x)),
+        },
+      },
+    });
+
+    const prevTx = TransactionReader.readHex(toOwnerMultisigTxHex);
+    const stasOutPoint = new OutPoint(
+      prevTx.Id,
+      0,
+      prevTx.Outputs[0].LockingScript,
+      prevTx.Outputs[0].Satoshis,
+      new Address(ownerMlpkh),
+      ScriptType.dstas,
+    );
+    const feeOutPoint = new OutPoint(
+      prevTx.Id,
+      1,
+      prevTx.Outputs[1].LockingScript,
+      prevTx.Outputs[1].Satoshis,
+      fixture.bob.Address,
+      ScriptType.p2pkh,
+    );
+
+    const authorityServiceField = hash160(fixture.cat.PublicKey);
+    const transferOutLock = buildDstasLockingScriptForOwnerField({
+      ownerField: fixture.bob.Address.Hash160,
+      tokenIdHex: fixture.scheme.TokenId,
+      freezable: fixture.scheme.Freeze,
+      confiscatable: fixture.scheme.Confiscation,
+      authorityServiceField,
+      confiscationAuthorityServiceField: authorityServiceField,
+      frozen: false,
+    });
+
+    const txBuilder = TransactionBuilder.init()
+      .addInput(stasOutPoint, fixture.bob)
+      .addInput(feeOutPoint, fixture.bob);
+
+    txBuilder.Outputs.push(
+      new OutputBuilder(transferOutLock, stasOutPoint.Satoshis),
+    );
+
+    txBuilder.Inputs[0].UnlockingScript = buildOwnerMultisigUnlockingScript({
+      txBuilder,
+      stasInputIndex: 0,
+      spendingType: 1,
+      signers: [fixture.bob, rogue],
+      pubKeys: ownerPubKeys,
+      threshold: ownerThreshold,
+    });
+
+    const spendTxHex = txBuilder.sign().toHex();
+    const evalResult = evaluateTransactionHex(
+      spendTxHex,
+      resolveFromTx(toOwnerMultisigTxHex),
+      { allowOpReturn: true },
+    );
+
+    expect(evalResult.success).toBe(false);
+    expect(evalResult.inputs.find((x) => x.inputIndex === 0)?.success).toBe(
+      false,
+    );
+    expect(evalResult.inputs.find((x) => x.inputIndex === 1)?.success).toBe(
+      true,
+    );
+  });
+
   test("real funding: fee is within expected range for built Divisible STAS steps", () => {
     const fixture = createRealFundingFlowFixture();
 
