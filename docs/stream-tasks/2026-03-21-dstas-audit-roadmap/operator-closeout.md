@@ -14,12 +14,15 @@
   - Added preset unlocking-size hints and corrected DSTAS fee-sizing ordering in canonical assembly.
 - `delivery-integration` -> `d7cc6c0`
   - Added packed-package smoke coverage and aligned README/package export contract.
+- `post-closeout verification patch` -> `ab7ee8b`
+  - Restored legacy `p2stas` sample detection after full-suite validation exposed a regression in legacy STAS classification; also updated the DSTAS multisig-owner outpoint test to use a canonical MPKH preimage.
 
 ## Final operator notes
 
 - Unexpected worker artifact `/Users/imighty/Code/dxs-stas-sdk/src/script/identity-field.ts` was inspected, confirmed as intentional protocol helper work, and incorporated into the contracts stream.
 - Later stray diffs in `/Users/imighty/Code/dxs-stas-sdk/src/script/read/locking-script-reader.ts` and `/Users/imighty/Code/dxs-stas-sdk/tests/locking-script-reader.test.ts` were formatting-only noise and were discarded before closeout.
 - All stream dependencies were satisfied in order: contracts -> reliability/platform -> integration.
+- A final full-suite validation pass was run after stream closeout; `28/28` suites passed (`1` intentionally skipped debug suite).
 
 ## Remaining follow-up owners
 
