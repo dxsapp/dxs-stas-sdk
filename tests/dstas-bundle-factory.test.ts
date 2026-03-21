@@ -86,8 +86,8 @@ const makeFactory = (
   );
 
   const getStasUtxoSet = createSpy(async () => [stasOutPoint]);
-  const getFundingUtxo = createSpy(async (_request: TDstasFundingUtxoRequest) =>
-    feeOutPoint,
+  const getFundingUtxo = createSpy(
+    async (_request: TDstasFundingUtxoRequest) => feeOutPoint,
   );
   const getTransactions = createSpy(async () => ({}));
 
