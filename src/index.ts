@@ -4,7 +4,14 @@ export * as stas from "./stas";
 // Shared primitives intentionally exposed at the package root.
 export { bs58check } from "./base";
 export type { Bytes } from "./bytes";
-export { bytesToUtf8, concat, equal, fromHex, toHex, utf8ToBytes } from "./bytes";
+export {
+  bytesToUtf8,
+  concat,
+  equal,
+  fromHex,
+  toHex,
+  utf8ToBytes,
+} from "./bytes";
 export { hash160, hash256, ripemd160, sha256 } from "./hashes";
 export {
   configureStrictMode,
