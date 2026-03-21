@@ -20,12 +20,14 @@ Outcome:
 ### delivery-integration
 
 - `5070f9d` — `refactor(exports): expose bsv dstas stas namespaces`
+
 - `1e87a3b` — `style: normalize conformance vector formatting`
 
 Outcome:
 
 - root package surface is namespace-only: `dstas`, `stas`, `bsv`
 - low-level blockchain toolkit is grouped under `bsv`
+
 - package subpaths now include `dxs-stas-sdk/bsv`
 - README and package smoke/export tests reflect the canonical contract
 
@@ -37,6 +39,7 @@ Outcome:
 
 - DSTAS request surface now uses only `scheme`
 - `LockignScript` alias is removed; only `LockingScript` remains
+
 - docs and tests are aligned to canonical-only names
 
 ### delivery-backend-reliability
