@@ -8,14 +8,13 @@ import {
 } from "./bitcoin";
 import { Bytes } from "./bytes";
 import { TransactionBuilder, TransactionReader } from "./transaction";
-import { OutputBuilder } from "./transaction/build/output-builder";
 import { FeeRate } from "./transaction-factory";
+import { DstasLockingParams } from "./script/build/dstas-locking-builder";
 import {
-  DstasLockingParams,
-  buildDstasLockingScript,
-} from "./script/build/dstas-locking-builder";
-import { ScriptBuilder } from "./script/build/script-builder";
-import { ScriptReader } from "./script/read/script-reader";
+  TDstasAssemblyPayment,
+  buildSignedDstasTransaction,
+  validateDstasAmounts,
+} from "./dstas-tx-assembly";
 
 export const AvgFeeForDstasMerge = 500;
 
@@ -84,9 +83,7 @@ export type TDstasUnlockingScriptBuilder = (args: {
   isMerge: boolean;
 }) => Bytes;
 
-export type TDstasPayment = TPayment & {
-  UnlockingScript?: Bytes;
-};
+export type TDstasPayment = TDstasAssemblyPayment;
 
 export type TDstasDestination = {
   Satoshis: number;
@@ -657,54 +654,28 @@ export class DstasBundleFactory {
     if (destinations.length === 0)
       throw new Error("At least one destination is required");
 
-    this.validateStasAmounts(stasPayments, destinations);
+    validateDstasAmounts(stasPayments, destinations);
 
-    const txBuilder = TransactionBuilder.init();
-    const stasInputIdxs: number[] = [];
-
-    for (const payment of stasPayments) {
-      if (isMerge) {
-        txBuilder.addStasMergeInput(payment.OutPoint, payment.Owner);
-      } else {
-        txBuilder.addInput(payment.OutPoint, payment.Owner);
-      }
-      stasInputIdxs.push(txBuilder.Inputs.length - 1);
-    }
-
-    txBuilder.addInput(feePayment.OutPoint, feePayment.Owner);
-
-    for (const dest of destinations) {
-      const lockingScript = this.buildDstasLockingScriptBuilder(
-        dest.LockingParams,
-      );
-      txBuilder.Outputs.push(new OutputBuilder(lockingScript, dest.Satoshis));
-    }
-
-    const feeOutputIdx = txBuilder.Outputs.length;
-
-    if (note) txBuilder.addNullDataOutput(note);
-
-    txBuilder.addChangeOutputWithFee(
-      feePayment.OutPoint.Address,
-      feePayment.OutPoint.Satoshis,
-      feeRate ?? FeeRate,
-      feeOutputIdx,
-    );
-
-    for (const idx of stasInputIdxs) {
-      const input = txBuilder.Inputs[idx];
-      input.AllowPresetUnlockingScript = true;
-      input.UnlockingScript = this.buildUnlockingScript({
-        txBuilder,
-        inputIndex: idx,
-        outPoint: input.OutPoint,
-        spendType,
-        isFreezeLike: spendType === "freeze" || spendType === "unfreeze",
-        isMerge,
-      });
-    }
-
-    return txBuilder.sign().toHex();
+    return buildSignedDstasTransaction({
+      stasPayments,
+      feePayment,
+      destinations,
+      note,
+      feeRate: feeRate ?? FeeRate,
+      isMerge,
+      configureStasInput: ({ txBuilder, inputIndex }) => {
+        const input = txBuilder.Inputs[inputIndex];
+        input.AllowPresetUnlockingScript = true;
+        input.UnlockingScript = this.buildUnlockingScript({
+          txBuilder,
+          inputIndex,
+          outPoint: input.OutPoint,
+          spendType,
+          isFreezeLike: spendType === "freeze" || spendType === "unfreeze",
+          isMerge,
+        });
+      },
+    });
   };
 
   private buildDestinations = (
@@ -730,26 +701,6 @@ export class DstasBundleFactory {
         isChange: output.isChange,
       }),
     }));
-  };
-
-  private validateStasAmounts = (
-    stasPayments: TDstasPayment[],
-    destinations: TDstasDestination[],
-  ) => {
-    const inputTotal = stasPayments.reduce(
-      (sum, p) => sum + p.OutPoint.Satoshis,
-      0,
-    );
-    const outputTotal = destinations.reduce((sum, d) => sum + d.Satoshis, 0);
-
-    if (inputTotal !== outputTotal)
-      throw new Error("Input satoshis must be equal output satoshis");
-  };
-
-  private buildDstasLockingScriptBuilder = (params: DstasLockingParams) => {
-    const scriptBytes = buildDstasLockingScript(params);
-    const tokens = ScriptReader.read(scriptBytes);
-    return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
   };
 
   private outPointFromTransaction = (

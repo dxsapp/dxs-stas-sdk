@@ -11,9 +11,7 @@ import {
   ActionDataInput,
   DstasLockingParams,
   buildDstasFlags,
-  buildDstasLockingTokens,
 } from "./script/build/dstas-locking-builder";
-import { ScriptBuilder } from "./script/build/script-builder";
 import { TransactionBuilder } from "./transaction/build/transaction-builder";
 import { OutputBuilder } from "./transaction/build/output-builder";
 import { TransactionReader } from "./transaction/read/transaction-reader";
@@ -21,10 +19,14 @@ import { FeeRate } from "./transaction-factory";
 import { hash160 } from "./hashes";
 import { LockingScriptReader } from "./script/read/locking-script-reader";
 import { Point } from "@noble/secp256k1";
+import {
+  TDstasAssemblyDestination,
+  TDstasAssemblyPayment,
+  buildDstasLockingScriptBuilder,
+  buildSignedDstasTransaction,
+} from "./dstas-tx-assembly";
 
-export type TDstasPayment = TPayment & {
-  UnlockingScript?: Bytes;
-};
+export type TDstasPayment = TDstasAssemblyPayment;
 
 export type TDstasDestinationByLockingParams = {
   Satoshis: number;
@@ -73,11 +75,6 @@ export type TBuildDstasIssueTxsResult = {
 
 const resolveUnlockingScript = (payment: TDstasPayment): Bytes | undefined =>
   payment.UnlockingScript;
-
-const buildDstasLockingScriptBuilder = (params: DstasLockingParams) => {
-  const tokens = buildDstasLockingTokens(params);
-  return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
-};
 
 const deriveFlagsFromScheme = (scheme: TokenScheme): Bytes =>
   buildDstasFlags({
@@ -245,20 +242,6 @@ const resolveLockingParams = (
   };
 };
 
-const validateDstasAmounts = (
-  stasPayments: TDstasPayment[],
-  destinations: TDstasDestination[],
-) => {
-  const inputTotal = stasPayments.reduce(
-    (sum, p) => sum + p.OutPoint.Satoshis,
-    0,
-  );
-  const outputTotal = destinations.reduce((sum, d) => sum + d.Satoshis, 0);
-
-  if (inputTotal !== outputTotal)
-    throw new Error("Input satoshis must be equal output satoshis");
-};
-
 const validateDestinationSatoshis = (destinations: TDstasDestination[]) => {
   for (const [idx, destination] of destinations.entries()) {
     if (!Number.isInteger(destination.Satoshis) || destination.Satoshis <= 0) {
@@ -299,53 +282,30 @@ export const BuildDstasBaseTx = ({
     throw new Error("At least one destination is required");
 
   validateDestinationSatoshis(destinations);
-  validateDstasAmounts(stasPayments, destinations);
+  const resolvedDestinations: TDstasAssemblyDestination[] = destinations.map(
+    (destination) => ({
+      Satoshis: destination.Satoshis,
+      LockingParams: resolveLockingParams(destination, Scheme),
+    }),
+  );
 
-  const txBuilder = TransactionBuilder.init();
-  const stasInputIdxs: number[] = [];
-
-  for (const payment of stasPayments) {
-    if (stasPayments.length > 1) {
-      txBuilder.addStasMergeInput(payment.OutPoint, payment.Owner);
-    } else {
-      txBuilder.addInput(payment.OutPoint, payment.Owner);
-    }
-    stasInputIdxs.push(txBuilder.Inputs.length - 1);
-  }
-
-  txBuilder.addInput(feePayment.OutPoint, feePayment.Owner);
-
-  for (const dest of destinations) {
-    const lockingScript = buildDstasLockingScriptBuilder(
-      resolveLockingParams(dest, Scheme),
-    );
-    txBuilder.Outputs.push(new OutputBuilder(lockingScript, dest.Satoshis));
-  }
-
-  const feeOutputIdx = txBuilder.Outputs.length;
-
-  if (note) txBuilder.addNullDataOutput(note!);
-
-  if (!omitChangeOutput) {
-    txBuilder.addChangeOutputWithFee(
-      feePayment.OutPoint.Address,
-      feePayment.OutPoint.Satoshis,
-      feeRate,
-      feeOutputIdx,
-    );
-  }
-
-  stasInputIdxs.forEach((idx, i) => {
-    const payment = stasPayments[i];
-    txBuilder.Inputs[idx].DstasSpendingType = spendingType ?? 1;
-    const unlocking = resolveUnlockingScript(payment);
-    if (unlocking) {
-      txBuilder.Inputs[idx].AllowPresetUnlockingScript = true;
-      txBuilder.Inputs[idx].UnlockingScript = unlocking;
-    }
+  return buildSignedDstasTransaction({
+    stasPayments,
+    feePayment,
+    destinations: resolvedDestinations,
+    note,
+    feeRate,
+    omitChangeOutput,
+    isMerge: stasPayments.length > 1,
+    configureStasInput: ({ txBuilder, inputIndex, payment }) => {
+      txBuilder.Inputs[inputIndex].DstasSpendingType = spendingType ?? 1;
+      const unlocking = resolveUnlockingScript(payment);
+      if (unlocking) {
+        txBuilder.Inputs[inputIndex].AllowPresetUnlockingScript = true;
+        txBuilder.Inputs[inputIndex].UnlockingScript = unlocking;
+      }
+    },
   });
-
-  return txBuilder.sign().toHex();
 };
 
 export const BuildDstasIssueTxs = ({
