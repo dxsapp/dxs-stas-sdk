@@ -150,4 +150,39 @@ describe("script evaluator", () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain("missing FORKID");
   });
+
+  test("fails CHECKMULTISIG deterministically for malformed pubkeys", () => {
+    const tx = TransactionReader.readHex(stasTxs.SourceTxRaw);
+    const sig = new Uint8Array([
+      0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x01, 0x01,
+    ]);
+    const malformedPubKey = new Uint8Array([0x02]);
+    const lockingScript = new Uint8Array([OpCode.OP_CHECKMULTISIG]);
+    const unlockingScript = new Uint8Array([
+      OpCode.OP_0,
+      sig.length,
+      ...sig,
+      OpCode.OP_1,
+      malformedPubKey.length,
+      ...malformedPubKey,
+      OpCode.OP_1,
+    ]);
+
+    const result = evaluateScripts(
+      unlockingScript,
+      lockingScript,
+      {
+        tx,
+        inputIndex: 0,
+        prevOutputs: [{ lockingScript: new Uint8Array(), satoshis: 1 }],
+      },
+      {
+        scriptFlags:
+          SCRIPT_ENABLE_MAGNETIC_OPCODES | SCRIPT_ENABLE_MONOLITH_OPCODES,
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Script evaluated to false");
+  });
 });

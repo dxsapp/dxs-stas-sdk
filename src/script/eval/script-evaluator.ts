@@ -1131,40 +1131,45 @@ class ScriptInterpreter {
 
         let sigIdx = 0;
         let keyIdx = 0;
+        let ok = false;
+        try {
+          while (sigIdx < m && keyIdx < n) {
+            const { signature, sighashType } = parseSignature(
+              sigs[sigIdx],
+              this.requireDerSignatures,
+            );
+            const requireForkId = this.hasFlag(SCRIPT_ENABLE_SIGHASH_FORKID);
+            const hasForkId =
+              (sighashType & SignatureHashType.SIGHASH_FORKID) ===
+              SignatureHashType.SIGHASH_FORKID;
+            if (requireForkId && !hasForkId) {
+              keyIdx++;
+              continue;
+            }
+            const scriptCode = this.getScriptCode();
+            const preimage = buildSighashPreimage(
+              this.ctx,
+              scriptCode,
+              sighashType,
+            );
+            const msg = hash256(preimage);
 
-        while (sigIdx < m && keyIdx < n) {
-          const { signature, sighashType } = parseSignature(
-            sigs[sigIdx],
-            this.requireDerSignatures,
-          );
-          const requireForkId = this.hasFlag(SCRIPT_ENABLE_SIGHASH_FORKID);
-          const hasForkId =
-            (sighashType & SignatureHashType.SIGHASH_FORKID) ===
-            SignatureHashType.SIGHASH_FORKID;
-          if (requireForkId && !hasForkId) {
+            const matched =
+              signature.length > 0 &&
+              nobleVerify(signature, msg, pubKeys[keyIdx], {
+                prehash: false,
+                format: "compact",
+              });
+
+            if (matched) sigIdx++;
             keyIdx++;
-            continue;
           }
-          const scriptCode = this.getScriptCode();
-          const preimage = buildSighashPreimage(
-            this.ctx,
-            scriptCode,
-            sighashType,
-          );
-          const msg = hash256(preimage);
 
-          const ok =
-            signature.length > 0 &&
-            nobleVerify(signature, msg, pubKeys[keyIdx], {
-              prehash: false,
-              format: "compact",
-            });
-
-          if (ok) sigIdx++;
-          keyIdx++;
+          ok = sigIdx === m;
+        } catch {
+          ok = false;
         }
-
-        const success = sigIdx === m;
+        const success = ok;
 
         if (opcode === OpCode.OP_CHECKMULTISIGVERIFY) {
           if (!success)

@@ -19,13 +19,13 @@ export type StrictModeConfig = {
 
 const defaultStrictModeConfig: StrictModeConfig = {
   strictTxParse: true,
-  strictOutPointValidation: false,
+  strictOutPointValidation: true,
   strictFeeRateValidation: true,
   maxFeeRateSatsPerByte: 1000,
   strictPresetUnlockingScript: false,
   strictMultisigKeys: false,
-  strictScriptReader: false,
-  strictScriptEvaluation: false,
+  strictScriptReader: true,
+  strictScriptEvaluation: true,
   scriptEvaluationLimits: {
     maxScriptSizeBytes: 100000,
     maxOps: 50000,

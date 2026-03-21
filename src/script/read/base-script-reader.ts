@@ -1,6 +1,7 @@
 import { ByteWriter } from "../../binary";
 import { OpCode } from "../../bitcoin/op-codes";
 import { Bytes } from "../../bytes";
+import { getStrictModeConfig } from "../../security/strict-mode";
 import { ScriptReadToken } from "./script-read-token";
 
 export abstract class BaseScriptReader {
@@ -107,6 +108,10 @@ export abstract class BaseScriptReader {
     varInt: number,
   ): boolean {
     if (count + this.ReadBytes > this.ExpectedLength) {
+      if (getStrictModeConfig().strictScriptReader) {
+        throw new Error("Malformed pushdata in script");
+      }
+
       const rest = this.ExpectedLength - this.ReadBytes;
       const writer = ByteWriter.fromSize(1 + this.varIntLength(varInt) + rest);
 
@@ -135,6 +140,10 @@ export abstract class BaseScriptReader {
   }
 
   private handleRest(opCodeNum: number, tokenIdx: number): boolean {
+    if (getStrictModeConfig().strictScriptReader) {
+      throw new Error("Malformed pushdata in script");
+    }
+
     const count = this.ExpectedLength - this.ReadBytes;
     const bytes = count > 0 ? this.readNBytes(count) : undefined;
 

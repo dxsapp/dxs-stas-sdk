@@ -82,6 +82,15 @@ describe("strict mode hardening", () => {
     ).toThrow("Invalid fee rate");
   });
 
+  test("strict defaults enable outpoint parsing, script reading, and script evaluation", () => {
+    resetStrictMode();
+    const strict = getStrictModeConfig();
+
+    expect(strict.strictOutPointValidation).toBe(true);
+    expect(strict.strictScriptReader).toBe(true);
+    expect(strict.strictScriptEvaluation).toBe(true);
+  });
+
   test("strictPresetUnlockingScript requires explicit opt-in", () => {
     const from = issuerPrivateKey.Address;
     const outPoint = new OutPoint(
@@ -111,9 +120,6 @@ describe("strict mode hardening", () => {
   test("strictScriptReader throws on malformed pushdata", () => {
     const malformed = new Uint8Array([OpCode.OP_PUSHDATA1, 0x02, 0xaa]);
 
-    expect(ScriptReader.read(malformed)).toEqual([]);
-
-    configureStrictMode({ strictScriptReader: true });
     expect(() => ScriptReader.read(malformed)).toThrow(
       "Pushdata exceeds script length",
     );
@@ -125,10 +131,6 @@ describe("strict mode hardening", () => {
 
     expect(ScriptReader.decode(malformed2, 0)).toBeNull();
     expect(ScriptReader.decode(malformed4, 0)).toBeNull();
-    expect(ScriptReader.read(malformed2)).toEqual([]);
-    expect(ScriptReader.read(malformed4)).toEqual([]);
-
-    configureStrictMode({ strictScriptReader: true });
     expect(() => ScriptReader.read(malformed2)).toThrow(
       "Malformed pushdata at offset 0",
     );
@@ -140,7 +142,7 @@ describe("strict mode hardening", () => {
   test("strictOutPointValidation rejects script type mismatch", () => {
     const from = issuerPrivateKey.Address;
 
-    configureStrictMode({ strictOutPointValidation: true });
+    resetStrictMode();
 
     expect(
       () =>
@@ -188,7 +190,7 @@ describe("strict mode hardening", () => {
   });
 
   test("strict script evaluation enforces opcode limits", () => {
-    configureStrictMode({ strictScriptEvaluation: true });
+    resetStrictMode();
 
     const tx = TransactionReader.readHex(TransferNoNoteRaw);
     const result = evaluateScripts(

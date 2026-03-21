@@ -49,23 +49,24 @@ describe("locking script reader", () => {
     expect(toHex(reader.Data![0])).toBe("414243");
   });
 
-  test("handles broken pushdata near end like C# reader", () => {
+  test("rejects broken pushdata near end in locking-script reading", () => {
     const brokenHex = "006a4c05aabb";
-    const reader = LockingScriptReader.readHex(brokenHex);
 
-    expect(reader.ScriptType).toBe(ScriptType.nullData);
-    expect(reader.Data).toHaveLength(1);
-    expect(toHex(reader.Data![0])).toBe("4c05aabb");
+    expect(() => LockingScriptReader.readHex(brokenHex)).toThrow(
+      "Malformed pushdata in script",
+    );
   });
 
-  test("keeps malformed ScriptReader and LockingScriptReader behavior intentionally different", () => {
+  test("locking-script reader fails harder than plain script reader on malformed pushdata", () => {
     const broken = fromHex("006a4c05aabb");
 
-    expect(ScriptReader.read(broken)).toEqual([]);
+    expect(() => ScriptReader.read(broken)).toThrow(
+      "Pushdata exceeds script length",
+    );
 
-    const reader = LockingScriptReader.read(broken);
-    expect(reader.ScriptType).toBe(ScriptType.nullData);
-    expect(reader.Data).toHaveLength(1);
+    expect(() => LockingScriptReader.read(broken)).toThrow(
+      "Malformed pushdata in script",
+    );
   });
 
   test("extracts p2stas helper fields", () => {
