@@ -430,14 +430,7 @@ export class DstasBundleFactory {
         throw new Error("Transfer planner failed to locate STAS change output");
       }
 
-      currentStas = new OutPoint(
-        tx.Id,
-        changeOutputIndex,
-        changeOutput.LockingScript,
-        changeOutput.Satoshis,
-        this.stasWallet.Address,
-        changeOutput.ScriptType,
-      );
+      currentStas = this.outPointFromTransaction(tx, changeOutputIndex);
 
       queue.splice(0, transferOutputs.length);
     }
@@ -706,10 +699,17 @@ export class DstasBundleFactory {
   private outPointFromTransaction = (
     tx: Transaction,
     vout: number,
-    fallbackAddress: Address,
+    fallbackAddress?: Address,
   ): OutPoint => {
     const output = tx.Outputs[vout];
     const owner = output.Address ?? fallbackAddress;
+
+    if (!owner) {
+      throw new Error(
+        "STAS output does not expose address and no fallback owner was provided",
+      );
+    }
+
     const outPoint = new OutPoint(
       tx.Id,
       vout,
@@ -725,7 +725,7 @@ export class DstasBundleFactory {
 
   private getStasOutPoint = (
     tx: Transaction,
-    fallbackAddress: Address,
+    fallbackAddress?: Address,
   ): OutPoint => {
     const index = tx.Outputs.findIndex(
       (output) =>

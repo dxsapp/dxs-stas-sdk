@@ -280,7 +280,7 @@ describe("DstasBundleFactory spendType flags", () => {
     expect(result.feeSatoshis).toBe(0);
   });
 
-  test("merge source reconstruction supports multisig-owner DSTAS outputs", async () => {
+  test("merge source reconstruction fails for multisig-owner DSTAS outputs without exposed address", async () => {
     const stasWallet =
       Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
     const feeWallet =
@@ -359,7 +359,7 @@ describe("DstasBundleFactory spendType flags", () => {
         0,
         tx1.Outputs[0].LockingScript,
         tx1.Outputs[0].Satoshis,
-        stasWallet.Address,
+        tx1.Outputs[0].Address!,
         ScriptType.dstas,
       ),
       new OutPoint(
@@ -367,7 +367,7 @@ describe("DstasBundleFactory spendType flags", () => {
         0,
         tx2.Outputs[0].LockingScript,
         tx2.Outputs[0].Satoshis,
-        stasWallet.Address,
+        tx2.Outputs[0].Address!,
         ScriptType.dstas,
       ),
     ];
@@ -401,13 +401,132 @@ describe("DstasBundleFactory spendType flags", () => {
       () => new Uint8Array(),
     );
 
-    const result = await factory.createTransferBundle(1000, {
+    await expect(
+      factory.createTransferBundle(1000, {
+        m: 1,
+        addresses: [stasWallet.Address],
+      }),
+    ).rejects.toThrow(
+      "STAS output does not expose address and no fallback owner was provided",
+    );
+  });
+
+  test("transfer planner fails when an intermediate DSTAS output has no address", async () => {
+    const buildOwnerMultisigField = (m: number, keys: Uint8Array[]) => {
+      const n = keys.length;
+      const bytes = new Uint8Array(1 + n * (1 + 33) + 1);
+      let off = 0;
+      bytes[off++] = m & 0xff;
+      for (const key of keys) {
+        bytes[off++] = 0x21;
+        bytes.set(key, off);
+        off += key.length;
+      }
+      bytes[off] = n & 0xff;
+      return bytes;
+    };
+
+    const stasWallet =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
+    const feeWallet =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/1");
+
+    const ownerMultisig = buildOwnerMultisigField(2, [
+      stasWallet.PublicKey,
+      feeWallet.PublicKey,
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/2").PublicKey,
+    ]);
+
+    const createSourceTx = (txIdSeed: string, satoshis: number) => {
+      const fundingScript = new P2pkhBuilder(feeWallet.Address).toBytes();
+      const fundingOutPoint = makeOutPoint(
+        txIdSeed,
+        satoshis,
+        feeWallet.Address,
+        ScriptType.p2pkh,
+        fundingScript,
+      );
+
+      const lockingScript = ScriptBuilder.fromTokens(
+        buildDstasLockingTokens({
+          owner: ownerMultisig,
+          actionData: null,
+          redemptionPkh,
+          frozen: false,
+          flags: buildDstasFlags({ freezable: true }),
+          serviceFields: [freezeAuthorityPkh],
+          optionalData: [],
+        }),
+        ScriptType.dstas,
+      );
+
+      const txBuilder = TransactionBuilder.init().addInput(
+        fundingOutPoint,
+        feeWallet,
+      );
+      txBuilder.Outputs.push(new OutputBuilder(lockingScript, satoshis));
+      return TransactionReader.readHex(txBuilder.sign().toHex());
+    };
+
+    const tx = createSourceTx("55".repeat(32), 1000);
+    const getStasUtxoSet = async () => [
+      new OutPoint(
+        tx.Id,
+        0,
+        tx.Outputs[0].LockingScript,
+        tx.Outputs[0].Satoshis,
+        tx.Outputs[0].Address!,
+        ScriptType.dstas,
+      ),
+    ];
+    const getFundingUtxo = async () => {
+      const feeScript = new P2pkhBuilder(feeWallet.Address).toBytes();
+      return makeOutPoint(
+        "66".repeat(32),
+        100000,
+        feeWallet.Address,
+        ScriptType.p2pkh,
+        feeScript,
+      );
+    };
+    const getTransactions = async () => ({
+      [tx.Id]: tx,
+    });
+    const factory = new DstasBundleFactory(
+      stasWallet,
+      feeWallet,
+      getFundingUtxo,
+      getStasUtxoSet,
+      getTransactions,
+      () => ({
+        owner: ownerMultisig,
+        actionData: null,
+        redemptionPkh,
+        frozen: false,
+        flags: buildDstasFlags({ freezable: true }),
+        serviceFields: [freezeAuthorityPkh],
+        optionalData: [],
+      }),
+      () => new Uint8Array(),
+    );
+    const recipient = {
       m: 1,
       addresses: [stasWallet.Address],
-    });
+    };
 
-    expect(result.transactions).toBeDefined();
-    expect(result.transactions!.length).toBeGreaterThan(0);
+    await expect(
+      factory.transfer({
+        outputs: [
+          { recipient, satoshis: 200 },
+          { recipient, satoshis: 200 },
+          { recipient, satoshis: 200 },
+          { recipient, satoshis: 200 },
+          { recipient, satoshis: 200 },
+        ],
+      }),
+    ).rejects.toThrow(
+      "STAS output does not expose address and no fallback owner was provided",
+    );
   });
 
   test("merge service tx uses addStasMergeInput path", async () => {
@@ -464,7 +583,7 @@ describe("DstasBundleFactory spendType flags", () => {
         0,
         tx1.Outputs[0].LockingScript,
         tx1.Outputs[0].Satoshis,
-        stasWallet.Address,
+        tx1.Outputs[0].Address!,
         ScriptType.dstas,
       ),
       new OutPoint(
@@ -472,7 +591,7 @@ describe("DstasBundleFactory spendType flags", () => {
         0,
         tx2.Outputs[0].LockingScript,
         tx2.Outputs[0].Satoshis,
-        stasWallet.Address,
+        tx2.Outputs[0].Address!,
         ScriptType.dstas,
       ),
     ];
