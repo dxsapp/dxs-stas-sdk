@@ -3,7 +3,7 @@
 - Stream: `delivery`
 - Lane: `integration`
 - Zone: `Z3 - Public API, Packaging, Integration Surface`
-- Status: `blocked`
+- Status: `done`
 - Depends on: `delivery-backend-platform done`
 
 ## Goal
@@ -56,4 +56,4 @@ npm pack
 
 - Commit message suggestion: `test(integration): validate package consumer contract`
 - Status transitions: `blocked -> in_progress -> done`
-- `done` requires commit hash or explicit no-code smoke evidence.
+- `done` evidence: `d7cc6c0` - tarball/package smoke coverage, cleaned dist, and README/export alignment.

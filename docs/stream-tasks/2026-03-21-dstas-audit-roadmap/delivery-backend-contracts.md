@@ -4,7 +4,7 @@
 - Lane: `backend`
 - Backend substream: `BE-Contracts`
 - Zone: `Z1 - Protocol Core`
-- Status: `todo`
+- Status: `done`
 - Depends on: `none`
 
 ## Goal
@@ -56,4 +56,4 @@ npm test -- --runInBand tests/script-read.test.ts tests/locking-script-reader.te
 
 - Commit message suggestion: `test(protocol): harden dstas parser boundaries`
 - Status transitions: `todo -> in_progress -> done`
-- `done` requires commit hash plus short note of behavior changes.
+- `done` evidence: `be859b6` - hardened identity-field/action-data validation and locking-script classification rules.

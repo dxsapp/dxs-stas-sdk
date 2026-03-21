@@ -4,7 +4,7 @@
 - Lane: `backend`
 - Backend substream: `BE-Reliability`
 - Zone: `Z4 - Test & Conformance`
-- Status: `blocked`
+- Status: `done`
 - Depends on: `delivery-backend-contracts done`
 
 ## Goal
@@ -55,4 +55,4 @@ npm test -- --runInBand tests/script-read.test.ts tests/script-eval.test.ts test
 
 - Commit message suggestion: `test(reliability): add malformed dstas corpus`
 - Status transitions: `blocked -> in_progress -> done`
-- `done` requires commit hash plus short inventory of new negative cases.
+- `done` evidence: `03d1e04`, `174470a`, `2712227` - malformed parser corpus plus final multisig/authority negative coverage.

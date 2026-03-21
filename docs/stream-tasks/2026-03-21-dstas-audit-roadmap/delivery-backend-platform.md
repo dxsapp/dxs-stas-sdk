@@ -4,7 +4,7 @@
 - Lane: `backend`
 - Backend substream: `BE-Platform`
 - Zone: `Z2 - Transaction Assembly & Planning`
-- Status: `blocked`
+- Status: `done`
 - Depends on: `delivery-backend-contracts done`
 
 ## Goal
@@ -57,4 +57,4 @@ npm test -- --runInBand tests/dstas-bundle-factory.test.ts tests/dstas-flow.test
 
 - Commit message suggestion: `refactor(platform): tighten dstas assembly audit coverage`
 - Status transitions: `blocked -> in_progress -> done`
-- `done` requires commit hash plus evidence of canonical-path validation.
+- `done` evidence: `7481057`, `fc95351` - preset unlocking-size hints and corrected DSTAS fee-sizing ordering in assembly.
