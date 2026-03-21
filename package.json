@@ -9,13 +9,15 @@
     "url": "https://github.com/dxsapp/dxs-stas-sdk"
   },
   "scripts": {
+    "prebuild": "node scripts/clean-dist.mjs",
     "build": "tsc",
+    "prepack": "npm run build",
     "check": "npm run check:nobuffer",
     "check:nobuffer": "node scripts/check-no-buffer.mjs",
     "lint": "eslint .",
     "lint:staged": "lint-staged",
     "format": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\"",
-    "prepare": "husky install",
+    "prepare": "node scripts/prepare-husky.mjs",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "start": "tsnd ./src/index.ts",
     "rollup": "rollup -c rollup.config.ts -w --configPlugin typescript"
@@ -25,6 +27,10 @@
   },
   "author": "oleg@dxs.app (https://github.com/panagushin)",
   "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@rollup/plugin-commonjs": "^29.0.0",

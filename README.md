@@ -325,15 +325,15 @@ const txHex = BuildTransferTx({
 
 ## API overview (high level)
 
-| Area                    | Purpose                               | Key exports                                                                                                    |
-| ----------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Bytes                   | Hex/UTF-8 helpers and byte utilities  | `fromHex`, `toHex`, `utf8ToBytes`, `bytesToUtf8`, `concat`, `equal`                                            |
-| Bitcoin primitives      | Keys, addresses, transactions         | `PrivateKey`, `Address`, `Transaction`, `OutPoint`                                                             |
-| Script builders/readers | Build and parse scripts               | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader`                            |
-| Transaction building    | Assemble raw txs                      | `TransactionBuilder`, `TransactionReader`                                                                      |
-| Root package            | Shared primitives and low-level tools | `PrivateKey`, `Address`, `OutPoint`, `TransactionBuilder`, `ScriptReader`, `hash160`                           |
-| `dxs-stas-sdk/dstas`    | Canonical DSTAS workflows             | `DstasBundleFactory`, `BuildDstasIssueTxs`, `BuildDstasTransferTx`, `BuildDstasFreezeTx`, `BuildDstasRedeemTx` |
-| `dxs-stas-sdk/stas`     | Older STAS workflow surface           | `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, `BuildRedeemTx`, `StasBundleFactory`                        |
+| Area                    | Purpose                               | Key exports                                                                                                        |
+| ----------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Bytes                   | Hex/UTF-8 helpers and byte utilities  | `fromHex`, `toHex`, `utf8ToBytes`, `bytesToUtf8`, `concat`, `equal`                                                |
+| Bitcoin primitives      | Keys, addresses, transactions         | `PrivateKey`, `Address`, `Transaction`, `OutPoint`                                                                 |
+| Script builders/readers | Build and parse scripts               | `ScriptBuilder`, `P2pkhBuilder`, `P2stasBuilder`, `NullDataBuilder`, `ScriptReader`                                |
+| Transaction building    | Assemble raw txs                      | `TransactionBuilder`, `TransactionReader`                                                                          |
+| Root package            | Shared primitives and low-level tools | `PrivateKey`, `Address`, `OutPoint`, `TransactionBuilder`, `ScriptReader`, `hash160`                               |
+| `dxs-stas-sdk/dstas`    | Canonical DSTAS workflows             | `DstasBundleFactory`, `BuildDstasIssueTxs`, `BuildDstasTransferTx`, `BuildDstasFreezeTx`, `BuildDstasConfiscateTx` |
+| `dxs-stas-sdk/stas`     | Older STAS workflow surface           | `BuildTransferTx`, `BuildSplitTx`, `BuildMergeTx`, `BuildRedeemTx`, `StasBundleFactory`                            |
 
 ## Strict mode
 
