@@ -23,12 +23,14 @@ Outcome:
 - `3c7a38b` — `refactor(dstas): share issue tx assembly`
 - `ba81e25` — `fix(bundle): improve planner fee estimates`
 - `873e69a` — `chore(format): normalize bundle factory test formatting`
+
 - `d487133` — `refactor(dstas): prefer scheme request field`
 
 Outcome:
 
 - planner no longer fabricates owner addresses for addressless intermediate DSTAS outputs
 - issuance now uses a shared internal assembly seam
+
 - bundle fee estimation is less brittle and the obvious quadratic queue hotspot is removed
 - DSTAS request surface now prefers `scheme`; deprecated `Scheme` remains as compatibility alias
 
@@ -42,6 +44,7 @@ Outcome:
 - package smoke test now installs the packed tarball in a clean temp consumer project
 - root export surface is narrower and namespace-first
 - README is clearer and DSTAS-first
+
 - runtime package contract includes the needed `@noble/curves` dependency
 
 ### delivery-backend-reliability
