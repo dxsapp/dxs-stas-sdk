@@ -61,13 +61,4 @@ export class TransactionOutput {
   set LockingScript(value: Bytes) {
     this._lockingScript = value;
   }
-
-  // Deprecated typo kept for backward compatibility.
-  get LockignScript(): Bytes {
-    return this._lockingScript;
-  }
-
-  set LockignScript(value: Bytes) {
-    this._lockingScript = value;
-  }
 }

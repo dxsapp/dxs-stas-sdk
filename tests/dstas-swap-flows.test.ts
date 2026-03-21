@@ -92,7 +92,7 @@ describe("dstas swap flows", () => {
           ActionData: swapActionData,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       feeRate: FeeRate,
       omitChangeOutput: true,
     });

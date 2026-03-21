@@ -53,7 +53,7 @@ For every protocol change or new flow, validate built tx hex with script evaluat
 - Preserve flags/service-field ordering and optional-data continuity invariants.
 - Keep multisig bounds enforced (`m <= n`, `n <= 5`) unless protocol spec changes.
 - Avoid silent behavior changes in unlock/signing semantics; cover with negative tests.
-- Use canonical `LockingScript` in new code; `LockignScript` exists only as deprecated compatibility alias.
+- Use canonical `LockingScript` in new code.
 
 ## Standard local commands
 

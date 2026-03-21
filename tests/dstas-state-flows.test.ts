@@ -84,7 +84,7 @@ describe("dstas state flows", () => {
         OutPoint: feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: frozenStasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -145,7 +145,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
 
     const confiscateEval = evaluateTransactionHex(
@@ -181,7 +181,7 @@ describe("dstas state flows", () => {
           Frozen: true,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
 
     const freezeEval = evaluateTransactionHex(
@@ -208,7 +208,7 @@ describe("dstas state flows", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -251,7 +251,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
 
     const confiscateEval = evaluateTransactionHex(
@@ -296,7 +296,7 @@ describe("dstas state flows", () => {
           ActionData: swapActionData,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
     const swapTx = TransactionReader.readHex(swapTxHex);
 
@@ -327,7 +327,7 @@ describe("dstas state flows", () => {
           Frozen: true,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
     const freezeTx = TransactionReader.readHex(freezeTxHex);
 
@@ -359,7 +359,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
 
     const confiscateEval = evaluateTransactionHex(
@@ -399,7 +399,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
 
     const confiscateEval = evaluateTransactionHex(
@@ -485,7 +485,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: schemeNoConfiscation,
+      scheme: schemeNoConfiscation,
     });
 
     const confiscateEval = evaluateTransactionHex(
@@ -521,7 +521,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
     const confiscateTx = TransactionReader.readHex(confiscateTxHex);
 
@@ -551,7 +551,7 @@ describe("dstas state flows", () => {
         OutPoint: confiscateFeeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: confiscatedStasOutPoint.Satoshis,
         To: fixture.alice.Address,
@@ -613,7 +613,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
 
     const unfreezeTx = TransactionReader.readHex(unfreezeTxHex);
@@ -677,7 +677,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
 
     const unfreezeEval = evaluateTransactionHex(
@@ -733,7 +733,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
     const unfreezeTx = TransactionReader.readHex(unfreezeTxHex);
 
@@ -763,7 +763,7 @@ describe("dstas state flows", () => {
         OutPoint: unfreezeFeeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: unfrozenStasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -798,7 +798,7 @@ describe("dstas state flows", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -831,7 +831,7 @@ describe("dstas state flows", () => {
         // Attacker tries to spend Bob-owned fee UTXO.
         Owner: fixture.cat,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -888,7 +888,7 @@ describe("dstas state flows", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -931,7 +931,7 @@ describe("dstas state flows", () => {
           Frozen: true,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
     const freezeIssuerUtxoTx = TransactionReader.readHex(freezeIssuerUtxoTxHex);
 
@@ -978,7 +978,7 @@ describe("dstas state flows", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -1036,7 +1036,7 @@ describe("dstas state flows", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -1098,7 +1098,7 @@ describe("dstas state flows", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         To: fixture.bob.Address,
@@ -1137,7 +1137,7 @@ describe("dstas state flows", () => {
           Frozen: true,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
     const freezeTx = TransactionReader.readHex(freezeTxHex);
     const frozenStasOutPoint = new OutPoint(
@@ -1172,7 +1172,7 @@ describe("dstas state flows", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
     const unfreezeTx = TransactionReader.readHex(unfreezeTxHex);
     const unfrozenStasOutPoint = new OutPoint(

@@ -19,4 +19,4 @@ Scoped guidance for `/Users/imighty/Code/dxs-stas-sdk/src`.
 - If a DSTAS change requires touching low-level core, keep behavior covered by script-level tests.
 - Do not introduce new `stas30`, `Stas3`, version-tagged, or `second field` terminology.
   Use `DSTAS` and `actionData`; never use `second field`.
-- Do not add new code against deprecated `LockignScript`; use `LockingScript` only.
+- Use canonical `LockingScript` in new code.

@@ -147,7 +147,7 @@ const vectors: ConformanceVector[] = [
           OutPoint: fixture.feeOutPoint,
           Owner: fixture.bob,
         },
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
         destination: {
           Satoshis: fixture.stasOutPoint.Satoshis,
           To: fixture.bob.Address,
@@ -179,7 +179,7 @@ const vectors: ConformanceVector[] = [
             Frozen: true,
           },
         ],
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
       });
       return runVector(freezeTxHex, resolveFromTx(fixture.issueTxHex));
     },
@@ -208,7 +208,7 @@ const vectors: ConformanceVector[] = [
             Frozen: true,
           },
         ],
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
       });
       const freezeTx = TransactionReader.readHex(freezeTxHex);
 
@@ -238,7 +238,7 @@ const vectors: ConformanceVector[] = [
           OutPoint: frozenFeeOutPoint,
           Owner: fixture.bob,
         },
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
         destination: {
           Satoshis: frozenStasOutPoint.Satoshis,
           To: fixture.bob.Address,
@@ -271,7 +271,7 @@ const vectors: ConformanceVector[] = [
             Frozen: true,
           },
         ],
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
       });
       const freezeTx = TransactionReader.readHex(freezeTxHex);
 
@@ -310,7 +310,7 @@ const vectors: ConformanceVector[] = [
             Frozen: false,
           },
         ],
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
       });
 
       return runVector(unfreezeTxHex, resolveFromTx(freezeTxHex));
@@ -330,7 +330,7 @@ const vectors: ConformanceVector[] = [
           OutPoint: fixture.feeOutPoint,
           Owner: fixture.bob,
         },
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
         destination: {
           Satoshis: fixture.stasOutPoint.Satoshis,
           To: fixture.bob.Address,
@@ -364,7 +364,7 @@ const vectors: ConformanceVector[] = [
             Frozen: false,
           },
         ],
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
       });
 
       return runVector(
@@ -397,7 +397,7 @@ const vectors: ConformanceVector[] = [
             Frozen: false,
           },
         ],
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
       });
       return runVector(confiscateTxHex, resolveFromTx(fixture.issueTxHex));
     },
@@ -473,7 +473,7 @@ const vectors: ConformanceVector[] = [
             Frozen: false,
           },
         ],
-        Scheme: schemeNoConfiscation,
+        scheme: schemeNoConfiscation,
       });
 
       return runVector(confiscateTxHex, resolveFromTx(issueTxHex));
@@ -494,7 +494,7 @@ const vectors: ConformanceVector[] = [
           OutPoint: fixture.feeOutPoint,
           Owner: fixture.bob,
         },
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
         destination: {
           Satoshis: fixture.stasOutPoint.Satoshis,
           To: fixture.bob.Address,
@@ -564,7 +564,7 @@ const vectors: ConformanceVector[] = [
           OutPoint: fixture.feeOutPoint,
           Owner: fixture.bob,
         },
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
         destination: {
           Satoshis: fixture.stasOutPoint.Satoshis,
           To: fixture.bob.Address,
@@ -608,7 +608,7 @@ const vectors: ConformanceVector[] = [
             Frozen: true,
           },
         ],
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
       });
       const freezeIssuerTx = TransactionReader.readHex(freezeIssuerUtxoTxHex);
       const frozenIssuerStasOutPoint = new OutPoint(
@@ -652,7 +652,7 @@ const vectors: ConformanceVector[] = [
           OutPoint: fixture.feeOutPoint,
           Owner: fixture.bob,
         },
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
         destination: {
           Satoshis: fixture.stasOutPoint.Satoshis,
           To: fixture.bob.Address,
@@ -756,7 +756,7 @@ const vectors: ConformanceVector[] = [
             ActionData: swapActionData,
           },
         ],
-        Scheme: fixture.scheme,
+        scheme: fixture.scheme,
         omitChangeOutput: true,
       });
       return runVector(swapTxHex, resolveFromTx(issueTxHex));

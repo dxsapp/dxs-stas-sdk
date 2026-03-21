@@ -340,7 +340,7 @@ describe("dstas multisig authority flow", () => {
         OutPoint: issueFeeOutPoint,
         Owner: bob,
       },
-      Scheme: scheme,
+      scheme: scheme,
       destination: {
         Satoshis: issueStasOutPoint.Satoshis,
         To: bob.Address,
@@ -501,7 +501,7 @@ describe("dstas multisig authority flow", () => {
         OutPoint: transfer2FeeOutPoint,
         Owner: bob,
       },
-      Scheme: scheme,
+      scheme: scheme,
       destination: {
         Satoshis: unfrozenStasOutPoint.Satoshis,
         To: alice.Address,
@@ -604,7 +604,7 @@ describe("dstas multisig authority flow", () => {
         OutPoint: issueFeeOutPoint,
         Owner: bob,
       },
-      Scheme: scheme,
+      scheme: scheme,
       destination: {
         Satoshis: issueStasOutPoint.Satoshis,
         To: bob.Address,
@@ -787,7 +787,7 @@ describe("dstas multisig authority flow", () => {
         OutPoint: issueFeeOutPoint,
         Owner: bob,
       },
-      Scheme: scheme,
+      scheme: scheme,
       destination: {
         Satoshis: issueStasOutPoint.Satoshis,
         To: bob.Address,

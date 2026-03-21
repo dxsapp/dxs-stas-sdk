@@ -129,7 +129,7 @@ export const buildTransferFromFixture = (
       OutPoint: fixture.feeOutPoint,
       Owner: fixture.bob,
     },
-    Scheme: fixture.scheme,
+    scheme: fixture.scheme,
     destination: {
       Satoshis: fixture.stasOutPoint.Satoshis,
       To: fixture.bob.Address,
@@ -156,5 +156,5 @@ export const buildFreezeFromFixture = (fixture: TDstasFlowFixture) =>
         Frozen: true,
       },
     ],
-    Scheme: fixture.scheme,
+    scheme: fixture.scheme,
   });

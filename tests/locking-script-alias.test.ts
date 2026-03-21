@@ -8,19 +8,18 @@ const p2pkhScript = fromHex(
   "76a914e3b111de8fec527b41f4189e313638075d96ccd688ac",
 );
 
-describe("locking script aliases", () => {
-  test("TransactionOutput exposes canonical LockingScript and legacy alias", () => {
+describe("locking script canonical property", () => {
+  test("TransactionOutput exposes canonical LockingScript", () => {
     const out = new TransactionOutput(1000, p2pkhScript);
 
     expect(toHex(out.LockingScript)).toBe(toHex(p2pkhScript));
-    expect(toHex(out.LockignScript)).toBe(toHex(p2pkhScript));
 
     const next = fromHex("76a9146b7f6a5d5677d1f3635e589b2eacc75d08dc6c4588ac");
     out.LockingScript = next;
-    expect(toHex(out.LockignScript)).toBe(toHex(next));
+    expect(toHex(out.LockingScript)).toBe(toHex(next));
   });
 
-  test("OutPoint exposes canonical LockingScript and legacy alias", () => {
+  test("OutPoint exposes canonical LockingScript", () => {
     const address = Address.fromBase58("1MkvWa82XHFqmRHaiRZ8BqZS7Uc83wekjp");
     const outPoint = new OutPoint(
       "11".repeat(32),
@@ -32,10 +31,9 @@ describe("locking script aliases", () => {
     );
 
     expect(toHex(outPoint.LockingScript)).toBe(toHex(p2pkhScript));
-    expect(toHex(outPoint.LockignScript)).toBe(toHex(p2pkhScript));
 
     const next = fromHex("76a9146b7f6a5d5677d1f3635e589b2eacc75d08dc6c4588ac");
-    outPoint.LockignScript = next;
+    outPoint.LockingScript = next;
     expect(toHex(outPoint.LockingScript)).toBe(toHex(next));
   });
 });

@@ -204,7 +204,7 @@ describe("dstas flow", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         ToOwnerMultisig: {
@@ -231,7 +231,7 @@ describe("dstas flow", () => {
     expect(tx.Outputs[0].Address).toBeDefined();
   });
 
-  test("real funding: transfer accepts lowercase scheme field", () => {
+  test("real funding: transfer uses canonical scheme field", () => {
     const fixture = createRealFundingFlowFixture();
     const canonicalTxHex = BuildDstasTransferTx({
       stasPayment: {
@@ -249,22 +249,6 @@ describe("dstas flow", () => {
       },
       omitChangeOutput: true,
     });
-    const aliasTxHex = BuildDstasTransferTx({
-      stasPayment: {
-        OutPoint: fixture.stasOutPoint,
-        Owner: fixture.alice,
-      },
-      feePayment: {
-        OutPoint: fixture.feeOutPoint,
-        Owner: fixture.bob,
-      },
-      Scheme: fixture.scheme,
-      destination: {
-        Satoshis: fixture.stasOutPoint.Satoshis,
-        To: fixture.alice.Address,
-      },
-      omitChangeOutput: true,
-    });
 
     const evalResult = evaluateTransactionHex(
       canonicalTxHex,
@@ -272,84 +256,6 @@ describe("dstas flow", () => {
       { allowOpReturn: true },
     );
 
-    expect(canonicalTxHex).toBe(aliasTxHex);
-    expect(evalResult.success).toBe(true);
-  });
-
-  test("real funding: lowercase scheme field takes precedence over Scheme alias", () => {
-    const fixture = createRealFundingFlowFixture();
-    const alternateScheme = new TokenScheme(
-      `${fixture.scheme.Name} Alias`,
-      fixture.scheme.TokenId,
-      "ALIAS",
-      fixture.scheme.SatoshisPerToken,
-      {
-        freeze: !fixture.scheme.Freeze,
-        confiscation: !fixture.scheme.Confiscation,
-        isDivisible: fixture.scheme.IsDivisible,
-        freezeAuthority: fixture.scheme.FreezeAuthority,
-        confiscationAuthority: fixture.scheme.ConfiscationAuthority,
-      },
-    );
-
-    const lowercaseCanonicalTxHex = BuildDstasTransferTx({
-      stasPayment: {
-        OutPoint: fixture.stasOutPoint,
-        Owner: fixture.alice,
-      },
-      feePayment: {
-        OutPoint: fixture.feeOutPoint,
-        Owner: fixture.bob,
-      },
-      scheme: fixture.scheme,
-      destination: {
-        Satoshis: fixture.stasOutPoint.Satoshis,
-        To: fixture.alice.Address,
-      },
-      omitChangeOutput: true,
-    });
-    const aliasOnlyTxHex = BuildDstasTransferTx({
-      stasPayment: {
-        OutPoint: fixture.stasOutPoint,
-        Owner: fixture.alice,
-      },
-      feePayment: {
-        OutPoint: fixture.feeOutPoint,
-        Owner: fixture.bob,
-      },
-      Scheme: alternateScheme,
-      destination: {
-        Satoshis: fixture.stasOutPoint.Satoshis,
-        To: fixture.alice.Address,
-      },
-      omitChangeOutput: true,
-    });
-    const bothFieldsTxHex = BuildDstasTransferTx({
-      stasPayment: {
-        OutPoint: fixture.stasOutPoint,
-        Owner: fixture.alice,
-      },
-      feePayment: {
-        OutPoint: fixture.feeOutPoint,
-        Owner: fixture.bob,
-      },
-      scheme: fixture.scheme,
-      Scheme: alternateScheme,
-      destination: {
-        Satoshis: fixture.stasOutPoint.Satoshis,
-        To: fixture.alice.Address,
-      },
-      omitChangeOutput: true,
-    });
-
-    const evalResult = evaluateTransactionHex(
-      bothFieldsTxHex,
-      resolveFromTx(fixture.issueTxHex),
-      { allowOpReturn: true },
-    );
-
-    expect(bothFieldsTxHex).toBe(lowercaseCanonicalTxHex);
-    expect(bothFieldsTxHex).not.toBe(aliasOnlyTxHex);
     expect(evalResult.success).toBe(true);
   });
 
@@ -374,7 +280,7 @@ describe("dstas flow", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         ToOwnerMultisig: {
@@ -467,7 +373,7 @@ describe("dstas flow", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         ToOwnerMultisig: {
@@ -565,7 +471,7 @@ describe("dstas flow", () => {
         OutPoint: fixture.feeOutPoint,
         Owner: fixture.bob,
       },
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
       destination: {
         Satoshis: fixture.stasOutPoint.Satoshis,
         ToOwnerMultisig: {
@@ -716,7 +622,7 @@ describe("dstas flow", () => {
           Frozen: false,
         },
       ],
-      Scheme: fixture.scheme,
+      scheme: fixture.scheme,
     });
 
     assertFeeInRange(unfreezeTxHex, resolveFromTx(freezeTxHex), FeeRate, 2);
