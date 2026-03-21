@@ -121,12 +121,7 @@ describe("strict mode hardening", () => {
 
   test("strictScriptReader throws on malformed PUSHDATA2 and PUSHDATA4 headers", () => {
     const malformed2 = new Uint8Array([OpCode.OP_PUSHDATA2, 0x02]);
-    const malformed4 = new Uint8Array([
-      OpCode.OP_PUSHDATA4,
-      0x01,
-      0x00,
-      0x00,
-    ]);
+    const malformed4 = new Uint8Array([OpCode.OP_PUSHDATA4, 0x01, 0x00, 0x00]);
 
     expect(ScriptReader.decode(malformed2, 0)).toBeNull();
     expect(ScriptReader.decode(malformed4, 0)).toBeNull();
@@ -215,7 +210,10 @@ describe("strict mode hardening", () => {
     const tx = TransactionReader.readHex(TransferNoNoteRaw);
     const oversizedElement = new Uint8Array(9);
     oversizedElement.fill(0x01);
-    const unlocking = new Uint8Array([oversizedElement.length, ...oversizedElement]);
+    const unlocking = new Uint8Array([
+      oversizedElement.length,
+      ...oversizedElement,
+    ]);
 
     const result = evaluateScripts(
       unlocking,
