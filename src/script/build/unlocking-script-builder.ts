@@ -81,11 +81,10 @@ export const buildDstasSwapUnlockingScriptFromTransaction = (
   const counterpartyScript = extractDstasCounterpartyScript(
     request.counterpartyLockingScript,
   );
-  const counterpartyPieces =
-    splitDstasPreviousTransactionByCounterpartyScript(
-      request.counterpartyPreviousTransaction,
-      counterpartyScript,
-    );
+  const counterpartyPieces = splitDstasPreviousTransactionByCounterpartyScript(
+    request.counterpartyPreviousTransaction,
+    counterpartyScript,
+  );
 
   return buildDstasSwapUnlockingScript({
     counterpartyOutpointIndex: request.counterpartyOutpointIndex,
@@ -117,11 +116,10 @@ export const estimateDstasSwapUnlockingScriptSizeFromTransaction = (
   const counterpartyScript = extractDstasCounterpartyScript(
     request.counterpartyLockingScript,
   );
-  const counterpartyPieces =
-    splitDstasPreviousTransactionByCounterpartyScript(
-      request.counterpartyPreviousTransaction,
-      counterpartyScript,
-    );
+  const counterpartyPieces = splitDstasPreviousTransactionByCounterpartyScript(
+    request.counterpartyPreviousTransaction,
+    counterpartyScript,
+  );
 
   return estimateDstasSwapUnlockingScriptSize({
     counterpartyOutpointIndex: request.counterpartyOutpointIndex,
