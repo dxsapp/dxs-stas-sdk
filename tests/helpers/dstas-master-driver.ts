@@ -69,10 +69,13 @@ const freezeAuthorityForAsset = (assetId: TMasterAssetId): TMasterActorId =>
 
 const confiscationAuthorityForAsset = (
   assetId: TMasterAssetId,
-): TMasterActorId => (assetId === "assetC" ? "msFreezeAuth" : "confiscationAuth");
+): TMasterActorId =>
+  assetId === "assetC" ? "msFreezeAuth" : "confiscationAuth";
 
 const buildAuthorityServiceField = (
-  authority: NonNullable<TMasterWorld["schemes"][TMasterAssetId]["FreezeAuthority"]>,
+  authority: NonNullable<
+    TMasterWorld["schemes"][TMasterAssetId]["FreezeAuthority"]
+  >,
 ) => {
   const pubKeys = authority.publicKeys.map((value) => fromHex(value));
   if (authority.m === 1 && pubKeys.length === 1) {
@@ -255,7 +258,10 @@ const buildMultisigAuthorityStateTx = (
     { frozen: !params.frozen },
   );
   const feeOutput = requireFeeOutput(world, params.assetId);
-  const authority = requireActor(world, freezeAuthorityForAsset(params.assetId));
+  const authority = requireActor(
+    world,
+    freezeAuthorityForAsset(params.assetId),
+  );
   if (authority.kind !== "multisig") {
     throw new Error(`Expected multisig authority for ${params.assetId}`);
   }
