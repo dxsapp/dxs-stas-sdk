@@ -224,8 +224,6 @@ export class InputBilder {
 
   private isP2PkLike = (scriptType: ScriptType): boolean =>
     scriptType === ScriptType.p2pkh || scriptType === ScriptType.p2mpkh;
-
-
   private hasDstasSwapActionData = (lockingScript: Bytes): boolean => {
     const tokens = ScriptReader.read(lockingScript);
     const actionDataToken = tokens[1];
