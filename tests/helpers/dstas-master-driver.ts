@@ -5,6 +5,7 @@ import {
   BuildDstasMergeTx,
   BuildDstasSplitTx,
   BuildDstasSwapTx,
+  BuildDstasSwapSwapTx,
   BuildDstasTransferSwapTx,
   BuildDstasTransferTx,
   BuildDstasUnfreezeTx,
@@ -630,6 +631,37 @@ export const createSwapActionDataForRequest = (
   });
 };
 
+export const createSwapActionDataForDesiredOutput = (
+  world: TMasterWorld,
+  params: {
+    requestedAssetId: TMasterAssetId;
+    requestedOwner: TMasterActorId;
+    requestedPkhOwner: TMasterActorId;
+    rateNumerator: number;
+    rateDenominator: number;
+    requestedScriptHashOverride?: Uint8Array;
+  },
+) => {
+  const requestedOwnerActor = requireActor(world, params.requestedOwner);
+  const requestedPkhActor = requireActor(world, params.requestedPkhOwner);
+
+  return buildSwapActionData({
+    requestedScriptHash:
+      params.requestedScriptHashOverride ??
+      computeDstasRequestedScriptHash(
+        buildDstasLockingScript(
+          world,
+          params.requestedAssetId,
+          requestedOwnerActor.address,
+          false,
+        ),
+      ),
+    requestedPkh: requestedPkhActor.address.Hash160,
+    rateNumerator: params.rateNumerator,
+    rateDenominator: params.rateDenominator,
+  });
+};
+
 export const transfer = (
   world: TMasterWorld,
   params: {
@@ -949,6 +981,68 @@ const buildTransferSwapTx = (
         assetId: params.offeredAssetId,
         owner: params.counterpartyReceives,
         satoshis: params.offeredSatoshis,
+        actionData: null,
+      }),
+    ],
+  });
+};
+
+const buildSwapSwapTx = (
+  world: TMasterWorld,
+  params: {
+    leftAssetId: TMasterAssetId;
+    leftOwner: TMasterActorId;
+    leftSatoshis: number;
+    rightAssetId: TMasterAssetId;
+    rightOwner: TMasterActorId;
+    rightSatoshis: number;
+    feeAssetId: TMasterAssetId;
+    leftReceives: TMasterActorId;
+    rightReceives: TMasterActorId;
+  },
+) => {
+  const leftOutput = requireLiveOutput(
+    world,
+    params.leftAssetId,
+    params.leftOwner,
+    params.leftSatoshis,
+    { frozen: false },
+  );
+  const rightOutput = requireLiveOutput(
+    world,
+    params.rightAssetId,
+    params.rightOwner,
+    params.rightSatoshis,
+    { frozen: false },
+  );
+  const feeOutput = requireFeeOutput(world, params.feeAssetId);
+
+  return BuildDstasSwapSwapTx({
+    stasPayments: [
+      {
+        OutPoint: leftOutput.outPoint,
+        Owner: requireSingleWallet(world, params.leftOwner),
+      },
+      {
+        OutPoint: rightOutput.outPoint,
+        Owner: requireSingleWallet(world, params.rightOwner),
+      },
+    ],
+    feePayment: {
+      OutPoint: feeOutput.outPoint,
+      Owner: requireSingleWallet(world, feeOutput.owner),
+    },
+    destinations: [
+      buildSwapDestinationForActor(world, {
+        assetId: params.rightAssetId,
+        owner: params.leftReceives,
+        satoshis: params.rightSatoshis,
+        actionData: null,
+      }),
+      buildSwapDestinationForActor(world, {
+        assetId: params.leftAssetId,
+        owner: params.rightReceives,
+        satoshis: params.leftSatoshis,
         actionData: null,
       }),
     ],
@@ -1347,6 +1441,62 @@ export const swap = (
   });
 
   return { markTxHex, swapTxHex };
+};
+
+export const swapSwap = (
+  world: TMasterWorld,
+  params: {
+    leftAssetId: TMasterAssetId;
+    leftOwner: TMasterActorId;
+    leftSatoshis: number;
+    rightAssetId: TMasterAssetId;
+    rightOwner: TMasterActorId;
+    rightSatoshis: number;
+    feeAssetId: TMasterAssetId;
+    leftReceives: TMasterActorId;
+    rightReceives: TMasterActorId;
+    step: string;
+  },
+) => {
+  const leftOutput = requireLiveOutput(
+    world,
+    params.leftAssetId,
+    params.leftOwner,
+    params.leftSatoshis,
+    { frozen: false },
+  );
+  const rightOutput = requireLiveOutput(
+    world,
+    params.rightAssetId,
+    params.rightOwner,
+    params.rightSatoshis,
+    { frozen: false },
+  );
+  const feeOutput = requireFeeOutput(world, params.feeAssetId);
+  const swapTxHex = buildSwapSwapTx(world, params);
+
+  assertLifecycleTxValid(world, params.step, swapTxHex, 3);
+  addHistory(world, params.step, undefined, swapTxHex);
+
+  removeLiveOutput(world, leftOutput);
+  removeLiveOutput(world, rightOutput);
+  removeLiveOutput(world, feeOutput);
+  addTrackedDstasOutput(world, params.rightAssetId, swapTxHex, 0, {
+    owner: params.leftReceives,
+    satoshis: params.rightSatoshis,
+    frozen: false,
+  });
+  addTrackedDstasOutput(world, params.leftAssetId, swapTxHex, 1, {
+    owner: params.rightReceives,
+    satoshis: params.leftSatoshis,
+    frozen: false,
+  });
+  addLiveOutput(
+    world,
+    findFeeOutput(swapTxHex, feeOutput.owner, params.feeAssetId),
+  );
+
+  return swapTxHex;
 };
 
 export const expectTransferSwapFailWrongRequestedScript = (
