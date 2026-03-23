@@ -33,10 +33,7 @@ import { FeeRate } from "../../src/transaction-factory";
 import { fromHex } from "../../src/bytes";
 import { hash160, hash256 } from "../../src/hashes";
 import { reverseBytes } from "../../src/buffer/buffer-utils";
-import {
-  buildMlpkhPreimage,
-  buildRedeemTx,
-} from "./dstas-flow-shared";
+import { buildMlpkhPreimage, buildRedeemTx } from "./dstas-flow-shared";
 import {
   buildSwapActionData,
   computeDstasRequestedScriptHash,
@@ -159,7 +156,6 @@ const buildSwapDestinationForActor = (
       params.actionData === undefined ? null : (params.actionData ?? null),
   };
 };
-
 
 const buildAuthorityUnlockingScript = ({
   txBuilder,
@@ -864,7 +860,9 @@ const buildSwapMarkTx = (
   const actionData = buildSwapActionData({
     requestedScriptHash:
       params.requestedScriptHashOverride ??
-      computeDstasRequestedScriptHash(counterpartyOutput.outPoint.LockingScript),
+      computeDstasRequestedScriptHash(
+        counterpartyOutput.outPoint.LockingScript,
+      ),
     requestedPkh: owner.address.Hash160,
     rateNumerator: params.rateNumerator,
     rateDenominator: params.rateDenominator,
