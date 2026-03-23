@@ -24,6 +24,12 @@ import {
   buildSignedDstasIssueTransaction,
   buildSignedDstasTransaction,
 } from "./dstas-tx-assembly";
+export {
+  buildDstasSwapUnlockingScript,
+  buildDstasSwapUnlockingScriptFromTransaction,
+  estimateDstasSwapUnlockingScriptSize,
+  estimateDstasSwapUnlockingScriptSizeFromTransaction,
+} from "./script/build/unlocking-script-builder";
 
 export type TDstasPayment = TDstasAssemblyPayment;
 

@@ -219,6 +219,24 @@ describe("DstasBundleFactory spendType flags", () => {
     }
   });
 
+  test("transfer() uses unlocking size hint when provided before final build", async () => {
+    const { factory, buildUnlockingScript, recipient } = makeFactory(1000);
+    const sizedBuilder = buildUnlockingScript as SpyFn<
+      [UnlockingArgs],
+      Uint8Array
+    > & {
+      estimateSize?: (args: UnlockingArgs) => number;
+    };
+    sizedBuilder.estimateSize = () => 512;
+
+    const result = await factory.transfer({
+      outputs: [{ recipient, satoshis: 1000 }],
+    });
+
+    expect(result.transactions).toBeDefined();
+    expect(buildUnlockingScript.calls).toHaveLength(1);
+  });
+
   test("createTransferBundle remains compatible with transfer()", async () => {
     const { factory, recipient } = makeFactory(1000);
 

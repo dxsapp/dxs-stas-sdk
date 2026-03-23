@@ -21,5 +21,6 @@ export * from "./script-utils";
 export * from "./dstas-action-data";
 export * from "./dstas-swap-script";
 export * from "./dstas-requested-script-hash";
+export * from "./build/unlocking-script-builder";
 export * from "./templates/dstas-locking-template";
 export * from "./eval/script-evaluator";

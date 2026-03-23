@@ -6,11 +6,18 @@ import {
   buildDstasFlags,
   buildDstasLockingTokens,
 } from "../src/script/build/dstas-locking-builder";
+import {
+  buildDstasLockingScriptForOwnerField,
+  buildUnlockingScript,
+  buildDstasSwapUnlockingScriptFromTransaction,
+  decomposeDstasUnlockingScript,
+  estimateDstasSwapUnlockingScriptSizeFromTransaction,
+  extractDstasCounterpartyScript,
+} from "../src/script";
 import { buildSwapActionData } from "../src/script/dstas-action-data";
 import { ResolveDstasSwapMode } from "../src/dstas-factory";
-import { decomposeDstasUnlockingScript } from "../src/script";
 import { OpCode } from "../src/bitcoin/op-codes";
-import { fromHex } from "../src/bytes";
+import { concat, fromHex, toHex } from "../src/bytes";
 
 const mnemonic =
   "group spy extend supreme monkey judge avocado cancel exit educate modify bubble";
@@ -118,5 +125,70 @@ describe("ResolveDstasSwapMode", () => {
     expect(decoded.counterpartyPiecesCount).toBe(2);
     expect(decoded.counterpartyPiecesHexes).toEqual(["aa", "bb"]);
     expect(decoded.counterpartyScriptHex).toBe("cccccccccccccccc");
+  });
+
+  test("builds new swap unlocking script from derived script pieces", () => {
+    const owner =
+      Wallet.fromMnemonic(mnemonic).deriveWallet("m/44'/236'/0'/0/0");
+    const counterpartyLockingScript = buildDstasLockingScriptForOwnerField({
+      ownerField: owner.Address.Hash160,
+      tokenIdHex: toHex(tokenId),
+      freezable: true,
+      confiscatable: true,
+      authorityServiceField: new Uint8Array(20).fill(0x11),
+      confiscationAuthorityServiceField: new Uint8Array(20).fill(0x22),
+      frozen: false,
+    });
+    const counterpartyScript = extractDstasCounterpartyScript(
+      counterpartyLockingScript,
+    );
+    const previousTransaction = concat([
+      fromHex("aa"),
+      counterpartyScript,
+      fromHex("bb"),
+    ]);
+    const preimage = new Uint8Array(120).fill(0x11);
+    const signature = new Uint8Array(72).fill(0x30);
+    const publicKey = new Uint8Array(33).fill(0x02);
+
+    const unlocking = buildDstasSwapUnlockingScriptFromTransaction({
+      counterpartyOutpointIndex: 7,
+      counterpartyLockingScript,
+      counterpartyPreviousTransaction: previousTransaction,
+      preimage,
+      signature,
+      publicKey,
+      spendingType: 1,
+    });
+
+    const unlockingPrefix = buildUnlockingScript([
+      { number: 100 },
+      { data: fromHex("11".repeat(20)) },
+      { op: OpCode.OP_0 },
+      { op: OpCode.OP_0 },
+      { op: OpCode.OP_0 },
+      { number: 1 },
+      { data: fromHex("44".repeat(32)) },
+      { op: OpCode.OP_0 },
+    ]);
+    const fullUnlocking = concat([unlockingPrefix, unlocking]);
+    const decoded = decomposeDstasUnlockingScript(fullUnlocking);
+    const estimated = estimateDstasSwapUnlockingScriptSizeFromTransaction({
+      counterpartyOutpointIndex: 7,
+      counterpartyLockingScript,
+      counterpartyPreviousTransaction: previousTransaction,
+      preimageLength: preimage.length,
+      signatureLength: signature.length,
+      publicKeyLength: publicKey.length,
+      spendingType: 1,
+    });
+
+    expect(decoded.parsed).toBe(true);
+    expect(decoded.spendingType).toBe(1);
+    expect(decoded.counterpartyOutpointIndex).toBe(7);
+    expect(decoded.counterpartyPiecesCount).toBe(2);
+    expect(decoded.counterpartyPiecesHexes).toEqual(["aa", "bb"]);
+    expect(decoded.counterpartyScriptHex).toBe(toHex(counterpartyScript));
+    expect(estimated).toBe(unlocking.length);
   });
 });

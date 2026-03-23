@@ -12,6 +12,7 @@ export {
   TDstasTransferRequest,
   TDstasLockingParamsBuilder,
   TDstasUnlockingScriptBuilder,
+  TDstasUnlockingScriptEstimator,
   TDstasPayment,
   TDstasDestination,
   DstasBundleFactory,

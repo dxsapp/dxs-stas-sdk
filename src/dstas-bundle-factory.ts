@@ -74,14 +74,21 @@ export type TDstasLockingParamsBuilder = (args: {
   isChange: boolean;
 }) => DstasLockingParams;
 
-export type TDstasUnlockingScriptBuilder = (args: {
-  txBuilder: TransactionBuilder;
-  inputIndex: number;
-  outPoint: OutPoint;
-  spendType: DstasSpendType;
-  isFreezeLike: boolean;
-  isMerge: boolean;
-}) => Bytes;
+export type TDstasUnlockingScriptBuilder = {
+  (args: {
+    txBuilder: TransactionBuilder;
+    inputIndex: number;
+    outPoint: OutPoint;
+    spendType: DstasSpendType;
+    isFreezeLike: boolean;
+    isMerge: boolean;
+  }): Bytes;
+  estimateSize?: TDstasUnlockingScriptEstimator;
+};
+
+export type TDstasUnlockingScriptEstimator = (
+  args: Parameters<TDstasUnlockingScriptBuilder>[0],
+) => number;
 
 export type TDstasPayment = TDstasAssemblyPayment;
 
@@ -671,14 +678,23 @@ export class DstasBundleFactory {
       configureStasInput: ({ txBuilder, inputIndex }) => {
         const input = txBuilder.Inputs[inputIndex];
         input.AllowPresetUnlockingScript = true;
-        input.UnlockingScript = this.buildUnlockingScript({
+        const unlockingArgs = {
           txBuilder,
           inputIndex,
           outPoint: input.OutPoint,
           spendType,
           isFreezeLike: spendType === "freeze" || spendType === "unfreeze",
           isMerge,
-        });
+        };
+
+        if (typeof this.buildUnlockingScript.estimateSize === "function") {
+          input.PresetUnlockingScriptSizeHint =
+            this.buildUnlockingScript.estimateSize(unlockingArgs);
+          input.UnlockingScript = undefined;
+          return;
+        }
+
+        input.UnlockingScript = this.buildUnlockingScript(unlockingArgs);
       },
     });
   };
