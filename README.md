@@ -1,18 +1,14 @@
 # dxs-stas-sdk
 
-TypeScript SDK for building and reading Bitcoin SV transactions, with first-class support for DSTAS token scripts and a lower-level STAS workflow surface. Use `dxs-stas-sdk/dstas` for canonical DSTAS flows, `dxs-stas-sdk/stas` for the older STAS workflow surface, and `dxs-stas-sdk/bsv` for low-level blockchain primitives. Root imports expose only the `dstas`, `stas`, and `bsv` namespaces.
+TypeScript SDK for building, reading, and validating Bitcoin SV transactions.
 
-## Binary types
+The public surface is split into three entrypoints:
 
-All binary inputs/outputs are `Uint8Array` (no Node.js `Buffer` in the public API).
+- `dxs-stas-sdk/dstas`: canonical Divisible STAS flow API
+- `dxs-stas-sdk/stas`: older STAS workflow helpers
+- `dxs-stas-sdk/bsv`: low-level blockchain primitives, script tooling, and transaction utilities
 
-## Security defaults
-
-- ECDSA signing is deterministic (RFC 6979 behavior from `@noble/secp256k1`) with `lowS: true`.
-- Strict transaction parsing is enabled by default.
-- Strict fee-rate validation is enabled by default.
-- Strict script evaluation defaults include a 1MB max element size limit (when strict eval is enabled).
-- DSTAS multisig key validation enforces compressed secp256k1 points and `n <= 5`.
+Root imports expose only the `dstas`, `stas`, and `bsv` namespaces.
 
 ## Install
 
@@ -20,43 +16,36 @@ All binary inputs/outputs are `Uint8Array` (no Node.js `Buffer` in the public AP
 npm install dxs-stas-sdk
 ```
 
-## Quick start import rules
+## Choose your entrypoint
 
-- `dxs-stas-sdk/dstas`: canonical DSTAS issue/transfer/freeze/confiscation/redeem/swap flows
-- `dxs-stas-sdk/stas`: older STAS transaction helpers
-- `dxs-stas-sdk`: namespace-only root entrypoint for `dstas`, `stas`, and `bsv`
-- `dxs-stas-sdk/bsv`: low-level blockchain primitives, byte/hash helpers, transaction tooling, and script readers/builders
+Use the narrowest surface that matches your task.
 
-## AI agent onboarding
+- `dxs-stas-sdk/dstas`
+  Use for protocol-facing DSTAS flows: issue, transfer, split, merge, freeze, unfreeze, confiscation, swap, redeem.
+- `dxs-stas-sdk/stas`
+  Use for the older STAS transaction workflow.
+- `dxs-stas-sdk/bsv`
+  Use for low-level work: keys, addresses, scripts, transaction parsing, transaction building, and script evaluation.
+- `dxs-stas-sdk`
+  Use only if you explicitly want namespace aggregation for `dstas`, `stas`, and `bsv`.
 
-If you are integrating this SDK through an AI coding agent, start with:
-
-- `AGENTS.md`
-- `docs/AGENT_RUNBOOK.md`
-- `docs/DSTAS_SDK_SPEC.md`
-
-## Concepts
-
-An `OutPoint` represents a spendable UTXO: txid, vout, locking script, satoshis, and owner address.
-
-`LockingScript` is the canonical property name in API objects.
-
-## Example: build a DSTAS issue + transfer flow
+## Quickstart: DSTAS issue and transfer
 
 ```ts
-import { bsv, dstas } from "dxs-stas-sdk";
+import { dstas } from "dxs-stas-sdk/dstas";
+import { bsv } from "dxs-stas-sdk/bsv";
 
 const {
   OutPoint,
   PrivateKey,
   TokenScheme,
   TransactionReader,
+  fromHex,
   toHex,
   utf8ToBytes,
-  fromHex,
 } = bsv;
 
-const bob = new PrivateKey(
+const issuer = new PrivateKey(
   fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
 );
 const alice = new PrivateKey(
@@ -65,26 +54,25 @@ const alice = new PrivateKey(
 
 const scheme = new TokenScheme(
   "Divisible STAS",
-  toHex(bob.Address.Hash160), // issuer token id
+  toHex(issuer.Address.Hash160),
   "DSTAS",
   1,
   {
     isDivisible: true,
     freeze: true,
     confiscation: true,
-    freezeAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
-    confiscationAuthority: { m: 1, publicKeys: [toHex(bob.PublicKey)] },
+    freezeAuthority: { m: 1, publicKeys: [toHex(issuer.PublicKey)] },
+    confiscationAuthority: { m: 1, publicKeys: [toHex(issuer.PublicKey)] },
   },
 );
 
-// Parse a funding transaction that belongs to issuer address (bob).
-const sourceTx = TransactionReader.readHex("<funding-tx-hex>");
-const fundingOut = OutPoint.fromTransaction(sourceTx, 0);
+const fundingTx = TransactionReader.readHex("<funding-tx-hex>");
+const fundingOut = OutPoint.fromTransaction(fundingTx, 0);
 
 const { issueTxHex } = dstas.BuildDstasIssueTxs({
-  fundingPayment: { OutPoint: fundingOut, Owner: bob },
+  fundingPayment: { OutPoint: fundingOut, Owner: issuer },
   scheme,
-  destinations: [{ Satoshis: 100, To: bob.Address }],
+  destinations: [{ Satoshis: 100, To: issuer.Address }],
   feeRate: 0.1,
 });
 
@@ -93,30 +81,50 @@ const stasOut = OutPoint.fromTransaction(issueTx, 0);
 const feeOut = OutPoint.fromTransaction(issueTx, 1);
 
 const transferTxHex = dstas.BuildDstasTransferTx({
-  stasPayment: { OutPoint: stasOut, Owner: bob },
-  feePayment: { OutPoint: feeOut, Owner: bob },
+  stasPayment: { OutPoint: stasOut, Owner: issuer },
+  feePayment: { OutPoint: feeOut, Owner: issuer },
   destination: { Satoshis: 100, To: alice.Address },
   scheme,
   note: [utf8ToBytes("DSTAS"), utf8ToBytes("transfer")],
 });
 ```
 
-## Example: high-level DSTAS payouts with `DstasBundleFactory`
+## High-level DSTAS APIs
+
+Use these first.
+
+### Single-flow builders
+
+`dxs-stas-sdk/dstas` exports `BuildDstas*` helpers for individual transactions:
+
+- `BuildDstasIssueTxs`
+- `BuildDstasTransferTx`
+- `BuildDstasSplitTx`
+- `BuildDstasMergeTx`
+- `BuildDstasFreezeTx`
+- `BuildDstasUnfreezeTx`
+- `BuildDstasConfiscateTx`
+- `BuildDstasRedeemTx`
+- `BuildDstasSwapTx`
+
+These helpers are the right starting point when you already know the exact flow you need to build.
+
+### Multi-step planning with `DstasBundleFactory`
+
+Use `DstasBundleFactory` when you want the SDK to plan merge/split/service transactions for you.
+
+Typical use cases:
+
+- many-recipient payouts
+- preparing UTXO sizes automatically
+- chaining service transactions before final transfers
+- building flows where intermediate DSTAS UTXOs must be reshaped before delivery
 
 ```ts
-import { bsv, dstas } from "dxs-stas-sdk";
+import { dstas } from "dxs-stas-sdk/dstas";
+import { bsv } from "dxs-stas-sdk/bsv";
 
-const {
-  Address,
-  LockingScriptReader,
-  OutPoint,
-  ScriptType,
-  Transaction,
-  Wallet,
-  hash160,
-  toHex,
-  utf8ToBytes,
-} = bsv;
+const { Address, LockingScriptReader, Transaction, Wallet, utf8ToBytes } = bsv;
 
 const { DstasBundleFactory, DstasSpendType } = dstas;
 
@@ -125,18 +133,11 @@ const stasWallet =
 const feeWallet =
   Wallet.fromMnemonic("<mnemonic>").deriveWallet("m/44'/236'/0'/0/1");
 
-// You provide these integrations from your indexer/wallet backend.
-const getStasUtxoSet = async (minSats = 0): Promise<OutPoint[]> => {
+const getStasUtxoSet = async (minSats = 0) => {
   return await fetchDstasUtxosForAddress(stasWallet.Address, minSats);
 };
 
-const getFundingUtxo = async ({
-  estimatedFeeSatoshis,
-}: {
-  utxoIdsToSpend: string[];
-  estimatedFeeSatoshis: number;
-  transactionsCount: number;
-}): Promise<OutPoint> => {
+const getFundingUtxo = async ({ estimatedFeeSatoshis }) => {
   return await fetchFeeUtxoForAddress(feeWallet.Address, estimatedFeeSatoshis);
 };
 
@@ -163,7 +164,7 @@ const factory = new DstasBundleFactory(
     const parsed = LockingScriptReader.read(fromOutPoint.LockingScript).Dstas;
     if (!parsed) throw new Error("Expected DSTAS input locking script");
     if (recipient.m !== 1 || recipient.addresses.length !== 1) {
-      throw new Error("README example supports only m=1 recipient");
+      throw new Error("Example keeps recipient handling at m=1");
     }
 
     return {
@@ -194,25 +195,20 @@ const factory = new DstasBundleFactory(
   },
 );
 
-const recipients = [
-  {
-    recipient: { m: 1, addresses: [Address.fromBase58("<alice-address>")] },
-    satoshis: 150,
-  },
-  {
-    recipient: { m: 1, addresses: [Address.fromBase58("<bob-address>")] },
-    satoshis: 200,
-  },
-];
-
 const bundle = await factory.transfer({
-  outputs: recipients,
+  outputs: [
+    {
+      recipient: { m: 1, addresses: [Address.fromBase58("<alice-address>")] },
+      satoshis: 150,
+    },
+    {
+      recipient: { m: 1, addresses: [Address.fromBase58("<bob-address>")] },
+      satoshis: 200,
+    },
+  ],
   spendType: "transfer",
   note: [utf8ToBytes("DSTAS"), utf8ToBytes("bundle transfer")],
 });
-
-console.log("transactions:", bundle.transactions?.length ?? 0);
-console.log("paid fee satoshis:", bundle.feeSatoshis);
 ```
 
 Notes:
@@ -220,12 +216,24 @@ Notes:
 - `DstasBundleFactory` plans merge/split/transfer service transactions automatically.
 - `note` is attached only to final transfer transaction(s), not to intermediate service transactions.
 - `spendType` supports `transfer`, `freeze`, `unfreeze`, `confiscation`, and `swap`.
-- For recipient multisig (`m > 1`), replace the simple `owner` derivation with your protocol-specific owner preimage/hash strategy.
 
-## Example: build a simple P2PKH transaction
+## Low-level BSV toolkit
+
+Use `dxs-stas-sdk/bsv` when you need direct blockchain primitives.
+
+Typical surface:
+
+- keys and wallets: `PrivateKey`, `Wallet`
+- addressing: `Address`
+- UTXOs: `OutPoint`
+- transactions: `Transaction`, `TransactionReader`, `TransactionBuilder`
+- script tooling: `ScriptBuilder`, `LockingScriptReader`, `evaluateTransactionHex`
+- byte and hash helpers: `fromHex`, `toHex`, `utf8ToBytes`, `hash160`, `hash256`
+
+### Example: build a simple P2PKH transaction
 
 ```ts
-import { bsv } from "dxs-stas-sdk";
+import { bsv } from "dxs-stas-sdk/bsv";
 
 const {
   Address,
@@ -246,8 +254,8 @@ const lockingScript = fromHex(
 );
 
 const utxo = new OutPoint(
-  "11".repeat(32), // txid hex (little-endian when serialized)
-  0, // vout
+  "11".repeat(32),
+  0,
   lockingScript,
   10_000,
   from,
@@ -260,26 +268,20 @@ const txHex = TransactionBuilder.init()
   .addChangeOutputWithFee(pk.Address, utxo.Satoshis - 1_000, 0.1)
   .sign()
   .toHex();
-
-// Optional: pass a custom input sequence (default is 0xffffffff).
-const txWithSequence = TransactionBuilder.init()
-  .addInput(utxo, pk, 0xfffffffe)
-  .addP2PkhOutput(1_000, to)
-  .addChangeOutputWithFee(pk.Address, utxo.Satoshis - 1_000, 0.1)
-  .sign()
-  .toHex();
 ```
 
-## Example: build a STAS transfer transaction
+## Older STAS workflow surface
+
+Use `dxs-stas-sdk/stas` only when you need the older STAS flow helpers.
 
 ```ts
-import { bsv, stas } from "dxs-stas-sdk";
+import { stas } from "dxs-stas-sdk/stas";
+import { bsv } from "dxs-stas-sdk/bsv";
 
 const {
   Address,
   OutPoint,
   PrivateKey,
-  ScriptType,
   TokenScheme,
   TransactionReader,
   fromHex,
@@ -300,7 +302,6 @@ const tokenScheme = new TokenScheme(
   1,
 );
 
-// Parse a previous transaction that produced a STAS output + fee output.
 const prevTx = TransactionReader.readHex("<issue-tx-hex>");
 const stasOut = OutPoint.fromTransaction(prevTx, 0);
 const feeOut = OutPoint.fromTransaction(prevTx, 1);
@@ -314,33 +315,34 @@ const txHex = stas.BuildTransferTx({
 });
 ```
 
-## FAQ / common pitfalls
+## Binary and data model rules
 
-- You typically need two inputs for STAS flows: one STAS UTXO and one fee-paying UTXO. (see: src/transaction-factory.ts:22-221)
-- `OutPoint.TxId` is big-endian hex, but when serialized into a transaction it is reversed (little-endian). (see: src/transaction/build/input-builder.ts:123-130, src/transaction/read/transaction-reader.ts:24-33)
-- Use `Uint8Array` everywhere; helpers are in `bsv.fromHex`, `bsv.toHex`, `bsv.utf8ToBytes`, and `bsv.bytesToUtf8`. (see: src/bytes.ts:1-38)
-- `Address.fromBase58` only accepts mainnet prefixes. (see: src/bitcoin/address.ts:26-31)
-- STAS script classification relies on known token templates; unknown scripts will classify as `unknown`. (see: src/bitcoin/transaction-output.ts:21-103, src/script/script-samples.ts:5-26)
+- Public binary inputs and outputs are `Uint8Array`, not Node.js `Buffer`.
+- `OutPoint` represents a spendable UTXO: txid, vout, locking script, satoshis, and owner address.
+- `LockingScript` is the canonical property name in API objects.
+- `OutPoint.TxId` is stored as big-endian hex and serialized little-endian inside transactions.
 
-## Strict mode
+## Security and strict mode
 
-These hardening defaults are already enabled out of the box:
+Defaults already enabled:
 
+- deterministic ECDSA signing
+- `lowS: true`
 - `strictTxParse: true`
 - `strictOutPointValidation: true`
 - `strictFeeRateValidation: true`
 - `strictScriptReader: true`
 - `strictScriptEvaluation: true`
+- strict script-eval max element size of `1024 * 1024`
+- compressed secp256k1 multisig key validation with `n <= 5`
 
-Other strict checks remain opt-in because they are more compatibility-sensitive:
+Other checks remain opt-in because they are more compatibility-sensitive:
 
 - `strictPresetUnlockingScript`
 - `strictMultisigKeys`
 
-Use `configureStrictMode(...)` to tighten behavior further:
-
 ```ts
-import { bsv } from "dxs-stas-sdk";
+import { bsv } from "dxs-stas-sdk/bsv";
 
 bsv.configureStrictMode({
   strictTxParse: true,
@@ -360,7 +362,15 @@ bsv.configureStrictMode({
 });
 ```
 
+## AI agent onboarding
+
+If you are integrating this SDK through an AI coding agent, start with:
+
+- `AGENTS.md`
+- `docs/AGENT_RUNBOOK.md`
+- `docs/DSTAS_SDK_SPEC.md`
+
 ## Author
 
-- Author: [Oleg Panagushin](https://github.com/panagushin)  
-  CTO / System Architect — Crypto & FinTech
+- Author: [Oleg Panagushin](https://github.com/panagushin)
+  CTO / System Architect - Crypto & FinTech
