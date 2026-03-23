@@ -3,6 +3,7 @@ import { createMasterWorld } from "./helpers/dstas-master-fixture";
 import {
   checkpoint,
   issue,
+  merge,
   split,
   transfer,
 } from "./helpers/dstas-master-driver";
@@ -11,9 +12,24 @@ describe("dstas master lifecycle", () => {
   test("wave r1: issue transfer split checkpoint slice is valid", () => {
     const world = createMasterWorld();
 
-    issue(world, { assetId: "assetA", to: "ownerA", satoshis: 100, step: "issue assetA" });
-    issue(world, { assetId: "assetB", to: "ownerB", satoshis: 100, step: "issue assetB" });
-    issue(world, { assetId: "assetC", to: "ownerC", satoshis: 100, step: "issue assetC" });
+    issue(world, {
+      assetId: "assetA",
+      to: "ownerA",
+      satoshis: 100,
+      step: "issue assetA",
+    });
+    issue(world, {
+      assetId: "assetB",
+      to: "ownerB",
+      satoshis: 100,
+      step: "issue assetB",
+    });
+    issue(world, {
+      assetId: "assetC",
+      to: "ownerC",
+      satoshis: 100,
+      step: "issue assetC",
+    });
 
     transfer(world, {
       assetId: "assetA",
@@ -40,6 +56,14 @@ describe("dstas master lifecycle", () => {
         { owner: "ownerA", satoshis: 10 },
       ],
       step: "assetA split",
+    });
+    merge(world, {
+      assetId: "assetA",
+      from: "ownerA",
+      left: 40,
+      right: 10,
+      to: "ownerA",
+      step: "assetA merge ownerA fragments",
     });
 
     transfer(world, {
@@ -81,7 +105,7 @@ describe("dstas master lifecycle", () => {
         assetA: {
           ownerB: [30],
           ownerC: [20],
-          ownerA: [10, 40],
+          ownerA: [50],
         },
         assetB: {
           ownerB: [25],
@@ -94,6 +118,6 @@ describe("dstas master lifecycle", () => {
       },
     });
 
-    expect(world.history.length).toBe(12);
+    expect(world.history.length).toBe(13);
   });
 });

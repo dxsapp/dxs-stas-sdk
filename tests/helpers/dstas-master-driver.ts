@@ -1,4 +1,9 @@
-import { BuildDstasIssueTxs, BuildDstasMergeTx, BuildDstasSplitTx, BuildDstasTransferTx } from "../../src/dstas-factory";
+import {
+  BuildDstasIssueTxs,
+  BuildDstasMergeTx,
+  BuildDstasSplitTx,
+  BuildDstasTransferTx,
+} from "../../src/dstas-factory";
 import { TransactionReader } from "../../src/transaction/read/transaction-reader";
 import { OutPoint, ScriptType } from "../../src/bitcoin";
 import {
@@ -16,7 +21,10 @@ import {
   recordCheckpoint,
 } from "./dstas-master-assert";
 
-const requireActor = (world: TMasterWorld, actorId: TMasterActorId): TMasterActor => {
+const requireActor = (
+  world: TMasterWorld,
+  actorId: TMasterActorId,
+): TMasterActor => {
   const actor = world.actors[actorId];
   if (!actor) throw new Error(`Unknown actor ${actorId}`);
   return actor;
@@ -25,14 +33,22 @@ const requireActor = (world: TMasterWorld, actorId: TMasterActorId): TMasterActo
 const requireSingleWallet = (world: TMasterWorld, actorId: TMasterActorId) => {
   const actor = requireActor(world, actorId);
   if (actor.kind !== "single") {
-    throw new Error(`Actor ${actorId} is multisig and cannot use high-level owner path in Wave R1`);
+    throw new Error(
+      `Actor ${actorId} is multisig and cannot use high-level owner path in Wave R1`,
+    );
   }
   return actor.wallet;
 };
 
-const findFeeOutput = (txHex: string, owner: TMasterActorId, assetId: TMasterAssetId): TTrackedOutput => {
+const findFeeOutput = (
+  txHex: string,
+  owner: TMasterActorId,
+  assetId: TMasterAssetId,
+): TTrackedOutput => {
   const tx = TransactionReader.readHex(txHex);
-  const feeIndex = tx.Outputs.findIndex((output) => output.ScriptType === ScriptType.p2pkh);
+  const feeIndex = tx.Outputs.findIndex(
+    (output) => output.ScriptType === ScriptType.p2pkh,
+  );
   if (feeIndex < 0) {
     throw new Error(`Expected fee output in ${assetId} transaction`);
   }
@@ -87,14 +103,22 @@ const addHistory = (
 };
 
 const removeLiveOutput = (world: TMasterWorld, tracked: TTrackedOutput) => {
-  world.liveOutputs.delete(outPointKey(tracked.outPoint.TxId, tracked.outPoint.Vout));
-  if (world.feeOutputs[tracked.assetId]?.outPoint.toString() === tracked.outPoint.toString()) {
+  world.liveOutputs.delete(
+    outPointKey(tracked.outPoint.TxId, tracked.outPoint.Vout),
+  );
+  if (
+    world.feeOutputs[tracked.assetId]?.outPoint.toString() ===
+    tracked.outPoint.toString()
+  ) {
     delete world.feeOutputs[tracked.assetId];
   }
 };
 
 const addLiveOutput = (world: TMasterWorld, tracked: TTrackedOutput) => {
-  world.liveOutputs.set(outPointKey(tracked.outPoint.TxId, tracked.outPoint.Vout), tracked);
+  world.liveOutputs.set(
+    outPointKey(tracked.outPoint.TxId, tracked.outPoint.Vout),
+    tracked,
+  );
   if (tracked.isFee) {
     world.feeOutputs[tracked.assetId] = tracked;
   }
@@ -148,7 +172,9 @@ const requireLiveOutput = (
       entry.satoshis === satoshis,
   );
   if (!tracked) {
-    throw new Error(`Missing live ${assetId} output for ${owner} with ${satoshis} sats`);
+    throw new Error(
+      `Missing live ${assetId} output for ${owner} with ${satoshis} sats`,
+    );
   }
   return tracked;
 };
@@ -176,19 +202,44 @@ export const issue = (
       Owner: funding.owner,
     },
     scheme,
-    destinations: [dstasDestinationForActor(world, { owner: params.to, satoshis: params.satoshis })],
+    destinations: [
+      dstasDestinationForActor(world, {
+        owner: params.to,
+        satoshis: params.satoshis,
+      }),
+    ],
   });
 
-  assertLifecycleTxValid(world, `${params.step}:contract`, txs.contractTxHex, 1);
-  addHistory(world, `${params.step}:contract`, params.assetId, txs.contractTxHex);
+  assertLifecycleTxValid(
+    world,
+    `${params.step}:contract`,
+    txs.contractTxHex,
+    1,
+  );
+  addHistory(
+    world,
+    `${params.step}:contract`,
+    params.assetId,
+    txs.contractTxHex,
+  );
 
   assertLifecycleTxValid(world, `${params.step}:issue`, txs.issueTxHex, 2);
   addHistory(world, `${params.step}:issue`, params.assetId, txs.issueTxHex);
 
-  addDstasOutputs(world, params.assetId, txs.issueTxHex, [{ owner: params.to, satoshis: params.satoshis }]);
+  addDstasOutputs(world, params.assetId, txs.issueTxHex, [
+    { owner: params.to, satoshis: params.satoshis },
+  ]);
   addLiveOutput(
     world,
-    findFeeOutput(txs.issueTxHex, params.assetId === "assetA" ? "issuerA" : params.assetId === "assetB" ? "issuerB" : "issuerC", params.assetId),
+    findFeeOutput(
+      txs.issueTxHex,
+      params.assetId === "assetA"
+        ? "issuerA"
+        : params.assetId === "assetB"
+          ? "issuerB"
+          : "issuerC",
+      params.assetId,
+    ),
   );
 
   return txs;
@@ -204,7 +255,12 @@ export const transfer = (
     step: string;
   },
 ) => {
-  const stasOutput = requireLiveOutput(world, params.assetId, params.from, params.satoshis);
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.from,
+    params.satoshis,
+  );
   const feeOutput = requireFeeOutput(world, params.assetId);
   const txHex = BuildDstasTransferTx({
     stasPayment: {
@@ -227,11 +283,10 @@ export const transfer = (
 
   removeLiveOutput(world, stasOutput);
   removeLiveOutput(world, feeOutput);
-  addDstasOutputs(world, params.assetId, txHex, [{ owner: params.to, satoshis: params.satoshis }]);
-  addLiveOutput(
-    world,
-    findFeeOutput(txHex, feeOutput.owner, params.assetId),
-  );
+  addDstasOutputs(world, params.assetId, txHex, [
+    { owner: params.to, satoshis: params.satoshis },
+  ]);
+  addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
 
   return txHex;
 };
@@ -246,7 +301,12 @@ export const split = (
     step: string;
   },
 ) => {
-  const stasOutput = requireLiveOutput(world, params.assetId, params.from, params.satoshis);
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.from,
+    params.satoshis,
+  );
   const feeOutput = requireFeeOutput(world, params.assetId);
   const txHex = BuildDstasSplitTx({
     stasPayment: {
@@ -258,7 +318,9 @@ export const split = (
       Owner: requireSingleWallet(world, feeOutput.owner),
     },
     scheme: world.schemes[params.assetId],
-    destinations: params.outputs.map((output) => dstasDestinationForActor(world, output)),
+    destinations: params.outputs.map((output) =>
+      dstasDestinationForActor(world, output),
+    ),
   });
 
   assertLifecycleTxValid(world, params.step, txHex, 2);
@@ -283,10 +345,22 @@ export const merge = (
     step: string;
   },
 ) => {
-  const leftOutput = requireLiveOutput(world, params.assetId, params.from, params.left);
-  const rightOutput = requireLiveOutput(world, params.assetId, params.from, params.right);
+  const leftOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.from,
+    params.left,
+  );
+  const rightOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.from,
+    params.right,
+  );
   if (leftOutput.outPoint.toString() === rightOutput.outPoint.toString()) {
-    throw new Error(`Merge inputs resolved to the same outpoint for ${params.step}`);
+    throw new Error(
+      `Merge inputs resolved to the same outpoint for ${params.step}`,
+    );
   }
   const feeOutput = requireFeeOutput(world, params.assetId);
   const mergedSatoshis = params.left + params.right;
@@ -306,7 +380,12 @@ export const merge = (
       Owner: requireSingleWallet(world, feeOutput.owner),
     },
     scheme: world.schemes[params.assetId],
-    destinations: [dstasDestinationForActor(world, { owner: params.to, satoshis: mergedSatoshis })],
+    destinations: [
+      dstasDestinationForActor(world, {
+        owner: params.to,
+        satoshis: mergedSatoshis,
+      }),
+    ],
   });
 
   assertLifecycleTxValid(world, params.step, txHex, 3);
@@ -315,7 +394,9 @@ export const merge = (
   removeLiveOutput(world, leftOutput);
   removeLiveOutput(world, rightOutput);
   removeLiveOutput(world, feeOutput);
-  addDstasOutputs(world, params.assetId, txHex, [{ owner: params.to, satoshis: mergedSatoshis }]);
+  addDstasOutputs(world, params.assetId, txHex, [
+    { owner: params.to, satoshis: mergedSatoshis },
+  ]);
   addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
 
   return txHex;
@@ -325,10 +406,7 @@ export const checkpoint = (world: TMasterWorld, name: string) => {
   recordCheckpoint(world, name);
 };
 
-export const expectFail = (
-  world: TMasterWorld,
-  buildTx: () => string,
-) => {
+export const expectFail = (world: TMasterWorld, buildTx: () => string) => {
   const before = [...world.liveOutputs.keys()].sort();
   const txHex = buildTx();
   const result = expectLifecycleTxFailure(world, txHex);

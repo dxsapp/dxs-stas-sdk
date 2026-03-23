@@ -18,6 +18,12 @@ import { TransactionBuilder } from "./transaction-builder";
 import { Wallet } from "../../bitcoin";
 import { Bytes, fromHex } from "../../bytes";
 import { getStrictModeConfig } from "../../security/strict-mode";
+import {
+  extractDstasCounterpartyScript,
+  splitDstasPreviousTransactionByCounterpartyScript,
+} from "../../script/dstas-swap-script";
+import { decodeActionData } from "../../script/dstas-action-data";
+import { ScriptReader } from "../../script/read/script-reader";
 
 export class InputBilder {
   protected TxBuilder: TransactionBuilder;
@@ -218,6 +224,21 @@ export class InputBilder {
 
   private isP2PkLike = (scriptType: ScriptType): boolean =>
     scriptType === ScriptType.p2pkh || scriptType === ScriptType.p2mpkh;
+
+
+  private hasDstasSwapActionData = (lockingScript: Bytes): boolean => {
+    const tokens = ScriptReader.read(lockingScript);
+    const actionDataToken = tokens[1];
+    if (!actionDataToken?.Data || actionDataToken.Data.length === 0) {
+      return false;
+    }
+
+    try {
+      return decodeActionData(actionDataToken.Data).kind === "swap";
+    } catch {
+      return false;
+    }
+  };
 
   /**
    * DSTAS full-redeem shape:
@@ -504,7 +525,21 @@ export class InputBilder {
 
     this._mergeVout = mergeUtxo.OutPoint.Vout;
     if (this.OutPoint.ScriptType === ScriptType.dstas) {
-      this._mergeSegments = [mergeRaw];
+      const lockingScript = this.TxBuilder.Inputs[0].OutPoint.LockingScript;
+      const shouldUseWholeCounterpartyTx =
+        this.hasDstasSwapActionData(this.OutPoint.LockingScript) ||
+        this.hasDstasSwapActionData(mergeUtxo.OutPoint.LockingScript);
+
+      if (shouldUseWholeCounterpartyTx) {
+        this._mergeSegments = [mergeRaw];
+        return;
+      }
+
+      const scriptToCut = extractDstasCounterpartyScript(lockingScript);
+      this._mergeSegments = splitDstasPreviousTransactionByCounterpartyScript(
+        mergeRaw,
+        scriptToCut,
+      ).reverse();
       return;
     }
 

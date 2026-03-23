@@ -1,4 +1,10 @@
-import { Address, OutPoint, ScriptType, TokenScheme, Wallet } from "../../src/bitcoin";
+import {
+  Address,
+  OutPoint,
+  ScriptType,
+  TokenScheme,
+  Wallet,
+} from "../../src/bitcoin";
 import { P2pkhBuilder } from "../../src/script/build/p2pkh-builder";
 import { hash160 } from "../../src/hashes";
 import { toHex } from "../../src/bytes";
@@ -57,19 +63,70 @@ const createActors = (): Record<TMasterActorId, TMasterActor> => {
   const msAuth1 = deriveWallet(10);
   const msAuth2 = deriveWallet(11);
   const msAuth3 = deriveWallet(12);
-  const msOwnerWallets = [deriveWallet(13), deriveWallet(14), deriveWallet(15), deriveWallet(16), deriveWallet(17)];
+  const msOwnerWallets = [
+    deriveWallet(13),
+    deriveWallet(14),
+    deriveWallet(15),
+    deriveWallet(16),
+    deriveWallet(17),
+  ];
   const feeWallet = deriveWallet(18);
 
   const actors: Record<TMasterActorId, TMasterActor> = {
-    issuerA: { id: "issuerA", kind: "single", wallet: issuerA, address: issuerA.Address },
-    issuerB: { id: "issuerB", kind: "single", wallet: issuerB, address: issuerB.Address },
-    issuerC: { id: "issuerC", kind: "single", wallet: issuerC, address: issuerC.Address },
-    ownerA: { id: "ownerA", kind: "single", wallet: ownerA, address: ownerA.Address },
-    ownerB: { id: "ownerB", kind: "single", wallet: ownerB, address: ownerB.Address },
-    ownerC: { id: "ownerC", kind: "single", wallet: ownerC, address: ownerC.Address },
-    ownerD: { id: "ownerD", kind: "single", wallet: ownerD, address: ownerD.Address },
-    ownerE: { id: "ownerE", kind: "single", wallet: ownerE, address: ownerE.Address },
-    freezeAuth: { id: "freezeAuth", kind: "single", wallet: freezeAuth, address: freezeAuth.Address },
+    issuerA: {
+      id: "issuerA",
+      kind: "single",
+      wallet: issuerA,
+      address: issuerA.Address,
+    },
+    issuerB: {
+      id: "issuerB",
+      kind: "single",
+      wallet: issuerB,
+      address: issuerB.Address,
+    },
+    issuerC: {
+      id: "issuerC",
+      kind: "single",
+      wallet: issuerC,
+      address: issuerC.Address,
+    },
+    ownerA: {
+      id: "ownerA",
+      kind: "single",
+      wallet: ownerA,
+      address: ownerA.Address,
+    },
+    ownerB: {
+      id: "ownerB",
+      kind: "single",
+      wallet: ownerB,
+      address: ownerB.Address,
+    },
+    ownerC: {
+      id: "ownerC",
+      kind: "single",
+      wallet: ownerC,
+      address: ownerC.Address,
+    },
+    ownerD: {
+      id: "ownerD",
+      kind: "single",
+      wallet: ownerD,
+      address: ownerD.Address,
+    },
+    ownerE: {
+      id: "ownerE",
+      kind: "single",
+      wallet: ownerE,
+      address: ownerE.Address,
+    },
+    freezeAuth: {
+      id: "freezeAuth",
+      kind: "single",
+      wallet: freezeAuth,
+      address: freezeAuth.Address,
+    },
     confiscationAuth: {
       id: "confiscationAuth",
       kind: "single",
@@ -81,8 +138,14 @@ const createActors = (): Record<TMasterActorId, TMasterActor> => {
       kind: "multisig",
       m: 2,
       wallets: [msAuth1, msAuth2, msAuth3],
-      publicKeysHex: [toHex(msAuth1.PublicKey), toHex(msAuth2.PublicKey), toHex(msAuth3.PublicKey)],
-      address: new Address(hash160(buildMlpkhPreimage(2, [msAuth1, msAuth2, msAuth3]))),
+      publicKeysHex: [
+        toHex(msAuth1.PublicKey),
+        toHex(msAuth2.PublicKey),
+        toHex(msAuth3.PublicKey),
+      ],
+      address: new Address(
+        hash160(buildMlpkhPreimage(2, [msAuth1, msAuth2, msAuth3])),
+      ),
     },
     msOwner: {
       id: "msOwner",
@@ -92,12 +155,16 @@ const createActors = (): Record<TMasterActorId, TMasterActor> => {
       publicKeysHex: msOwnerWallets.map((wallet) => toHex(wallet.PublicKey)),
       address: new Address(hash160(buildMlpkhPreimage(3, msOwnerWallets))),
     },
-    feeWallet: { id: "feeWallet", kind: "single", wallet: feeWallet, address: feeWallet.Address },
+    feeWallet: {
+      id: "feeWallet",
+      kind: "single",
+      wallet: feeWallet,
+      address: feeWallet.Address,
+    },
   };
 
   return actors;
 };
-
 
 const requireSingleActor = (actor: TMasterActor, id: string) => {
   if (actor.kind !== "single") {
@@ -123,10 +190,23 @@ const createSchemes = (actors: Record<TMasterActorId, TMasterActor>) => ({
       freeze: true,
       confiscation: true,
       isDivisible: true,
-      freezeAuthority: { m: 1, publicKeys: [toHex(requireSingleActor(actors.freezeAuth, "freezeAuth").wallet.PublicKey)] },
+      freezeAuthority: {
+        m: 1,
+        publicKeys: [
+          toHex(
+            requireSingleActor(actors.freezeAuth, "freezeAuth").wallet
+              .PublicKey,
+          ),
+        ],
+      },
       confiscationAuthority: {
         m: 1,
-        publicKeys: [toHex(requireSingleActor(actors.confiscationAuth, "confiscationAuth").wallet.PublicKey)],
+        publicKeys: [
+          toHex(
+            requireSingleActor(actors.confiscationAuth, "confiscationAuth")
+              .wallet.PublicKey,
+          ),
+        ],
       },
     },
   ),
@@ -139,10 +219,23 @@ const createSchemes = (actors: Record<TMasterActorId, TMasterActor>) => ({
       freeze: true,
       confiscation: true,
       isDivisible: true,
-      freezeAuthority: { m: 1, publicKeys: [toHex(requireSingleActor(actors.freezeAuth, "freezeAuth").wallet.PublicKey)] },
+      freezeAuthority: {
+        m: 1,
+        publicKeys: [
+          toHex(
+            requireSingleActor(actors.freezeAuth, "freezeAuth").wallet
+              .PublicKey,
+          ),
+        ],
+      },
       confiscationAuthority: {
         m: 1,
-        publicKeys: [toHex(requireSingleActor(actors.confiscationAuth, "confiscationAuth").wallet.PublicKey)],
+        publicKeys: [
+          toHex(
+            requireSingleActor(actors.confiscationAuth, "confiscationAuth")
+              .wallet.PublicKey,
+          ),
+        ],
       },
     },
   ),
@@ -157,11 +250,13 @@ const createSchemes = (actors: Record<TMasterActorId, TMasterActor>) => ({
       isDivisible: true,
       freezeAuthority: {
         m: requireMultisigActor(actors.msFreezeAuth, "msFreezeAuth").m,
-        publicKeys: requireMultisigActor(actors.msFreezeAuth, "msFreezeAuth").publicKeysHex
+        publicKeys: requireMultisigActor(actors.msFreezeAuth, "msFreezeAuth")
+          .publicKeysHex,
       },
       confiscationAuthority: {
         m: requireMultisigActor(actors.msFreezeAuth, "msFreezeAuth").m,
-        publicKeys: requireMultisigActor(actors.msFreezeAuth, "msFreezeAuth").publicKeysHex
+        publicKeys: requireMultisigActor(actors.msFreezeAuth, "msFreezeAuth")
+          .publicKeysHex,
       },
     },
   ),
@@ -172,15 +267,27 @@ export const createMasterWorld = (): TMasterWorld => {
   const schemes = createSchemes(actors);
   const syntheticFunding = {
     assetA: {
-      outPoint: createSyntheticFundingOutPoint("1", requireSingleActor(actors.issuerA, "issuerA").wallet, 100_000),
+      outPoint: createSyntheticFundingOutPoint(
+        "1",
+        requireSingleActor(actors.issuerA, "issuerA").wallet,
+        100_000,
+      ),
       owner: requireSingleActor(actors.issuerA, "issuerA").wallet,
     },
     assetB: {
-      outPoint: createSyntheticFundingOutPoint("2", requireSingleActor(actors.issuerB, "issuerB").wallet, 100_000),
+      outPoint: createSyntheticFundingOutPoint(
+        "2",
+        requireSingleActor(actors.issuerB, "issuerB").wallet,
+        100_000,
+      ),
       owner: requireSingleActor(actors.issuerB, "issuerB").wallet,
     },
     assetC: {
-      outPoint: createSyntheticFundingOutPoint("3", requireSingleActor(actors.issuerC, "issuerC").wallet, 100_000),
+      outPoint: createSyntheticFundingOutPoint(
+        "3",
+        requireSingleActor(actors.issuerC, "issuerC").wallet,
+        100_000,
+      ),
       owner: requireSingleActor(actors.issuerC, "issuerC").wallet,
     },
   } satisfies Record<TMasterAssetId, { outPoint: OutPoint; owner: Wallet }>;

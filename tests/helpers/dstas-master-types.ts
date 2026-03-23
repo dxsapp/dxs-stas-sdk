@@ -1,4 +1,10 @@
-import { Address, OutPoint, ScriptType, TokenScheme, Wallet } from "../../src/bitcoin";
+import {
+  Address,
+  OutPoint,
+  ScriptType,
+  TokenScheme,
+  Wallet,
+} from "../../src/bitcoin";
 import { Transaction } from "../../src/bitcoin/transaction";
 
 export type TMasterActorId =
@@ -54,7 +60,10 @@ export type TTxHistoryEntry = {
 
 export type TCheckpointSummary = {
   supplyByAsset: Record<TMasterAssetId, number>;
-  ownersByAsset: Record<TMasterAssetId, Partial<Record<TMasterActorId, number[]>>>;
+  ownersByAsset: Record<
+    TMasterAssetId,
+    Partial<Record<TMasterActorId, number[]>>
+  >;
 };
 
 export type TSyntheticPrevout = {

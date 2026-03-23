@@ -13,7 +13,10 @@ import {
 } from "./dstas-master-types";
 
 const listSyntheticPrevouts = (world: TMasterWorld) => {
-  const entries = new Map<string, { lockingScript: Uint8Array; satoshis: number }>();
+  const entries = new Map<
+    string,
+    { lockingScript: Uint8Array; satoshis: number }
+  >();
   for (const funding of Object.values(world.syntheticFunding)) {
     entries.set(outPointKey(funding.outPoint.TxId, funding.outPoint.Vout), {
       lockingScript: funding.outPoint.LockingScript,
@@ -59,9 +62,13 @@ export const expectLifecycleTxFailure = (
   world: TMasterWorld,
   txHex: string,
 ) => {
-  const evalResult = evaluateTransactionHex(txHex, buildWorldPrevOutputResolver(world), {
-    allowOpReturn: true,
-  });
+  const evalResult = evaluateTransactionHex(
+    txHex,
+    buildWorldPrevOutputResolver(world),
+    {
+      allowOpReturn: true,
+    },
+  );
   expect(evalResult.success).toBe(false);
   return evalResult;
 };
@@ -83,7 +90,9 @@ const buildCheckpointSummary = (world: TMasterWorld): TCheckpointSummary => {
     supplyByAsset[tracked.assetId] += tracked.satoshis;
     const ownerMap = ownersByAsset[tracked.assetId];
     const current = ownerMap[tracked.owner] ?? [];
-    ownerMap[tracked.owner] = [...current, tracked.satoshis].sort((a, b) => a - b);
+    ownerMap[tracked.owner] = [...current, tracked.satoshis].sort(
+      (a, b) => a - b,
+    );
   }
 
   return { supplyByAsset, ownersByAsset };
@@ -97,7 +106,10 @@ const normalizeOwnerMap = (
   value: Partial<Record<TMasterActorId, number[]>>,
 ): Partial<Record<TMasterActorId, number[]>> =>
   Object.fromEntries(
-    Object.entries(value).map(([owner, amounts]) => [owner, [...(amounts ?? [])].sort((a, b) => a - b)]),
+    Object.entries(value).map(([owner, amounts]) => [
+      owner,
+      [...(amounts ?? [])].sort((a, b) => a - b),
+    ]),
   );
 
 export const assertCheckpoint = (
@@ -114,8 +126,8 @@ export const assertCheckpoint = (
   }
 
   for (const [assetId, owners] of Object.entries(expected.ownersByAsset)) {
-    expect(normalizeOwnerMap(actual.ownersByAsset[assetId as TMasterAssetId])).toMatchObject(
-      normalizeOwnerMap(owners ?? {}),
-    );
+    expect(
+      normalizeOwnerMap(actual.ownersByAsset[assetId as TMasterAssetId]),
+    ).toMatchObject(normalizeOwnerMap(owners ?? {}));
   }
 };
