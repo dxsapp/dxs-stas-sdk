@@ -1,0 +1,124 @@
+# Stream Task - Delivery Backend Reliability
+
+- Package: `2026-03-23-dstas-master-lifecycle-flow`
+- Stream: `delivery-backend-reliability`
+- Lane: `backend`
+- Backend substream: `BE-Reliability`
+- Status: `in_progress`
+- Repository: `/Users/imighty/Code/dxs-stas-sdk`
+
+## Goal
+
+Build the deterministic DSTAS master lifecycle test harness and implement the canonical 52-step lifecycle flow with embedded negative branches.
+
+## Scope
+
+In scope:
+
+- `/Users/imighty/Code/dxs-stas-sdk/tests/dstas-master-lifecycle.test.ts`
+- `/Users/imighty/Code/dxs-stas-sdk/tests/helpers/dstas-master-fixture.ts`
+- `/Users/imighty/Code/dxs-stas-sdk/tests/helpers/dstas-master-driver.ts`
+- `/Users/imighty/Code/dxs-stas-sdk/tests/helpers/dstas-master-assert.ts`
+- `/Users/imighty/Code/dxs-stas-sdk/tests/helpers/dstas-master-types.ts`
+- supporting updates under `/Users/imighty/Code/dxs-stas-sdk/tests/helpers/`
+
+Out of scope unless required by a concrete blocker:
+
+- product changes under `/Users/imighty/Code/dxs-stas-sdk/src/**`
+- package exports or docs outside direct test references
+
+## Required inputs
+
+Read before implementation:
+
+- `/Users/imighty/Code/dxs-stas-sdk/README.md`
+- `/Users/imighty/Code/dxs-stas-sdk/docs/AGENT_RUNBOOK.md`
+- `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SDK_SPEC.md`
+- `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SCRIPT_INVARIANTS.md`
+- `/Users/imighty/Code/dxs-stas-sdk/tests/dstas-flow.test.ts`
+- `/Users/imighty/Code/dxs-stas-sdk/tests/dstas-state-flows.test.ts`
+- `/Users/imighty/Code/dxs-stas-sdk/tests/dstas-swap-flows.test.ts`
+- `/Users/imighty/Code/dxs-stas-sdk/tests/dstas-multisig-authority-flow.test.ts`
+
+## Tasks
+
+### Wave R1 - Harness
+
+1. Create a world-state model for actors, assets, live outputs, tx history, and checkpoints.
+2. Create deterministic fixture helpers for issuers, owners, multisig owner, authorities, and fee wallet.
+3. Build a driver DSL with operations:
+   - `issue`
+   - `transfer`
+   - `split`
+   - `merge`
+   - `freeze`
+   - `unfreeze`
+   - `confiscate`
+   - `swap`
+   - `redeem`
+   - `checkpoint`
+   - `expectFail`
+4. Ensure every successful operation performs:
+   - `evaluateTransactionHex(...)`
+   - explicit prevout resolver wiring
+   - fee assertions
+   - token conservation assertions
+
+### Wave R2 - Scenario execution
+
+5. Implement the 52-step master flow from the package master doc.
+6. Embed negative branches directly in the lifecycle:
+   - frozen spend fails
+   - wrong confiscation authority fails
+   - non-issuer redeem fails
+   - wrong swap script fails
+   - wrong swap pieces count fails
+   - reordered swap pieces fail
+7. Add checkpoints after major phases:
+   - issued
+   - post-split
+   - post-merge
+   - post-freeze
+   - post-unfreeze
+   - post-confiscation
+   - post-swap
+   - final
+
+### Wave R3 - Escalation
+
+8. If the DSL exposes missing SDK seams, stop that slice and hand off an explicit blocker to `delivery-backend-platform` or `delivery-backend-contracts` with:
+   - exact file
+   - exact operation that fails
+   - expected contract
+   - minimum patch needed
+
+## Acceptance criteria
+
+- The lifecycle suite is deterministic and does not depend on `.temp` or external files.
+- The new driver keeps the test readable; the master test itself should remain orchestration-first, not builder-noise-heavy.
+- At least the happy path plus the embedded negative cases from the master doc are covered in one suite.
+- Checkpoints can localize failures by asset and owner state.
+
+## Validation
+
+Required before handoff:
+
+```bash
+npm run build -- --pretty false
+npm run lint
+npm test -- --runInBand tests/dstas-master-lifecycle.test.ts
+```
+
+If helper reuse touches existing suites, also rerun the directly affected DSTAS suites.
+
+## Commit expectation
+
+Commit only reliability-owned test/harness changes.
+
+Suggested commit sequence:
+
+- `test(dstas): add master lifecycle harness`
+- `test(dstas): add master lifecycle scenario`
+- optional formatting follow-up if needed
+
+On completion, update this file to `done` and record commit hashes.
