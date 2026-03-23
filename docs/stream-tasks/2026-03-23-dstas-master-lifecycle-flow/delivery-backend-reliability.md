@@ -4,7 +4,7 @@
 - Stream: `delivery-backend-reliability`
 - Lane: `backend`
 - Backend substream: `BE-Reliability`
-- Status: `in_progress`
+- Status: `blocked`
 - Repository: `/Users/imighty/Code/dxs-stas-sdk`
 
 ## Goal
@@ -122,3 +122,12 @@ Suggested commit sequence:
 - optional formatting follow-up if needed
 
 On completion, update this file to `done` and record commit hashes.
+
+## Blocker
+
+- Failing operation: valid DSTAS merge of two same-owner outputs produced by a prior DSTAS split transaction
+- Reproduction point: the removed merge step in `/Users/imighty/Code/dxs-stas-sdk/tests/dstas-master-lifecycle.test.ts`
+- Observed behavior: `BuildDstasMergeTx(...)` builds a tx that evaluates with `OP_NUMEQUALVERIFY failed` on both STAS inputs even when both merge inputs carry the same owner and the source `OutPoint.Transaction` raw bytes are attached.
+- Exact failing surface: `/Users/imighty/Code/dxs-stas-sdk/src/transaction/build/input-builder.ts` merge path, reached through `/Users/imighty/Code/dxs-stas-sdk/src/dstas-factory.ts` -> `BuildDstasMergeTx(...)`
+- Expected minimal contract: two same-owner DSTAS outputs from a split transaction must be mergeable into one DSTAS output using the canonical `BuildDstasMergeTx(...)` helper, with script evaluation success on both STAS inputs.
+- Why tests alone cannot solve it: the failure happens after a fully formed tx is built and evaluated; the merge unlocking payload or merge-source reconstruction is inconsistent with the script template. The test harness can reproduce it deterministically, but it cannot correct the runtime merge encoding.
