@@ -207,8 +207,8 @@ describe("dstas action data", () => {
     const longTail = extractDstasCounterpartyScript(long);
 
     expect(toHex(shortTail)).toBe(toHex(longTail));
-    expect(
-      toHex(computeDstasRequestedScriptHash(short)),
-    ).toBe(toHex(computeDstasRequestedScriptHash(long)));
+    expect(toHex(computeDstasRequestedScriptHash(short))).toBe(
+      toHex(computeDstasRequestedScriptHash(long)),
+    );
   });
 });

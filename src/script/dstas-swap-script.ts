@@ -113,7 +113,11 @@ export const splitDstasPreviousTransactionByCounterpartyScript = (
 
   let cursor = 0;
   while (cursor <= previousTransaction.length) {
-    const match = findNextOccurrence(previousTransaction, counterpartyScript, cursor);
+    const match = findNextOccurrence(
+      previousTransaction,
+      counterpartyScript,
+      cursor,
+    );
     if (match < 0) {
       pieces.push(previousTransaction.subarray(cursor));
       break;
