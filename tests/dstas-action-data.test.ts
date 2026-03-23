@@ -2,7 +2,10 @@ import { fromHex, toHex } from "../src/bytes";
 import {
   DstasActionKind,
   DstasSwapActionData,
+  buildDstasLockingScript,
   buildSwapActionData,
+  computeDstasRequestedScriptHash,
+  extractDstasCounterpartyScript,
   decodeActionData,
   encodeActionData,
 } from "../src/script";
@@ -184,5 +187,28 @@ describe("dstas action data", () => {
     if (parsed.kind !== "unknown") return;
     expect(parsed.action).toBe(0x7f);
     expect(toHex(parsed.payload)).toBe("aa55");
+  });
+
+  test("requestedScriptHash ignores second field length and hashes the parsed tail", () => {
+    const short = buildDstasLockingScript({
+      ownerPkh: fromHex("11".repeat(20)),
+      actionData: fromHex("aa"),
+      redemptionPkh: fromHex("22".repeat(20)),
+      flags: new Uint8Array([0x00]),
+    });
+    const long = buildDstasLockingScript({
+      ownerPkh: fromHex("11".repeat(20)),
+      actionData: fromHex("aa55aa55aa"),
+      redemptionPkh: fromHex("22".repeat(20)),
+      flags: new Uint8Array([0x00]),
+    });
+
+    const shortTail = extractDstasCounterpartyScript(short);
+    const longTail = extractDstasCounterpartyScript(long);
+
+    expect(toHex(shortTail)).toBe(toHex(longTail));
+    expect(
+      toHex(computeDstasRequestedScriptHash(short)),
+    ).toBe(toHex(computeDstasRequestedScriptHash(long)));
   });
 });

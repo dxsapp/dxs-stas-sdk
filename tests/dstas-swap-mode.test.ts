@@ -8,6 +8,8 @@ import {
 } from "../src/script/build/dstas-locking-builder";
 import { buildSwapActionData } from "../src/script/dstas-action-data";
 import { ResolveDstasSwapMode } from "../src/dstas-factory";
+import { decomposeDstasUnlockingScript } from "../src/script";
+import { OpCode } from "../src/bitcoin/op-codes";
 import { fromHex } from "../src/bytes";
 
 const mnemonic =
@@ -85,5 +87,36 @@ describe("ResolveDstasSwapMode", () => {
 
     const mode = ResolveDstasSwapMode([left, right]);
     expect(mode).toBe("swap-swap");
+  });
+
+  test("decomposes new swap unlock fields from the tail", () => {
+    const script = new ScriptBuilder(ScriptType.p2stas);
+    script
+      .addNumber(100)
+      .addData(fromHex("11".repeat(20)))
+      .addOpCode(OpCode.OP_0)
+      .addOpCode(OpCode.OP_0)
+      .addOpCode(OpCode.OP_0)
+      .addNumber(1)
+      .addData(new Uint8Array(32).fill(0x44))
+      .addOpCode(OpCode.OP_0)
+      .addNumber(7)
+      .addData(fromHex("aa"))
+      .addData(fromHex("bb"))
+      .addNumber(2)
+      .addData(fromHex("cc".repeat(8)))
+      .addData(new Uint8Array(120).fill(0x11))
+      .addNumber(1)
+      .addData(new Uint8Array(72).fill(0x30))
+      .addData(new Uint8Array(33).fill(0x02));
+
+    const decoded = decomposeDstasUnlockingScript(script.toBytes());
+
+    expect(decoded.parsed).toBe(true);
+    expect(decoded.spendingType).toBe(1);
+    expect(decoded.counterpartyOutpointIndex).toBe(7);
+    expect(decoded.counterpartyPiecesCount).toBe(2);
+    expect(decoded.counterpartyPiecesHexes).toEqual(["aa", "bb"]);
+    expect(decoded.counterpartyScriptHex).toBe("cccccccccccccccc");
   });
 });

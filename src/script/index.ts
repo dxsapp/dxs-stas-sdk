@@ -19,6 +19,7 @@ export * from "./script-samples";
 export * from "./script-token";
 export * from "./script-utils";
 export * from "./dstas-action-data";
+export * from "./dstas-swap-script";
 export * from "./dstas-requested-script-hash";
 export * from "./templates/dstas-locking-template";
 export * from "./eval/script-evaluator";

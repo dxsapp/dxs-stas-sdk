@@ -8,6 +8,14 @@ type RawChunk = {
   data?: Bytes;
 };
 
+type SwapSection = {
+  start: number;
+  counterpartyOutpointIndex: number;
+  counterpartyPiecesCount: number;
+  counterpartyPiecesHexes: string[];
+  counterpartyScriptHex: string;
+};
+
 export type DstasUnlockingScriptDecomposition = {
   parsed: boolean;
   errors: string[];
@@ -19,6 +27,10 @@ export type DstasUnlockingScriptDecomposition = {
   fundingVout?: number;
   fundingTxIdLeHex?: string;
   mergeMode: "none" | "present" | "unknown";
+  counterpartyOutpointIndex?: number;
+  counterpartyPiecesCount?: number;
+  counterpartyPiecesHexes: string[];
+  counterpartyScriptHex?: string;
   preimageHex?: string;
   spendingType?: number;
   signatureHex?: string;
@@ -101,6 +113,36 @@ const parseNumberChunk = (chunk: RawChunk): number | undefined => {
   return undefined;
 };
 
+const tryParseSwapSection = (chunks: RawChunk[]): SwapSection | undefined => {
+  if (chunks.length < 4) return undefined;
+
+  const scriptChunk = chunks[chunks.length - 1];
+  if (!scriptChunk.data || scriptChunk.data.length === 0) return undefined;
+
+  const piecesCountChunk = chunks[chunks.length - 2];
+  const piecesCount = parseNumberChunk(piecesCountChunk);
+  if (piecesCount === undefined || piecesCount < 0) return undefined;
+
+  const piecesStart = chunks.length - 2 - piecesCount;
+  if (piecesStart < 1) return undefined;
+
+  const outpointIndexChunk = chunks[piecesStart - 1];
+  const outpointIndex = parseNumberChunk(outpointIndexChunk);
+  if (outpointIndex === undefined) return undefined;
+
+  const pieces = chunks.slice(piecesStart, chunks.length - 2);
+  if (pieces.length !== piecesCount) return undefined;
+  if (pieces.some((piece) => !piece.data)) return undefined;
+
+  return {
+    start: piecesStart - 1,
+    counterpartyOutpointIndex: outpointIndex,
+    counterpartyPiecesCount: piecesCount,
+    counterpartyPiecesHexes: pieces.map((piece) => toHex(piece.data!)),
+    counterpartyScriptHex: toHex(scriptChunk.data),
+  };
+};
+
 export const decomposeDstasUnlockingScript = (
   script: Bytes,
 ): DstasUnlockingScriptDecomposition => {
@@ -111,6 +153,7 @@ export const decomposeDstasUnlockingScript = (
     hasExplicitEmptyNote: false,
     authPlaceholderOpcodes: [],
     mergeMode: "unknown",
+    counterpartyPiecesHexes: [],
   };
 
   const chunks: RawChunk[] = [];
@@ -134,9 +177,6 @@ export const decomposeDstasUnlockingScript = (
   const sigChunk = chunks[chunks.length - 2];
   const spendingTypeChunk = chunks[chunks.length - 3];
   const preimageChunk = chunks[chunks.length - 4];
-  const mergeMarkerChunk = chunks[chunks.length - 5];
-  const fundingTxIdChunk = chunks[chunks.length - 6];
-  const fundingVoutChunk = chunks[chunks.length - 7];
 
   if (!pubChunk.data || pubChunk.data.length !== 33) {
     result.errors.push("public key chunk not found at script end");
@@ -163,6 +203,28 @@ export const decomposeDstasUnlockingScript = (
     result.spendingType = spendingType;
   }
 
+  const prefix = chunks.slice(0, chunks.length - 4);
+  const swapSection = tryParseSwapSection(prefix);
+  if (swapSection) {
+    if (result.spendingType !== undefined && result.spendingType !== 1) {
+      result.errors.push("swap section requires spending type 1");
+    }
+    result.counterpartyOutpointIndex = swapSection.counterpartyOutpointIndex;
+    result.counterpartyPiecesCount = swapSection.counterpartyPiecesCount;
+    result.counterpartyPiecesHexes = swapSection.counterpartyPiecesHexes;
+    result.counterpartyScriptHex = swapSection.counterpartyScriptHex;
+  }
+
+  const working = swapSection ? prefix.slice(0, swapSection.start) : prefix;
+  if (working.length < 3) {
+    result.errors.push("missing funding fields");
+    return result;
+  }
+
+  const fundingVoutChunk = working[working.length - 3];
+  const fundingTxIdChunk = working[working.length - 2];
+  const mergeMarkerChunk = working[working.length - 1];
+
   if (!fundingTxIdChunk.data || fundingTxIdChunk.data.length !== 32) {
     result.errors.push("funding txid(LE) chunk not found");
   } else {
@@ -181,7 +243,7 @@ export const decomposeDstasUnlockingScript = (
       ? "none"
       : "present";
 
-  const head = chunks.slice(0, chunks.length - 7);
+  const head = working.slice(0, working.length - 3);
   if (head.length < 3) {
     result.errors.push("missing first token-output chunks");
     return result;
@@ -214,7 +276,6 @@ export const decomposeDstasUnlockingScript = (
     auth3?.opcode ?? -1,
   ];
 
-  // with-change: [changeSatoshis(scriptnum), changePkh(20), notes...]
   const hasChangePair =
     !!auth1 &&
     !!auth2 &&
@@ -222,7 +283,6 @@ export const decomposeDstasUnlockingScript = (
     !!auth2.data &&
     auth2.data.length === 20;
 
-  // no-change: [OP_0, OP_0, notes...]
   const hasNoChangePlaceholders =
     !!auth1 &&
     !!auth2 &&
@@ -231,9 +291,7 @@ export const decomposeDstasUnlockingScript = (
     auth2.opcode === OpCode.OP_0 &&
     !auth2.data;
 
-  if (hasChangePair) {
-    noteStartIdx = 5;
-  } else if (hasNoChangePlaceholders) {
+  if (hasChangePair || hasNoChangePlaceholders) {
     noteStartIdx = 5;
   } else if (tailHead.length > 0) {
     result.errors.push("unexpected post-output layout before funding fields");

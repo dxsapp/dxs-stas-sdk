@@ -1,6 +1,6 @@
 import { Address } from "../src/bitcoin/address";
 import { ScriptType } from "../src/bitcoin/script-type";
-import { fromHex, toHex, utf8ToBytes } from "../src/bytes";
+import { concat, fromHex, toHex, utf8ToBytes } from "../src/bytes";
 import { P2mpkhBuilder } from "../src/script/build/p2mpkh-builder";
 import { P2stasBuilder } from "../src/script/build/p2stas-builder";
 import {
@@ -12,9 +12,11 @@ import { ScriptToken } from "../src/script/script-token";
 import {
   LockingScriptReader,
   buildSwapActionData,
+  extractDstasCounterpartyScript,
   getData,
   getSymbol,
   getTokenId,
+  splitDstasPreviousTransactionByCounterpartyScript,
 } from "../src/script";
 import { ScriptReader } from "../src/script/read/script-reader";
 
@@ -336,6 +338,47 @@ describe("locking script reader", () => {
     ).toThrow(
       "service field must be either 20-byte PKH or canonical MPKH preimage",
     );
+  });
+
+  test("extracts counterparty script after the variable second field", () => {
+    const owner = fromHex("11".repeat(20));
+    const redemption = fromHex("aa".repeat(20));
+
+    const shortScript = buildDstasLockingScript({
+      ownerPkh: owner,
+      actionData: fromHex("ab"),
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x00]),
+    });
+    const longScript = buildDstasLockingScript({
+      ownerPkh: owner,
+      actionData: fromHex("ab".repeat(9)),
+      redemptionPkh: redemption,
+      flags: new Uint8Array([0x00]),
+    });
+
+    const shortCounterparty = extractDstasCounterpartyScript(shortScript);
+    const longCounterparty = extractDstasCounterpartyScript(longScript);
+
+    expect(toHex(shortCounterparty)).toBe(toHex(longCounterparty));
+  });
+
+  test("splits previous transaction by all counterparty script occurrences", () => {
+    const counterpartyScript = fromHex("abcd");
+    const previousTx = concat([
+      fromHex("11"),
+      counterpartyScript,
+      fromHex("22"),
+      counterpartyScript,
+      fromHex("33"),
+    ]);
+
+    const pieces = splitDstasPreviousTransactionByCounterpartyScript(
+      previousTx,
+      counterpartyScript,
+    );
+
+    expect(pieces.map(toHex)).toEqual(["11", "22", "33"]);
   });
 
   test("rejects dstas script with malformed structured actionData", () => {
