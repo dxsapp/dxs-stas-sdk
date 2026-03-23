@@ -1,13 +1,16 @@
 import {
   BuildDstasFreezeTx,
+  BuildDstasConfiscateTx,
   BuildDstasIssueTxs,
   BuildDstasMergeTx,
   BuildDstasSplitTx,
   BuildDstasTransferTx,
   BuildDstasUnfreezeTx,
 } from "../../src/dstas-factory";
+import { Address, SignatureHashType } from "../../src/bitcoin";
 import { TransactionReader } from "../../src/transaction/read/transaction-reader";
-import { OutPoint, ScriptType } from "../../src/bitcoin";
+import { OutPoint, ScriptType, Wallet } from "../../src/bitcoin";
+import { OpCode } from "../../src/bitcoin/op-codes";
 import {
   TDestinationSpec,
   TMasterActor,
@@ -17,6 +20,18 @@ import {
   TTrackedOutput,
   outPointKey,
 } from "./dstas-master-types";
+import {
+  buildDstasFlags,
+  buildDstasLockingTokens,
+} from "../../src/script/build/dstas-locking-builder";
+import { ScriptBuilder } from "../../src/script/build/script-builder";
+import { TransactionBuilder } from "../../src/transaction/build/transaction-builder";
+import { OutputBuilder } from "../../src/transaction/build/output-builder";
+import { FeeRate } from "../../src/transaction-factory";
+import { fromHex } from "../../src/bytes";
+import { hash160, hash256 } from "../../src/hashes";
+import { reverseBytes } from "../../src/buffer/buffer-utils";
+import { buildMlpkhPreimage } from "./dstas-flow-shared";
 import {
   assertLifecycleTxValid,
   expectLifecycleTxFailure,
@@ -43,11 +58,251 @@ const requireSingleWallet = (world: TMasterWorld, actorId: TMasterActorId) => {
 };
 
 const issuerForAsset = (assetId: TMasterAssetId): TMasterActorId =>
-  assetId === "assetA" ? "issuerA" : assetId === "assetB" ? "issuerB" : "issuerC";
+  assetId === "assetA"
+    ? "issuerA"
+    : assetId === "assetB"
+      ? "issuerB"
+      : "issuerC";
 
-const freezeAuthorityForAsset = (
+const freezeAuthorityForAsset = (assetId: TMasterAssetId): TMasterActorId =>
+  assetId === "assetC" ? "msFreezeAuth" : "freezeAuth";
+
+const confiscationAuthorityForAsset = (
   assetId: TMasterAssetId,
-): TMasterActorId => (assetId === "assetC" ? "msFreezeAuth" : "freezeAuth");
+): TMasterActorId => (assetId === "assetC" ? "msFreezeAuth" : "confiscationAuth");
+
+const buildAuthorityServiceField = (
+  authority: NonNullable<TMasterWorld["schemes"][TMasterAssetId]["FreezeAuthority"]>,
+) => {
+  const pubKeys = authority.publicKeys.map((value) => fromHex(value));
+  if (authority.m === 1 && pubKeys.length === 1) {
+    return hash160(pubKeys[0]);
+  }
+
+  return hash160(buildMlpkhPreimage(authority.m, pubKeys));
+};
+
+const buildDstasLockingScript = (
+  world: TMasterWorld,
+  assetId: TMasterAssetId,
+  owner: Address,
+  frozen: boolean,
+) => {
+  const scheme = world.schemes[assetId];
+  const serviceFields = [];
+  if (scheme.Freeze && scheme.FreezeAuthority) {
+    serviceFields.push(buildAuthorityServiceField(scheme.FreezeAuthority));
+  }
+  if (scheme.Confiscation && scheme.ConfiscationAuthority) {
+    serviceFields.push(
+      buildAuthorityServiceField(scheme.ConfiscationAuthority),
+    );
+  }
+
+  const tokens = buildDstasLockingTokens({
+    ownerPkh: owner.Hash160,
+    actionData: null,
+    redemptionPkh: fromHex(scheme.TokenId),
+    frozen,
+    flags: buildDstasFlags({
+      freezable: scheme.Freeze,
+      confiscatable: scheme.Confiscation,
+    }),
+    serviceFields,
+    optionalData: [],
+  });
+
+  return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
+};
+
+const buildAuthorityUnlockingScript = ({
+  txBuilder,
+  stasInputIndex,
+  spendingType,
+  authoritySigners,
+  authorityPubKeys,
+  authorityThreshold,
+}: {
+  txBuilder: TransactionBuilder;
+  stasInputIndex: number;
+  spendingType: number;
+  authoritySigners: Wallet[];
+  authorityPubKeys: Uint8Array[];
+  authorityThreshold: number;
+}) => {
+  const script = new ScriptBuilder(ScriptType.p2stas);
+  let hasNote = false;
+  let hasChange = false;
+
+  for (const output of txBuilder.Outputs) {
+    if (output.LockingScript.ScriptType === ScriptType.nullData) {
+      const payload = output.LockingScript.toBytes().subarray(2);
+      script.addData(payload);
+      hasNote = true;
+      continue;
+    }
+
+    const ownerField =
+      output.LockingScript.ToAddress?.Hash160 ??
+      output.LockingScript._tokens[0]?.Data;
+    if (!ownerField) throw new Error("Output is missing owner field");
+
+    script.addNumber(output.Satoshis).addData(ownerField);
+
+    if (output.LockingScript.ScriptType === ScriptType.dstas) {
+      const actionDataToken = output.LockingScript._tokens[1];
+      if (actionDataToken?.Data) script.addData(actionDataToken.Data);
+      else if (actionDataToken) script.addOpCode(actionDataToken.OpCodeNum);
+      else throw new Error("DSTAS output missing action-data token");
+    }
+
+    if (output.LockingScript.ScriptType === ScriptType.p2pkh) hasChange = true;
+  }
+
+  if (!hasChange) {
+    script.addOpCode(OpCode.OP_0);
+    script.addOpCode(OpCode.OP_0);
+  }
+  if (!hasNote) script.addOpCode(OpCode.OP_0);
+
+  const fundingInput = txBuilder.Inputs[txBuilder.Inputs.length - 1];
+  script
+    .addNumber(fundingInput.OutPoint.Vout)
+    .addData(reverseBytes(fromHex(fundingInput.OutPoint.TxId)))
+    .addOpCode(OpCode.OP_0);
+
+  const preimage = txBuilder.Inputs[stasInputIndex].preimage(
+    TransactionBuilder.DefaultSighashType as SignatureHashType,
+  );
+  const preimageHash = hash256(preimage);
+
+  script.addData(preimage).addNumber(spendingType);
+  script.addOpCode(OpCode.OP_0);
+
+  for (const signer of authoritySigners) {
+    const der = signer.sign(preimageHash);
+    const derWithType = new Uint8Array(der.length + 1);
+    derWithType.set(der);
+    derWithType[der.length] = TransactionBuilder.DefaultSighashType;
+    script.addData(derWithType);
+  }
+
+  script.addData(buildMlpkhPreimage(authorityThreshold, authorityPubKeys));
+  return script.toBytes();
+};
+
+const prepareAuthorityUnlockingSize = ({
+  txBuilder,
+  stasInputIndex,
+  spendingType,
+  authoritySignersCount,
+  authorityPubKeysCount,
+}: {
+  txBuilder: TransactionBuilder;
+  stasInputIndex: number;
+  spendingType: number;
+  authoritySignersCount: number;
+  authorityPubKeysCount: number;
+}) => {
+  const stasInput = txBuilder.Inputs[stasInputIndex];
+  stasInput.DstasSpendingType = spendingType;
+  stasInput.AuthoritySignaturesCount = authoritySignersCount;
+  stasInput.AuthorityPubKeysCount = authorityPubKeysCount;
+};
+
+const finalizeAuthorityUnlocking = ({
+  txBuilder,
+  stasInputIndex,
+  spendingType,
+  authoritySigners,
+  authorityPubKeys,
+  authorityThreshold,
+}: {
+  txBuilder: TransactionBuilder;
+  stasInputIndex: number;
+  spendingType: number;
+  authoritySigners: Wallet[];
+  authorityPubKeys: Uint8Array[];
+  authorityThreshold: number;
+}) => {
+  const stasInput = txBuilder.Inputs[stasInputIndex];
+  stasInput.DstasSpendingType = spendingType;
+  stasInput.UnlockingScript = buildAuthorityUnlockingScript({
+    txBuilder,
+    stasInputIndex,
+    spendingType,
+    authoritySigners,
+    authorityPubKeys,
+    authorityThreshold,
+  });
+};
+
+const buildMultisigAuthorityStateTx = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    targetOwner: TMasterActorId;
+    satoshis: number;
+    frozen: boolean;
+    spendType: number;
+  },
+) => {
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.targetOwner,
+    params.satoshis,
+    { frozen: !params.frozen },
+  );
+  const feeOutput = requireFeeOutput(world, params.assetId);
+  const authority = requireActor(world, freezeAuthorityForAsset(params.assetId));
+  if (authority.kind !== "multisig") {
+    throw new Error(`Expected multisig authority for ${params.assetId}`);
+  }
+  const feeOwner = requireSingleWallet(world, feeOutput.owner);
+  const targetOwner = requireActor(world, params.targetOwner);
+  const authorityPubKeys = authority.wallets.map((wallet) => wallet.PublicKey);
+  const authoritySigners = authority.wallets.slice(0, authority.m);
+
+  const txBuilder = TransactionBuilder.init()
+    .addInput(stasOutput.outPoint, authority.wallets[0])
+    .addInput(feeOutput.outPoint, feeOwner);
+  txBuilder.Outputs.push(
+    new OutputBuilder(
+      buildDstasLockingScript(
+        world,
+        params.assetId,
+        targetOwner.address,
+        params.frozen,
+      ),
+      stasOutput.satoshis,
+    ),
+  );
+
+  prepareAuthorityUnlockingSize({
+    txBuilder,
+    stasInputIndex: 0,
+    spendingType: params.spendType,
+    authoritySignersCount: authoritySigners.length,
+    authorityPubKeysCount: authorityPubKeys.length,
+  });
+  txBuilder.addChangeOutputWithFee(
+    feeOwner.Address,
+    feeOutput.satoshis,
+    FeeRate,
+    1,
+  );
+  finalizeAuthorityUnlocking({
+    txBuilder,
+    stasInputIndex: 0,
+    spendingType: params.spendType,
+    authoritySigners,
+    authorityPubKeys,
+    authorityThreshold: authority.m,
+  });
+
+  return txBuilder.sign().toHex();
+};
 
 const findFeeOutput = (
   txHex: string,
@@ -497,6 +752,28 @@ export const freeze = (
   );
   const feeOutput = requireFeeOutput(world, params.assetId);
   const authority = freezeAuthorityForAsset(params.assetId);
+  if (requireActor(world, authority).kind === "multisig") {
+    const txHex = buildMultisigAuthorityStateTx(world, {
+      assetId: params.assetId,
+      targetOwner: params.targetOwner,
+      satoshis: params.satoshis,
+      frozen: true,
+      spendType: 2,
+    });
+
+    assertLifecycleTxValid(world, params.step, txHex, 3);
+    addHistory(world, params.step, params.assetId, txHex);
+
+    removeLiveOutput(world, stasOutput);
+    removeLiveOutput(world, feeOutput);
+    addDstasOutputs(world, params.assetId, txHex, [
+      { owner: params.targetOwner, satoshis: params.satoshis, frozen: true },
+    ]);
+    addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
+
+    return txHex;
+  }
+
   const txHex = BuildDstasFreezeTx({
     stasPayments: [
       {
@@ -549,6 +826,28 @@ export const unfreeze = (
   );
   const feeOutput = requireFeeOutput(world, params.assetId);
   const authority = freezeAuthorityForAsset(params.assetId);
+  if (requireActor(world, authority).kind === "multisig") {
+    const txHex = buildMultisigAuthorityStateTx(world, {
+      assetId: params.assetId,
+      targetOwner: params.targetOwner,
+      satoshis: params.satoshis,
+      frozen: false,
+      spendType: 2,
+    });
+
+    assertLifecycleTxValid(world, params.step, txHex, 3);
+    addHistory(world, params.step, params.assetId, txHex);
+
+    removeLiveOutput(world, stasOutput);
+    removeLiveOutput(world, feeOutput);
+    addDstasOutputs(world, params.assetId, txHex, [
+      { owner: params.targetOwner, satoshis: params.satoshis, frozen: false },
+    ]);
+    addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
+
+    return txHex;
+  }
+
   const txHex = BuildDstasUnfreezeTx({
     stasPayments: [
       {
@@ -583,8 +882,61 @@ export const unfreeze = (
   return txHex;
 };
 
-export const confiscate = () => {
-  throw new Error("Wave R1: confiscate is not implemented yet");
+export const confiscate = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    fromOwner: TMasterActorId;
+    toOwner: TMasterActorId;
+    satoshis: number;
+    step: string;
+  },
+) => {
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.fromOwner,
+    params.satoshis,
+  );
+  const feeOutput = requireFeeOutput(world, params.assetId);
+  const authority = confiscationAuthorityForAsset(params.assetId);
+  if (requireActor(world, authority).kind !== "single") {
+    throw new Error(
+      `Wave R2 confiscation only supports single-key authority for ${params.assetId}`,
+    );
+  }
+  const txHex = BuildDstasConfiscateTx({
+    stasPayments: [
+      {
+        OutPoint: stasOutput.outPoint,
+        Owner: requireSingleWallet(world, authority),
+      },
+    ],
+    feePayment: {
+      OutPoint: feeOutput.outPoint,
+      Owner: requireSingleWallet(world, feeOutput.owner),
+    },
+    scheme: world.schemes[params.assetId],
+    destinations: [
+      dstasDestinationForActor(world, {
+        owner: params.toOwner,
+        satoshis: params.satoshis,
+        frozen: false,
+      }),
+    ],
+  });
+
+  assertLifecycleTxValid(world, params.step, txHex, 2);
+  addHistory(world, params.step, params.assetId, txHex);
+
+  removeLiveOutput(world, stasOutput);
+  removeLiveOutput(world, feeOutput);
+  addDstasOutputs(world, params.assetId, txHex, [
+    { owner: params.toOwner, satoshis: params.satoshis, frozen: false },
+  ]);
+  addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
+
+  return txHex;
 };
 
 export const swap = () => {

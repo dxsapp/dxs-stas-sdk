@@ -5,6 +5,7 @@ import {
 import { createMasterWorld } from "./helpers/dstas-master-fixture";
 import {
   checkpoint,
+  confiscate,
   expectTransferFail,
   freeze,
   issue,
@@ -15,7 +16,7 @@ import {
 } from "./helpers/dstas-master-driver";
 
 describe("dstas master lifecycle", () => {
-  test("wave r1+r2: issue through freeze/unfreeze slice is valid", () => {
+  test("wave r1+r3: issue through confiscation and authority cycle is valid", () => {
     const world = createMasterWorld();
 
     issue(world, {
@@ -194,5 +195,66 @@ describe("dstas master lifecycle", () => {
     });
 
     expect(world.history.length).toBe(16);
+
+    confiscate(world, {
+      assetId: "assetA",
+      fromOwner: "ownerE",
+      toOwner: "issuerA",
+      satoshis: 50,
+      step: "assetA confiscate ownerE output to issuerA",
+    });
+
+    freeze(world, {
+      assetId: "assetC",
+      targetOwner: "msOwner",
+      satoshis: 100,
+      step: "assetC freeze msOwner output with multisig authority",
+    });
+    assertTrackedOutputState(world, {
+      assetId: "assetC",
+      owner: "msOwner",
+      satoshis: 100,
+      frozen: true,
+    });
+
+    unfreeze(world, {
+      assetId: "assetC",
+      targetOwner: "msOwner",
+      satoshis: 100,
+      step: "assetC unfreeze msOwner output with multisig authority",
+    });
+    assertTrackedOutputState(world, {
+      assetId: "assetC",
+      owner: "msOwner",
+      satoshis: 100,
+      frozen: false,
+    });
+
+    checkpoint(world, "post-confiscation-authority-cycle");
+
+    assertCheckpoint(world, "post-confiscation-authority-cycle", {
+      supplyByAsset: {
+        assetA: 100,
+        assetB: 100,
+        assetC: 100,
+      },
+      ownersByAsset: {
+        assetA: {
+          issuerA: [50],
+          ownerB: [30],
+          ownerC: [20],
+        },
+        assetB: {
+          ownerB: [25],
+          ownerD: [25],
+          ownerE: [50],
+        },
+        assetC: {
+          msOwner: [100],
+        },
+      },
+    });
+
+    expect(world.history.length).toBe(19);
   });
 });
