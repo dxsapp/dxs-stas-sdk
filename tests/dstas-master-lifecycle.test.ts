@@ -1,15 +1,21 @@
-import { assertCheckpoint } from "./helpers/dstas-master-assert";
+import {
+  assertCheckpoint,
+  assertTrackedOutputState,
+} from "./helpers/dstas-master-assert";
 import { createMasterWorld } from "./helpers/dstas-master-fixture";
 import {
   checkpoint,
+  expectTransferFail,
+  freeze,
   issue,
   merge,
   split,
   transfer,
+  unfreeze,
 } from "./helpers/dstas-master-driver";
 
 describe("dstas master lifecycle", () => {
-  test("wave r1: issue transfer split checkpoint slice is valid", () => {
+  test("wave r1+r2: issue through freeze/unfreeze slice is valid", () => {
     const world = createMasterWorld();
 
     issue(world, {
@@ -93,9 +99,9 @@ describe("dstas master lifecycle", () => {
       step: "assetC transfer ownerC -> msOwner",
     });
 
-    checkpoint(world, "post-initial-slice");
+    checkpoint(world, "post-r1");
 
-    assertCheckpoint(world, "post-initial-slice", {
+    assertCheckpoint(world, "post-r1", {
       supplyByAsset: {
         assetA: 100,
         assetB: 100,
@@ -119,5 +125,74 @@ describe("dstas master lifecycle", () => {
     });
 
     expect(world.history.length).toBe(13);
+
+    freeze(world, {
+      assetId: "assetA",
+      targetOwner: "ownerA",
+      satoshis: 50,
+      step: "assetA freeze ownerA merged output",
+    });
+    assertTrackedOutputState(world, {
+      assetId: "assetA",
+      owner: "ownerA",
+      satoshis: 50,
+      frozen: true,
+    });
+
+    expectTransferFail(world, {
+      assetId: "assetA",
+      from: "ownerA",
+      to: "ownerD",
+      satoshis: 50,
+      frozen: true,
+    });
+
+    unfreeze(world, {
+      assetId: "assetA",
+      targetOwner: "ownerA",
+      satoshis: 50,
+      step: "assetA unfreeze ownerA merged output",
+    });
+    assertTrackedOutputState(world, {
+      assetId: "assetA",
+      owner: "ownerA",
+      satoshis: 50,
+      frozen: false,
+    });
+
+    transfer(world, {
+      assetId: "assetA",
+      from: "ownerA",
+      to: "ownerE",
+      satoshis: 50,
+      step: "assetA transfer unfrozen merged output to ownerE",
+    });
+
+    checkpoint(world, "post-freeze-cycle");
+
+    assertCheckpoint(world, "post-freeze-cycle", {
+      supplyByAsset: {
+        assetA: 100,
+        assetB: 100,
+        assetC: 100,
+      },
+      ownersByAsset: {
+        assetA: {
+          ownerB: [30],
+          ownerC: [20],
+          ownerE: [50],
+        },
+        assetB: {
+          ownerB: [25],
+          ownerD: [25],
+          ownerE: [50],
+        },
+        assetC: {
+          msOwner: [100],
+        },
+      },
+    });
+
+    expect(world.history.length).toBe(16);
   });
 });

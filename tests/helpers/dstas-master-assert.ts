@@ -131,3 +131,23 @@ export const assertCheckpoint = (
     ).toMatchObject(normalizeOwnerMap(owners ?? {}));
   }
 };
+
+export const assertTrackedOutputState = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    owner: TMasterActorId;
+    satoshis: number;
+    frozen: boolean;
+  },
+) => {
+  const tracked = [...world.liveOutputs.values()].find(
+    (entry) =>
+      entry.assetId === params.assetId &&
+      !entry.isFee &&
+      entry.owner === params.owner &&
+      entry.satoshis === params.satoshis &&
+      entry.frozen === params.frozen,
+  );
+  expect(tracked).toBeDefined();
+};

@@ -1,8 +1,10 @@
 import {
+  BuildDstasFreezeTx,
   BuildDstasIssueTxs,
   BuildDstasMergeTx,
   BuildDstasSplitTx,
   BuildDstasTransferTx,
+  BuildDstasUnfreezeTx,
 } from "../../src/dstas-factory";
 import { TransactionReader } from "../../src/transaction/read/transaction-reader";
 import { OutPoint, ScriptType } from "../../src/bitcoin";
@@ -40,6 +42,13 @@ const requireSingleWallet = (world: TMasterWorld, actorId: TMasterActorId) => {
   return actor.wallet;
 };
 
+const issuerForAsset = (assetId: TMasterAssetId): TMasterActorId =>
+  assetId === "assetA" ? "issuerA" : assetId === "assetB" ? "issuerB" : "issuerC";
+
+const freezeAuthorityForAsset = (
+  assetId: TMasterAssetId,
+): TMasterActorId => (assetId === "assetC" ? "msFreezeAuth" : "freezeAuth");
+
 const findFeeOutput = (
   txHex: string,
   owner: TMasterActorId,
@@ -69,6 +78,7 @@ const findFeeOutput = (
     satoshis: tx.Outputs[feeIndex].Satoshis,
     scriptType: ScriptType.p2pkh,
     isFee: true,
+    frozen: false,
   };
 };
 
@@ -78,11 +88,16 @@ const dstasDestinationForActor = (
 ) => {
   const actor = requireActor(world, destination.owner);
   if (actor.kind === "single") {
-    return { Satoshis: destination.satoshis, To: actor.address };
+    return {
+      Satoshis: destination.satoshis,
+      To: actor.address,
+      Frozen: destination.frozen,
+    };
   }
 
   return {
     Satoshis: destination.satoshis,
+    Frozen: destination.frozen,
     ToOwnerMultisig: {
       m: actor.m,
       publicKeys: actor.publicKeysHex,
@@ -154,6 +169,7 @@ const addDstasOutputs = (
       satoshis: output.Satoshis,
       scriptType: ScriptType.dstas,
       isFee: false,
+      frozen: destination.frozen ?? false,
     });
   });
 };
@@ -163,13 +179,15 @@ const requireLiveOutput = (
   assetId: TMasterAssetId,
   owner: TMasterActorId,
   satoshis: number,
+  options?: { frozen?: boolean },
 ) => {
   const tracked = [...world.liveOutputs.values()].find(
     (entry) =>
       entry.assetId === assetId &&
       !entry.isFee &&
       entry.owner === owner &&
-      entry.satoshis === satoshis,
+      entry.satoshis === satoshis &&
+      (options?.frozen === undefined || entry.frozen === options.frozen),
   );
   if (!tracked) {
     throw new Error(
@@ -233,11 +251,7 @@ export const issue = (
     world,
     findFeeOutput(
       txs.issueTxHex,
-      params.assetId === "assetA"
-        ? "issuerA"
-        : params.assetId === "assetB"
-          ? "issuerB"
-          : "issuerC",
+      issuerForAsset(params.assetId),
       params.assetId,
     ),
   );
@@ -260,6 +274,7 @@ export const transfer = (
     params.assetId,
     params.from,
     params.satoshis,
+    { frozen: false },
   );
   const feeOutput = requireFeeOutput(world, params.assetId);
   const txHex = BuildDstasTransferTx({
@@ -284,7 +299,7 @@ export const transfer = (
   removeLiveOutput(world, stasOutput);
   removeLiveOutput(world, feeOutput);
   addDstasOutputs(world, params.assetId, txHex, [
-    { owner: params.to, satoshis: params.satoshis },
+    { owner: params.to, satoshis: params.satoshis, frozen: false },
   ]);
   addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
 
@@ -306,6 +321,7 @@ export const split = (
     params.assetId,
     params.from,
     params.satoshis,
+    { frozen: false },
   );
   const feeOutput = requireFeeOutput(world, params.assetId);
   const txHex = BuildDstasSplitTx({
@@ -350,12 +366,14 @@ export const merge = (
     params.assetId,
     params.from,
     params.left,
+    { frozen: false },
   );
   const rightOutput = requireLiveOutput(
     world,
     params.assetId,
     params.from,
     params.right,
+    { frozen: false },
   );
   if (leftOutput.outPoint.toString() === rightOutput.outPoint.toString()) {
     throw new Error(
@@ -395,11 +413,47 @@ export const merge = (
   removeLiveOutput(world, rightOutput);
   removeLiveOutput(world, feeOutput);
   addDstasOutputs(world, params.assetId, txHex, [
-    { owner: params.to, satoshis: mergedSatoshis },
+    { owner: params.to, satoshis: mergedSatoshis, frozen: false },
   ]);
   addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
 
   return txHex;
+};
+
+const buildTransferTx = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    from: TMasterActorId;
+    to: TMasterActorId;
+    satoshis: number;
+    frozen?: boolean;
+  },
+) => {
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.from,
+    params.satoshis,
+    params.frozen === undefined ? undefined : { frozen: params.frozen },
+  );
+  const feeOutput = requireFeeOutput(world, params.assetId);
+  return BuildDstasTransferTx({
+    stasPayment: {
+      OutPoint: stasOutput.outPoint,
+      Owner: requireSingleWallet(world, params.from),
+    },
+    feePayment: {
+      OutPoint: feeOutput.outPoint,
+      Owner: requireSingleWallet(world, feeOutput.owner),
+    },
+    scheme: world.schemes[params.assetId],
+    destination: dstasDestinationForActor(world, {
+      owner: params.to,
+      satoshis: params.satoshis,
+      frozen: false,
+    }),
+  });
 };
 
 export const checkpoint = (world: TMasterWorld, name: string) => {
@@ -414,12 +468,119 @@ export const expectFail = (world: TMasterWorld, buildTx: () => string) => {
   return result;
 };
 
-export const freeze = () => {
-  throw new Error("Wave R1: freeze is not implemented yet");
+export const expectTransferFail = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    from: TMasterActorId;
+    to: TMasterActorId;
+    satoshis: number;
+    frozen?: boolean;
+  },
+) => expectFail(world, () => buildTransferTx(world, params));
+
+export const freeze = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    targetOwner: TMasterActorId;
+    satoshis: number;
+    step: string;
+  },
+) => {
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.targetOwner,
+    params.satoshis,
+    { frozen: false },
+  );
+  const feeOutput = requireFeeOutput(world, params.assetId);
+  const authority = freezeAuthorityForAsset(params.assetId);
+  const txHex = BuildDstasFreezeTx({
+    stasPayments: [
+      {
+        OutPoint: stasOutput.outPoint,
+        Owner: requireSingleWallet(world, authority),
+      },
+    ],
+    feePayment: {
+      OutPoint: feeOutput.outPoint,
+      Owner: requireSingleWallet(world, feeOutput.owner),
+    },
+    scheme: world.schemes[params.assetId],
+    destinations: [
+      dstasDestinationForActor(world, {
+        owner: params.targetOwner,
+        satoshis: params.satoshis,
+        frozen: true,
+      }),
+    ],
+  });
+
+  assertLifecycleTxValid(world, params.step, txHex, 2);
+  addHistory(world, params.step, params.assetId, txHex);
+
+  removeLiveOutput(world, stasOutput);
+  removeLiveOutput(world, feeOutput);
+  addDstasOutputs(world, params.assetId, txHex, [
+    { owner: params.targetOwner, satoshis: params.satoshis, frozen: true },
+  ]);
+  addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
+
+  return txHex;
 };
 
-export const unfreeze = () => {
-  throw new Error("Wave R1: unfreeze is not implemented yet");
+export const unfreeze = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    targetOwner: TMasterActorId;
+    satoshis: number;
+    step: string;
+  },
+) => {
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.targetOwner,
+    params.satoshis,
+    { frozen: true },
+  );
+  const feeOutput = requireFeeOutput(world, params.assetId);
+  const authority = freezeAuthorityForAsset(params.assetId);
+  const txHex = BuildDstasUnfreezeTx({
+    stasPayments: [
+      {
+        OutPoint: stasOutput.outPoint,
+        Owner: requireSingleWallet(world, authority),
+      },
+    ],
+    feePayment: {
+      OutPoint: feeOutput.outPoint,
+      Owner: requireSingleWallet(world, feeOutput.owner),
+    },
+    scheme: world.schemes[params.assetId],
+    destinations: [
+      dstasDestinationForActor(world, {
+        owner: params.targetOwner,
+        satoshis: params.satoshis,
+        frozen: false,
+      }),
+    ],
+  });
+
+  assertLifecycleTxValid(world, params.step, txHex, 2);
+  addHistory(world, params.step, params.assetId, txHex);
+
+  removeLiveOutput(world, stasOutput);
+  removeLiveOutput(world, feeOutput);
+  addDstasOutputs(world, params.assetId, txHex, [
+    { owner: params.targetOwner, satoshis: params.satoshis, frozen: false },
+  ]);
+  addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
+
+  return txHex;
 };
 
 export const confiscate = () => {

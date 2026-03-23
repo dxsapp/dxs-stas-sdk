@@ -49,6 +49,7 @@ export type TTrackedOutput = {
   satoshis: number;
   scriptType: ScriptType;
   isFee: boolean;
+  frozen?: boolean;
 };
 
 export type TTxHistoryEntry = {
@@ -85,6 +86,7 @@ export type TMasterWorld = {
 export type TDestinationSpec = {
   owner: TMasterActorId;
   satoshis: number;
+  frozen?: boolean;
 };
 
 export type TCheckpointExpectation = {
