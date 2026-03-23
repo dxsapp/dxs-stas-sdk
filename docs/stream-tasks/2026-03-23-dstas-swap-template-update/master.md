@@ -19,12 +19,12 @@ Update the SDK to the new DSTAS swap script format that reconstructs the counter
 
 ## Streams
 
-| Stream                       | Lane    | Backend substream | Status      | Depends on                 | Model     | Reason                                          |
-| ---------------------------- | ------- | ----------------- | ----------- | -------------------------- | --------- | ----------------------------------------------- |
-| operator                     | -       | -                 | in_progress | -                          | reasoning | Own sequencing, dependency gates, and closeout  |
-| delivery-backend-contracts   | backend | BE-Contracts      | done        | -                          | Codex     | Parser/decomposer semantics for new swap format |
-| delivery-backend-platform    | backend | BE-Platform       | done        | delivery-backend-contracts | Codex     | Builder/runtime integration and size accounting |
-| delivery-backend-reliability | backend | BE-Reliability    | done        | contracts/platform         | Codex     | Regression, conformance, and negative coverage  |
+| Stream                       | Lane    | Backend substream | Status | Depends on                 | Model     | Reason                                          |
+| ---------------------------- | ------- | ----------------- | ------ | -------------------------- | --------- | ----------------------------------------------- |
+| operator                     | -       | -                 | done   | -                          | reasoning | Own sequencing, dependency gates, and closeout  |
+| delivery-backend-contracts   | backend | BE-Contracts      | done   | -                          | Codex     | Parser/decomposer semantics for new swap format |
+| delivery-backend-platform    | backend | BE-Platform       | done   | delivery-backend-contracts | Codex     | Builder/runtime integration and size accounting |
+| delivery-backend-reliability | backend | BE-Reliability    | done   | contracts/platform         | Codex     | Regression, conformance, and negative coverage  |
 
 ## Wave order
 
