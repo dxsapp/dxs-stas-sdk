@@ -4,21 +4,24 @@ This file is the root onboarding entrypoint for AI coding agents working on this
 
 ## Read order
 
-1. `/Users/imighty/Code/dxs-stas-sdk/README.md` (public API and examples)
-2. `/Users/imighty/Code/dxs-stas-sdk/docs/AGENT_RUNBOOK.md` (task-oriented execution flow)
-3. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SDK_SPEC.md` (normative protocol rules)
-4. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SCRIPT_INVARIANTS.md` (script-level invariants)
-5. `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_CONFORMANCE_MATRIX.md` (test mapping)
-6. Scoped guidance in `/Users/imighty/Code/dxs-stas-sdk/src/AGENTS.md` and `/Users/imighty/Code/dxs-stas-sdk/tests/AGENTS.md` when working in those paths
+1. `README.md` (public API and examples)
+2. `docs/AGENT_RUNBOOK.md` (task-oriented execution flow)
+3. `docs/DSTAS_SDK_SPEC.md` (normative protocol rules)
+4. `docs/DSTAS_SCRIPT_INVARIANTS.md` (script-level invariants)
+5. `docs/DSTAS_CONFORMANCE_MATRIX.md` (test mapping)
+6. `docs/repository-zones/zone-catalog.md` (path ownership and canonicality)
+7. Scoped guidance in `src/AGENTS.md` and `tests/AGENTS.md` when working in those paths
 
 ## Repository zones
 
-- `src/dstas*`, `src/script/*`, `tests/dstas*`, `tests/helpers/*`
+- `src/dstas*`, `src/script/**`, `tests/dstas-*.test.ts`, `tests/helpers/**`, `tests/fixtures/**`
   Canonical DSTAS implementation and verification surface.
-- `src/stas-bundle-factory.ts`, `src/transaction-factory.ts`
+- `src/stas-bundle-factory.ts`, `src/transaction-factory.ts`, `src/stas.ts`
   Older, lower-level STAS workflow surface. Do not use for new DSTAS work.
-- `src/bsv.ts`, `src/bitcoin/*`, `src/buffer/*`, `src/security/*`, `src/transaction/*`
+- `src/bsv.ts`, `src/bitcoin/**`, `src/buffer/**`, `src/security/**`, `src/transaction/**`
   Low-level core primitives shared by both protocol layers and exposed through the `bsv` namespace.
+- `docs/stream-tasks/**`
+  Operational history and closeout evidence only. Do not treat stream-task docs as protocol source of truth.
 
 ## Preferred implementation path
 
@@ -33,17 +36,17 @@ This file is the root onboarding entrypoint for AI coding agents working on this
 
 For every protocol change or new flow, validate built tx hex with script evaluation:
 
-- Use `evaluateTransactionHex(...)` from `/Users/imighty/Code/dxs-stas-sdk/src/script/eval/script-evaluator.ts`.
-- Provide an explicit prevout resolver from known `OutPoint`/transaction fixtures.
+- Use `evaluateTransactionHex(...)` from `src/script/eval/script-evaluator.ts`.
+- Provide an explicit prevout resolver from known `OutPoint` or transaction fixtures.
 - Never mark a DSTAS flow complete without script-level evaluation coverage.
 
 ## Testing expectations
 
-- Put deterministic fixtures under `/Users/imighty/Code/dxs-stas-sdk/tests/fixtures/`.
-- Keep debug/probe helpers under `/Users/imighty/Code/dxs-stas-sdk/tests/debug/`.
+- Put deterministic fixtures under `tests/fixtures/`.
+- Keep debug/probe helpers under `tests/debug/`.
 - Do not depend on local `.temp` files in CI-facing tests.
 - Update conformance vectors when behavior intentionally changes:
-  - `/Users/imighty/Code/dxs-stas-sdk/tests/fixtures/dstas-conformance-vectors.json`
+  - `tests/fixtures/dstas-conformance-vectors.json`
 
 ## Safety and constraints
 

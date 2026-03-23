@@ -1,16 +1,16 @@
 # AGENTS
 
-Scoped guidance for `/Users/imighty/Code/dxs-stas-sdk/tests`.
+Scoped guidance for `tests`.
 
 ## Zones
 
 - `dstas-*.test.ts`
   Canonical DSTAS behavior and regression coverage.
-- `helpers/*`
+- `helpers/**`
   Shared deterministic test helpers.
-- `fixtures/*`
+- `fixtures/**`
   Stable CI fixtures and conformance vectors.
-- `debug/*`
+- `debug/**`
   Debug/probe helpers only; not authoritative protocol coverage.
 
 ## Rules
@@ -19,3 +19,4 @@ Scoped guidance for `/Users/imighty/Code/dxs-stas-sdk/tests`.
 - Prefer adding deterministic fixtures over reading local files or environment-dependent data.
 - Do not store temporary debugging artifacts under `.temp` or depend on them from committed tests.
 - Keep negative tests next to the feature they protect.
+- Do not treat `docs/stream-tasks/**` as normative test requirements; they are operator history only.

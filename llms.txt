@@ -7,6 +7,7 @@ TypeScript SDK for building and validating Bitcoin SV transaction flows, includi
 - [README](README.md): public API, install, and usage examples.
 - [AGENTS](AGENTS.md): shortest practical onboarding path for coding agents.
 - [Agent Runbook](docs/AGENT_RUNBOOK.md): implementation and validation workflow.
+- [Zone Catalog](docs/repository-zones/zone-catalog.md): path ownership and canonicality.
 
 ## Protocol references
 
@@ -29,3 +30,8 @@ TypeScript SDK for building and validating Bitcoin SV transaction flows, includi
 
 - `dxs-stas-sdk/dstas`: canonical Divisible STAS flow API
 - `dxs-stas-sdk/stas`: older, lower-level STAS flow API
+- `dxs-stas-sdk/bsv`: low-level blockchain toolkit namespace
+
+## Non-canonical docs
+
+- `docs/stream-tasks/**`: operational task packages and closeout history only; do not use as protocol source of truth.
