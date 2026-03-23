@@ -4,6 +4,8 @@ import {
   BuildDstasIssueTxs,
   BuildDstasMergeTx,
   BuildDstasSplitTx,
+  BuildDstasSwapTx,
+  BuildDstasTransferSwapTx,
   BuildDstasTransferTx,
   BuildDstasUnfreezeTx,
 } from "../../src/dstas-factory";
@@ -31,7 +33,14 @@ import { FeeRate } from "../../src/transaction-factory";
 import { fromHex } from "../../src/bytes";
 import { hash160, hash256 } from "../../src/hashes";
 import { reverseBytes } from "../../src/buffer/buffer-utils";
-import { buildMlpkhPreimage } from "./dstas-flow-shared";
+import {
+  buildMlpkhPreimage,
+  buildRedeemTx,
+} from "./dstas-flow-shared";
+import {
+  buildSwapActionData,
+  computeDstasRequestedScriptHash,
+} from "../../src/script";
 import {
   assertLifecycleTxValid,
   expectLifecycleTxFailure,
@@ -117,6 +126,40 @@ const buildDstasLockingScript = (
 
   return ScriptBuilder.fromTokens(tokens, ScriptType.dstas);
 };
+
+const buildSwapDestinationForActor = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    owner: TMasterActorId;
+    satoshis: number;
+    actionData?: ReturnType<typeof buildSwapActionData> | null;
+  },
+) => {
+  const scheme = world.schemes[params.assetId];
+  const actor = requireActor(world, params.owner);
+  const freezeAuthorityServiceField =
+    scheme.Freeze && scheme.FreezeAuthority
+      ? buildAuthorityServiceField(scheme.FreezeAuthority)
+      : undefined;
+  const confiscationAuthorityServiceField =
+    scheme.Confiscation && scheme.ConfiscationAuthority
+      ? buildAuthorityServiceField(scheme.ConfiscationAuthority)
+      : undefined;
+
+  return {
+    Satoshis: params.satoshis,
+    Owner: actor.address.Hash160,
+    TokenIdHex: scheme.TokenId,
+    Freezable: scheme.Freeze,
+    Confiscatable: scheme.Confiscation,
+    FreezeAuthorityServiceField: freezeAuthorityServiceField,
+    ConfiscationAuthorityServiceField: confiscationAuthorityServiceField,
+    ActionData:
+      params.actionData === undefined ? null : (params.actionData ?? null),
+  };
+};
+
 
 const buildAuthorityUnlockingScript = ({
   txBuilder,
@@ -435,6 +478,40 @@ const addDstasOutputs = (
   });
 };
 
+const addTrackedDstasOutput = (
+  world: TMasterWorld,
+  assetId: TMasterAssetId,
+  txHex: string,
+  outputIndex: number,
+  destination: TDestinationSpec,
+) => {
+  const tx = TransactionReader.readHex(txHex);
+  const output = tx.Outputs[outputIndex];
+  if (!output) {
+    throw new Error(`Missing DSTAS output ${outputIndex} for ${assetId}`);
+  }
+  const actor = requireActor(world, destination.owner);
+  const outPoint = new OutPoint(
+    tx.Id,
+    outputIndex,
+    output.LockingScript,
+    output.Satoshis,
+    output.Address ?? actor.address,
+    ScriptType.dstas,
+  );
+  outPoint.Transaction = tx;
+
+  addLiveOutput(world, {
+    assetId,
+    owner: destination.owner,
+    outPoint,
+    satoshis: output.Satoshis,
+    scriptType: ScriptType.dstas,
+    isFee: false,
+    frozen: destination.frozen ?? false,
+  });
+};
+
 const requireLiveOutput = (
   world: TMasterWorld,
   assetId: TMasterAssetId,
@@ -470,6 +547,7 @@ export const issue = (
     assetId: TMasterAssetId;
     to: TMasterActorId;
     satoshis: number;
+    actionData?: ReturnType<typeof buildSwapActionData> | null;
     step: string;
   },
 ) => {
@@ -482,10 +560,15 @@ export const issue = (
     },
     scheme,
     destinations: [
-      dstasDestinationForActor(world, {
-        owner: params.to,
-        satoshis: params.satoshis,
-      }),
+      {
+        ...dstasDestinationForActor(world, {
+          owner: params.to,
+          satoshis: params.satoshis,
+        }),
+        ...(params.actionData === undefined
+          ? {}
+          : { ActionData: params.actionData ?? null }),
+      },
     ],
   });
 
@@ -518,6 +601,37 @@ export const issue = (
   );
 
   return txs;
+};
+
+export const createSwapActionDataForRequest = (
+  world: TMasterWorld,
+  params: {
+    requestedAssetId: TMasterAssetId;
+    requestedOwner: TMasterActorId;
+    requestedSatoshis: number;
+    requestedPkhOwner: TMasterActorId;
+    rateNumerator: number;
+    rateDenominator: number;
+    requestedScriptHashOverride?: Uint8Array;
+  },
+) => {
+  const requestedOutput = requireLiveOutput(
+    world,
+    params.requestedAssetId,
+    params.requestedOwner,
+    params.requestedSatoshis,
+    { frozen: false },
+  );
+  const requestedPkhActor = requireActor(world, params.requestedPkhOwner);
+
+  return buildSwapActionData({
+    requestedScriptHash:
+      params.requestedScriptHashOverride ??
+      computeDstasRequestedScriptHash(requestedOutput.outPoint.LockingScript),
+    requestedPkh: requestedPkhActor.address.Hash160,
+    rateNumerator: params.rateNumerator,
+    rateDenominator: params.rateDenominator,
+  });
 };
 
 export const transfer = (
@@ -714,6 +828,132 @@ const buildTransferTx = (
       satoshis: params.satoshis,
       frozen: false,
     }),
+  });
+};
+
+const buildSwapMarkTx = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    owner: TMasterActorId;
+    satoshis: number;
+    requestedAssetId: TMasterAssetId;
+    requestedOwner: TMasterActorId;
+    requestedSatoshis: number;
+    rateNumerator: number;
+    rateDenominator: number;
+    requestedScriptHashOverride?: Uint8Array;
+  },
+) => {
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.owner,
+    params.satoshis,
+    { frozen: false },
+  );
+  const counterpartyOutput = requireLiveOutput(
+    world,
+    params.requestedAssetId,
+    params.requestedOwner,
+    params.requestedSatoshis,
+    { frozen: false },
+  );
+  const feeOutput = requireFeeOutput(world, params.assetId);
+  const owner = requireActor(world, params.owner);
+  const actionData = buildSwapActionData({
+    requestedScriptHash:
+      params.requestedScriptHashOverride ??
+      computeDstasRequestedScriptHash(counterpartyOutput.outPoint.LockingScript),
+    requestedPkh: owner.address.Hash160,
+    rateNumerator: params.rateNumerator,
+    rateDenominator: params.rateDenominator,
+  });
+
+  return BuildDstasSwapTx({
+    stasPayments: [
+      {
+        OutPoint: stasOutput.outPoint,
+        Owner: requireSingleWallet(world, params.owner),
+      },
+    ],
+    feePayment: {
+      OutPoint: feeOutput.outPoint,
+      Owner: requireSingleWallet(world, feeOutput.owner),
+    },
+    scheme: world.schemes[params.assetId],
+    destinations: [
+      {
+        ...dstasDestinationForActor(world, {
+          owner: params.owner,
+          satoshis: params.satoshis,
+          frozen: false,
+        }),
+        ActionData: actionData,
+      },
+    ],
+  });
+};
+
+const buildTransferSwapTx = (
+  world: TMasterWorld,
+  params: {
+    offeredAssetId: TMasterAssetId;
+    offeredOwner: TMasterActorId;
+    offeredSatoshis: number;
+    counterpartyAssetId: TMasterAssetId;
+    counterpartyOwner: TMasterActorId;
+    counterpartySatoshis: number;
+    feeAssetId: TMasterAssetId;
+    requesterReceives: TMasterActorId;
+    counterpartyReceives: TMasterActorId;
+  },
+) => {
+  const offeredOutput = requireLiveOutput(
+    world,
+    params.offeredAssetId,
+    params.offeredOwner,
+    params.offeredSatoshis,
+    { frozen: false },
+  );
+  const counterpartyOutput = requireLiveOutput(
+    world,
+    params.counterpartyAssetId,
+    params.counterpartyOwner,
+    params.counterpartySatoshis,
+    { frozen: false },
+  );
+  const feeOutput = requireFeeOutput(world, params.feeAssetId);
+
+  return BuildDstasTransferSwapTx({
+    stasPayments: [
+      {
+        OutPoint: offeredOutput.outPoint,
+        Owner: requireSingleWallet(world, params.offeredOwner),
+      },
+      {
+        OutPoint: counterpartyOutput.outPoint,
+        Owner: requireSingleWallet(world, params.counterpartyOwner),
+      },
+    ],
+    feePayment: {
+      OutPoint: feeOutput.outPoint,
+      Owner: requireSingleWallet(world, feeOutput.owner),
+    },
+    destinations: [
+      buildSwapDestinationForActor(world, {
+        assetId: params.counterpartyAssetId,
+        owner: params.requesterReceives,
+        satoshis: params.counterpartySatoshis,
+        actionData: null,
+      }),
+      buildSwapDestinationForActor(world, {
+        assetId: params.offeredAssetId,
+        owner: params.counterpartyReceives,
+        satoshis: params.offeredSatoshis,
+        actionData: null,
+      }),
+    ],
   });
 };
 
@@ -945,10 +1185,219 @@ export const confiscate = (
   return txHex;
 };
 
-export const swap = () => {
-  throw new Error("Wave R1: swap is not implemented yet");
+export const markSwapRequest = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    owner: TMasterActorId;
+    satoshis: number;
+    requestedAssetId: TMasterAssetId;
+    requestedOwner: TMasterActorId;
+    requestedSatoshis: number;
+    rateNumerator: number;
+    rateDenominator: number;
+    requestedScriptHashOverride?: Uint8Array;
+    step: string;
+  },
+) => {
+  const markedStas = requireLiveOutput(
+    world,
+    params.assetId,
+    params.owner,
+    params.satoshis,
+    { frozen: false },
+  );
+  const markFeeOutput = requireFeeOutput(world, params.assetId);
+  const markTxHex = buildSwapMarkTx(world, params);
+
+  assertLifecycleTxValid(world, params.step, markTxHex, 2);
+  addHistory(world, params.step, params.assetId, markTxHex);
+
+  removeLiveOutput(world, markedStas);
+  removeLiveOutput(world, markFeeOutput);
+  addDstasOutputs(world, params.assetId, markTxHex, [
+    { owner: params.owner, satoshis: params.satoshis, frozen: false },
+  ]);
+  addLiveOutput(
+    world,
+    findFeeOutput(markTxHex, markFeeOutput.owner, params.assetId),
+  );
+
+  return markTxHex;
 };
 
-export const redeem = () => {
-  throw new Error("Wave R1: redeem is not implemented yet");
+export const expectSwapMarkFailWrongRequestedScript = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    owner: TMasterActorId;
+    satoshis: number;
+    requestedAssetId: TMasterAssetId;
+    requestedOwner: TMasterActorId;
+    requestedSatoshis: number;
+    rateNumerator: number;
+    rateDenominator: number;
+    requestedScriptHashOverride: Uint8Array;
+  },
+) => expectFail(world, () => buildSwapMarkTx(world, params));
+
+export const transferSwap = (
+  world: TMasterWorld,
+  params: {
+    offeredAssetId: TMasterAssetId;
+    offeredOwner: TMasterActorId;
+    offeredSatoshis: number;
+    counterpartyAssetId: TMasterAssetId;
+    counterpartyOwner: TMasterActorId;
+    counterpartySatoshis: number;
+    feeAssetId: TMasterAssetId;
+    requesterReceives: TMasterActorId;
+    counterpartyReceives: TMasterActorId;
+    step: string;
+  },
+) => {
+  const offeredOutput = requireLiveOutput(
+    world,
+    params.offeredAssetId,
+    params.offeredOwner,
+    params.offeredSatoshis,
+    { frozen: false },
+  );
+  const counterpartyOutput = requireLiveOutput(
+    world,
+    params.counterpartyAssetId,
+    params.counterpartyOwner,
+    params.counterpartySatoshis,
+    { frozen: false },
+  );
+  const feeOutput = requireFeeOutput(world, params.feeAssetId);
+  const swapTxHex = buildTransferSwapTx(world, {
+    offeredAssetId: params.offeredAssetId,
+    offeredOwner: params.offeredOwner,
+    offeredSatoshis: params.offeredSatoshis,
+    counterpartyAssetId: params.counterpartyAssetId,
+    counterpartyOwner: params.counterpartyOwner,
+    counterpartySatoshis: params.counterpartySatoshis,
+    feeAssetId: params.feeAssetId,
+    requesterReceives: params.requesterReceives,
+    counterpartyReceives: params.counterpartyReceives,
+  });
+
+  assertLifecycleTxValid(world, params.step, swapTxHex, 3);
+  addHistory(world, params.step, undefined, swapTxHex);
+
+  removeLiveOutput(world, offeredOutput);
+  removeLiveOutput(world, counterpartyOutput);
+  removeLiveOutput(world, feeOutput);
+  addTrackedDstasOutput(world, params.counterpartyAssetId, swapTxHex, 0, {
+    owner: params.requesterReceives,
+    satoshis: params.counterpartySatoshis,
+    frozen: false,
+  });
+  addTrackedDstasOutput(world, params.offeredAssetId, swapTxHex, 1, {
+    owner: params.counterpartyReceives,
+    satoshis: params.offeredSatoshis,
+    frozen: false,
+  });
+  addLiveOutput(
+    world,
+    findFeeOutput(swapTxHex, feeOutput.owner, params.feeAssetId),
+  );
+
+  return swapTxHex;
+};
+
+export const swap = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    owner: TMasterActorId;
+    satoshis: number;
+    requestedAssetId: TMasterAssetId;
+    requestedOwner: TMasterActorId;
+    requestedSatoshis: number;
+    requesterReceives: TMasterActorId;
+    counterpartyReceives: TMasterActorId;
+    rateNumerator: number;
+    rateDenominator: number;
+    markStep: string;
+    swapStep: string;
+  },
+) => {
+  const markTxHex = markSwapRequest(world, {
+    assetId: params.assetId,
+    owner: params.owner,
+    satoshis: params.satoshis,
+    requestedAssetId: params.requestedAssetId,
+    requestedOwner: params.requestedOwner,
+    requestedSatoshis: params.requestedSatoshis,
+    rateNumerator: params.rateNumerator,
+    rateDenominator: params.rateDenominator,
+    step: params.markStep,
+  });
+  const swapTxHex = transferSwap(world, {
+    offeredAssetId: params.assetId,
+    offeredOwner: params.owner,
+    offeredSatoshis: params.satoshis,
+    counterpartyAssetId: params.requestedAssetId,
+    counterpartyOwner: params.requestedOwner,
+    counterpartySatoshis: params.requestedSatoshis,
+    feeAssetId: params.assetId,
+    requesterReceives: params.requesterReceives,
+    counterpartyReceives: params.counterpartyReceives,
+    step: params.swapStep,
+  });
+
+  return { markTxHex, swapTxHex };
+};
+
+export const expectTransferSwapFailWrongRequestedScript = (
+  world: TMasterWorld,
+  params: {
+    offeredAssetId: TMasterAssetId;
+    offeredOwner: TMasterActorId;
+    offeredSatoshis: number;
+    counterpartyAssetId: TMasterAssetId;
+    counterpartyOwner: TMasterActorId;
+    counterpartySatoshis: number;
+    feeAssetId: TMasterAssetId;
+    requesterReceives: TMasterActorId;
+    counterpartyReceives: TMasterActorId;
+  },
+) => expectFail(world, () => buildTransferSwapTx(world, params));
+
+export const redeem = (
+  world: TMasterWorld,
+  params: {
+    assetId: TMasterAssetId;
+    owner: TMasterActorId;
+    satoshis: number;
+    step: string;
+  },
+) => {
+  const stasOutput = requireLiveOutput(
+    world,
+    params.assetId,
+    params.owner,
+    params.satoshis,
+    { frozen: false },
+  );
+  const feeOutput = requireFeeOutput(world, params.assetId);
+  const issuer = issuerForAsset(params.assetId);
+  const txHex = buildRedeemTx({
+    stasOutPoint: stasOutput.outPoint,
+    stasOwner: requireSingleWallet(world, params.owner),
+    feeOutPoint: feeOutput.outPoint,
+    feeOwner: requireSingleWallet(world, feeOutput.owner),
+    redeemAddress: requireActor(world, issuer).address,
+  });
+
+  assertLifecycleTxValid(world, params.step, txHex, 2);
+  addHistory(world, params.step, params.assetId, txHex);
+
+  removeLiveOutput(world, stasOutput);
+  removeLiveOutput(world, feeOutput);
+  addLiveOutput(world, findFeeOutput(txHex, feeOutput.owner, params.assetId));
+
+  return txHex;
 };

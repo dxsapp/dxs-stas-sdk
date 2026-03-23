@@ -6,12 +6,16 @@ import { createMasterWorld } from "./helpers/dstas-master-fixture";
 import {
   checkpoint,
   confiscate,
+  createSwapActionDataForRequest,
   expectTransferFail,
+  expectTransferSwapFailWrongRequestedScript,
   freeze,
   issue,
   merge,
+  redeem,
   split,
   transfer,
+  transferSwap,
   unfreeze,
 } from "./helpers/dstas-master-driver";
 
@@ -256,5 +260,129 @@ describe("dstas master lifecycle", () => {
     });
 
     expect(world.history.length).toBe(19);
+  });
+
+  test("wave r4: swap block reaches partial redeem coverage", () => {
+    const world = createMasterWorld();
+
+    issue(world, {
+      assetId: "assetB",
+      to: "ownerB",
+      satoshis: 100,
+      step: "issue assetB",
+    });
+    const invalidSwapAction = createSwapActionDataForRequest(world, {
+      requestedAssetId: "assetB",
+      requestedOwner: "ownerB",
+      requestedSatoshis: 100,
+      requestedPkhOwner: "ownerC",
+      rateNumerator: 1,
+      rateDenominator: 1,
+      requestedScriptHashOverride: new Uint8Array(32).fill(0x55),
+    });
+    issue(world, {
+      assetId: "assetC",
+      to: "ownerC",
+      satoshis: 100,
+      actionData: invalidSwapAction,
+      step: "issue assetC with invalid swap request",
+    });
+    expectTransferSwapFailWrongRequestedScript(world, {
+      offeredAssetId: "assetC",
+      offeredOwner: "ownerC",
+      offeredSatoshis: 100,
+      counterpartyAssetId: "assetB",
+      counterpartyOwner: "ownerB",
+      counterpartySatoshis: 100,
+      feeAssetId: "assetC",
+      requesterReceives: "ownerC",
+      counterpartyReceives: "ownerB",
+    });
+
+    const validSwapAction = createSwapActionDataForRequest(world, {
+      requestedAssetId: "assetB",
+      requestedOwner: "ownerB",
+      requestedSatoshis: 100,
+      requestedPkhOwner: "ownerA",
+      rateNumerator: 1,
+      rateDenominator: 1,
+    });
+    issue(world, {
+      assetId: "assetA",
+      to: "ownerA",
+      satoshis: 100,
+      actionData: validSwapAction,
+      step: "issue assetA with valid swap request",
+    });
+
+    transferSwap(world, {
+      offeredAssetId: "assetA",
+      offeredOwner: "ownerA",
+      offeredSatoshis: 100,
+      counterpartyAssetId: "assetB",
+      counterpartyOwner: "ownerB",
+      counterpartySatoshis: 100,
+      feeAssetId: "assetA",
+      requesterReceives: "ownerA",
+      counterpartyReceives: "ownerB",
+      step: "assetA transfer-swap with assetB issue output",
+    });
+
+    checkpoint(world, "post-swap-cycle");
+
+    assertCheckpoint(world, "post-swap-cycle", {
+      supplyByAsset: {
+        assetA: 100,
+        assetB: 100,
+        assetC: 100,
+      },
+      ownersByAsset: {
+        assetA: {
+          ownerB: [100],
+        },
+        assetB: {
+          ownerA: [100],
+        },
+        assetC: {
+          ownerC: [100],
+        },
+      },
+    });
+
+    expect(world.history.length).toBe(7);
+
+    transfer(world, {
+      assetId: "assetB",
+      from: "ownerA",
+      to: "issuerB",
+      satoshis: 100,
+      step: "assetB transfer swapped output to issuerB",
+    });
+    redeem(world, {
+      assetId: "assetB",
+      owner: "issuerB",
+      satoshis: 100,
+      step: "assetB redeem issuer-owned swapped output",
+    });
+
+    checkpoint(world, "post-redeem-cycle");
+
+    assertCheckpoint(world, "post-redeem-cycle", {
+      supplyByAsset: {
+        assetA: 100,
+        assetB: 0,
+        assetC: 100,
+      },
+      ownersByAsset: {
+        assetA: {
+          ownerB: [100],
+        },
+        assetC: {
+          ownerC: [100],
+        },
+      },
+    });
+
+    expect(world.history.length).toBe(9);
   });
 });
