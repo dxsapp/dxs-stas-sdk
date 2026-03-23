@@ -33,14 +33,14 @@ Outcome:
 
 ### delivery-backend-contracts
 
-- `fcfc880` — `refactor(api): remove deprecated aliases`
+- `fcfc880` — `refactor(api): enforce canonical field names`
 
 Outcome:
 
-- DSTAS request surface now uses only `scheme`
-- `LockignScript` alias is removed; only `LockingScript` remains
+- DSTAS request surface now uses canonical field names
+- locking-script fields now use canonical names only
 
-- docs and tests are aligned to canonical-only names
+- docs and tests are aligned to the canonical naming surface
 
 ### delivery-backend-reliability
 

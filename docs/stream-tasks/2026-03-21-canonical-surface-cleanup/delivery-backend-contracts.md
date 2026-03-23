@@ -9,7 +9,7 @@
 
 ## Goal
 
-Remove compatibility aliases and enforce the canonical contract.
+Enforce the canonical contract.
 
 ## In scope
 
@@ -20,14 +20,14 @@ Remove compatibility aliases and enforce the canonical contract.
 
 ## Tasks
 
-1. Remove DSTAS `Scheme` alias and leave only `scheme`.
-2. Remove `LockignScript` alias and leave only `LockingScript`.
-3. Remove any remaining deprecated alias mentions tied to those runtime/type surfaces.
+1. Keep only canonical DSTAS request field naming.
+2. Keep only canonical locking-script field naming.
+3. Remove any remaining non-canonical field-name mentions tied to those runtime/type surfaces.
 4. Add/adjust targeted tests if necessary.
 
 ## Acceptance criteria
 
-- Alias runtime/type surfaces are gone.
+- Non-canonical runtime/type surfaces are gone.
 - Only canonical names remain in code paths and protocol-facing docs.
 - Targeted validation passes.
 
@@ -35,9 +35,9 @@ Remove compatibility aliases and enforce the canonical contract.
 
 ```bash
 npm run build -- --pretty false
-npm test -- --runInBand tests/dstas-flow.test.ts tests/locking-script-alias.test.ts tests/address-outpoint.test.ts tests/transaction-build.test.ts
+npm test -- --runInBand tests/dstas-flow.test.ts tests/locking-script-canonical.test.ts tests/address-outpoint.test.ts tests/transaction-build.test.ts
 ```
 
 ## Commit expectation
 
-- Commit message suggestion: `refactor(api): remove deprecated aliases`
+- Commit message suggestion: `refactor(api): enforce canonical field names`

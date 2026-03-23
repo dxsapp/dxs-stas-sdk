@@ -7,7 +7,7 @@
 
 ## Goal
 
-Complete the final canonical-surface cleanup across DSTAS service planning, namespace-only package exports, and removal of compatibility aliases.
+Complete the final canonical-surface cleanup across DSTAS service planning, namespace-only package exports, and canonical field naming.
 
 ## Streams
 
@@ -16,7 +16,7 @@ Complete the final canonical-surface cleanup across DSTAS service planning, name
 | operator                     | -           | -                 | in_progress | -                              | reasoning | Own sequencing, dependency gates, and closeout                    |
 | delivery-backend-platform    | backend     | BE-Platform       | in_progress | -                              | Codex     | Owner-aware service planning and intermediate UTXO reconstruction |
 | delivery-integration         | integration | -                 | blocked     | delivery-backend-platform done | Codex     | Move public package surface to `dstas` / `stas` / `bsv`           |
-| delivery-backend-contracts   | backend     | BE-Contracts      | blocked     | delivery-integration done      | Codex     | Remove deprecated aliases and enforce canonical field names       |
+| delivery-backend-contracts   | backend     | BE-Contracts      | blocked     | delivery-integration done      | Codex     | Enforce canonical field names                                     |
 | delivery-backend-reliability | backend     | BE-Reliability    | blocked     | platform/integration/contracts | Codex     | Lock canonical-only behavior with regression coverage             |
 
 ## Wave order
@@ -31,11 +31,11 @@ Complete the final canonical-surface cleanup across DSTAS service planning, name
 
 - Service transactions preserve known owner semantics without synthetic addresses.
 - Root package exports only `dstas`, `stas`, and `bsv` namespaces.
-- Deprecated aliases (`Scheme`, `LockignScript`) are removed from runtime/types/docs.
+- Non-canonical field names are removed from runtime, types, and docs.
 - Regression coverage is canonical-only and remains hermetic.
 
 ## Operator monitoring rules
 
 - Do not start downstream streams before upstream dependency is `done` with validation evidence.
 - Require commit hash and commands/results for every `done` stream.
-- Re-open any stream that keeps a compatibility shim beyond the approved canonical contract.
+- Re-open any stream that keeps a non-canonical field or export contract beyond the approved surface.

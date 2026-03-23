@@ -32,7 +32,7 @@ Outcome:
 - issuance now uses a shared internal assembly seam
 
 - bundle fee estimation is less brittle and the obvious quadratic queue hotspot is removed
-- DSTAS request surface now prefers `scheme`; deprecated `Scheme` remains as compatibility alias
+- DSTAS request surface now prefers canonical request-field naming
 
 ### delivery-integration
 

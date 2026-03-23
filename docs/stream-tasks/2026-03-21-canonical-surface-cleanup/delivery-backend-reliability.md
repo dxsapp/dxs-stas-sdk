@@ -26,7 +26,7 @@ Lock the canonical-only surface and service-planning semantics with deterministi
 ## Acceptance criteria
 
 - Tests lock canonical-only behavior.
-- No CI-facing test depends on removed compatibility aliases.
+- No CI-facing test depends on removed non-canonical field names.
 - Full suite passes.
 
 ## Validation

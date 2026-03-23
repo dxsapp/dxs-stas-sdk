@@ -15,7 +15,7 @@
 - `delivery-integration` -> `d7cc6c0`
   - Added packed-package smoke coverage and aligned README/package export contract.
 - `post-closeout verification patch` -> `ab7ee8b`
-  - Restored legacy `p2stas` sample detection after full-suite validation exposed a regression in legacy STAS classification; also updated the DSTAS multisig-owner outpoint test to use a canonical MPKH preimage.
+  - Restored STAS sample detection after full-suite validation exposed a classification regression; also updated the DSTAS multisig-owner outpoint test to use a canonical MPKH preimage.
 
 ## Final operator notes
 

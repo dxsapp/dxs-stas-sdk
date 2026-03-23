@@ -22,7 +22,7 @@ Harden the published package contract and reduce DSTAS/STAS API ambiguity for co
 ## Tasks
 
 1. Replace the current tarball smoke setup with a real clean consumer install path.
-2. Unify the most confusing request-shape naming mismatch (`Scheme` vs `tokenScheme`) or provide a crisp compatibility seam.
+2. Unify the most confusing request-shape naming mismatch in the public API.
 3. Narrow/clarify the root package surface so canonical DSTAS/STAS entrypoints are preferred over low-level internals.
 4. Reduce README onboarding noise and keep it DSTAS-first.
 
