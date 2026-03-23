@@ -4,7 +4,7 @@
 - Stream: `delivery-backend-contracts`
 - Lane: `backend`
 - Backend substream: `BE-Contracts`
-- Status: `blocked`
+- Status: `skipped`
 - Repository: `/Users/imighty/Code/dxs-stas-sdk`
 
 ## Goal
@@ -67,3 +67,8 @@ Suggested commit message:
 - `fix(protocol): support master lifecycle assertions <short reason>`
 
 On completion, update this file to `done` with commit hash and unblock evidence.
+
+## Resolution
+
+- No contracts-stream blocker surfaced during this package.
+- The only runtime seam was in BE-Platform merge payload construction and was resolved in `18a2172` without new protocol helper work.

@@ -2,7 +2,7 @@
 
 - Package: `2026-03-23-dstas-master-lifecycle-flow`
 - Operator stream: `operator`
-- Status: `in_progress`
+- Status: `done`
 - Repository: `/Users/imighty/Code/dxs-stas-sdk`
 
 ## Goal
@@ -98,12 +98,12 @@ At negative steps:
 
 ## Streams
 
-| Stream                       | Lane    | Backend substream | Status      | Depends on                   | Model     | Reason                                                       |
-| ---------------------------- | ------- | ----------------- | ----------- | ---------------------------- | --------- | ------------------------------------------------------------ |
-| operator                     | -       | -                 | in_progress | -                            | reasoning | Own sequencing, gates, and closeout                          |
-| delivery-backend-reliability | backend | BE-Reliability    | in_progress | -                            | Codex     | Own test DSL, world model, master scenario, and assertions   |
-| delivery-backend-platform    | backend | BE-Platform       | blocked     | delivery-backend-reliability | Codex     | Patch production/test-support seams exposed by master driver |
-| delivery-backend-contracts   | backend | BE-Contracts      | blocked     | delivery-backend-reliability | Codex     | Patch protocol helper gaps only if master flow exposes them  |
+| Stream                       | Lane    | Backend substream | Status  | Depends on                   | Model     | Reason                                                       |
+| ---------------------------- | ------- | ----------------- | ------- | ---------------------------- | --------- | ------------------------------------------------------------ |
+| operator                     | -       | -                 | done    | -                            | reasoning | Own sequencing, gates, and closeout                          |
+| delivery-backend-reliability | backend | BE-Reliability    | done    | -                            | Codex     | Own test DSL, world model, master scenario, and assertions   |
+| delivery-backend-platform    | backend | BE-Platform       | done    | delivery-backend-reliability | Codex     | Patch production/test-support seams exposed by master driver |
+| delivery-backend-contracts   | backend | BE-Contracts      | skipped | delivery-backend-reliability | Codex     | Patch protocol helper gaps only if master flow exposes them  |
 
 ## Wave order
 
