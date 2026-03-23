@@ -675,7 +675,7 @@ export class DstasBundleFactory {
       note,
       feeRate: feeRate ?? FeeRate,
       isMerge,
-      configureStasInput: ({ txBuilder, inputIndex }) => {
+      configureStasInput: ({ phase, txBuilder, inputIndex }) => {
         const input = txBuilder.Inputs[inputIndex];
         input.AllowPresetUnlockingScript = true;
         const unlockingArgs = {
@@ -688,9 +688,15 @@ export class DstasBundleFactory {
         };
 
         if (typeof this.buildUnlockingScript.estimateSize === "function") {
-          input.PresetUnlockingScriptSizeHint =
-            this.buildUnlockingScript.estimateSize(unlockingArgs);
-          input.UnlockingScript = undefined;
+          if (phase === "estimate") {
+            input.PresetUnlockingScriptSizeHint =
+              this.buildUnlockingScript.estimateSize(unlockingArgs);
+            input.UnlockingScript = undefined;
+            return;
+          }
+
+          input.PresetUnlockingScriptSizeHint = undefined;
+          input.UnlockingScript = this.buildUnlockingScript(unlockingArgs);
           return;
         }
 

@@ -7,6 +7,7 @@ import {
   buildSwapActionData,
   computeDstasRequestedScriptHash,
   decomposeDstasLockingScript,
+  decomposeDstasUnlockingScript,
   evaluateTransactionHex,
 } from "../src/script";
 import {
@@ -98,6 +99,9 @@ describe("dstas swap flows", () => {
     });
 
     const swapTx = TransactionReader.readHex(swapTxHex);
+    const swapUnlock = decomposeDstasUnlockingScript(
+      swapTx.Inputs[0].UnlockingScript!,
+    );
     const swapEval = evaluateTransactionHex(
       swapTxHex,
       resolveFromTx(issueTxHex),
@@ -108,6 +112,8 @@ describe("dstas swap flows", () => {
 
     expect(swapTx.Inputs.length).toBe(2);
     expect(swapTx.Outputs.length).toBe(1);
+    expect(swapUnlock.parsed).toBe(true);
+    expect(swapUnlock.spendingType).toBe(4);
     expect(swapEval.success).toBe(true);
     expect(swapEval.inputs.find((x) => x.inputIndex === 0)?.success).toBe(true);
   });

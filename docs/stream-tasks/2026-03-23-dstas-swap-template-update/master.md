@@ -2,7 +2,7 @@
 
 - Package: `2026-03-23-dstas-swap-template-update`
 - Operator stream: `operator`
-- Status: `in_progress`
+- Status: `done`
 - Repository: `/Users/imighty/Code/dxs-stas-sdk`
 - Source template: `/Users/imighty/Downloads/Template_STAS_3_0_0_0_9_freeze,_confiscation,_swap,_multisig,_swap.txt`
 
@@ -22,9 +22,9 @@ Update the SDK to the new DSTAS swap script format that reconstructs the counter
 | Stream                       | Lane    | Backend substream | Status      | Depends on                 | Model     | Reason                                          |
 | ---------------------------- | ------- | ----------------- | ----------- | -------------------------- | --------- | ----------------------------------------------- |
 | operator                     | -       | -                 | in_progress | -                          | reasoning | Own sequencing, dependency gates, and closeout  |
-| delivery-backend-contracts   | backend | BE-Contracts      | in_progress | -                          | Codex     | Parser/decomposer semantics for new swap format |
+| delivery-backend-contracts   | backend | BE-Contracts      | done        | -                          | Codex     | Parser/decomposer semantics for new swap format |
 | delivery-backend-platform    | backend | BE-Platform       | done        | delivery-backend-contracts | Codex     | Builder/runtime integration and size accounting |
-| delivery-backend-reliability | backend | BE-Reliability    | blocked     | contracts/platform         | Codex     | Regression, conformance, and negative coverage  |
+| delivery-backend-reliability | backend | BE-Reliability    | done        | contracts/platform         | Codex     | Regression, conformance, and negative coverage  |
 
 ## Wave order
 

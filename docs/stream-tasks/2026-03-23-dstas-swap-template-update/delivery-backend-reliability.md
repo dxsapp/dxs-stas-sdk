@@ -3,7 +3,7 @@
 - Stream: `delivery`
 - Lane: `backend`
 - Backend substream: `BE-Reliability`
-- Status: `blocked`
+- Status: `done`
 - Depends on: `delivery-backend-contracts done` and `delivery-backend-platform done`
 
 ## Goal
