@@ -292,12 +292,10 @@ describe("ResolveDstasSwapMode", () => {
       frozen: true,
     });
 
-    const correctCounterpartyScript = extractDstasCounterpartyScript(
-      correctLockingScript,
-    );
-    const wrongCounterpartyScript = extractDstasCounterpartyScript(
-      wrongLockingScript,
-    );
+    const correctCounterpartyScript =
+      extractDstasCounterpartyScript(correctLockingScript);
+    const wrongCounterpartyScript =
+      extractDstasCounterpartyScript(wrongLockingScript);
     const sourcePreviousTransaction = reconstructCounterpartyTransaction(
       [fromHex("11"), fromHex("22"), fromHex("33")],
       correctCounterpartyScript,
