@@ -87,10 +87,7 @@ const txOutputs = (txHex: string) => {
   }));
 };
 
-const findFeeOutPoint = (
-  txHex: string,
-  owner: Wallet,
-): OutPoint => {
+const findFeeOutPoint = (txHex: string, owner: Wallet): OutPoint => {
   const tx = TransactionReader.readHex(txHex);
   const feeIndex = tx.Outputs.findIndex(
     (output) =>
@@ -126,7 +123,10 @@ describe("dstas swap remainder chain", () => {
 
     const sellerScheme = createDefaultDstasScheme(seller, seller);
     const buyerScheme = createDefaultDstasScheme(buyer, buyer);
-    const negativeScheme = createDefaultDstasScheme(negativeBuyer, negativeBuyer);
+    const negativeScheme = createDefaultDstasScheme(
+      negativeBuyer,
+      negativeBuyer,
+    );
 
     const state: TResolverState = {
       txMap: new Map(),
@@ -136,20 +136,22 @@ describe("dstas swap remainder chain", () => {
     const sellerFunding = makeSyntheticFundingOutPoint(seller, "11");
     const buyerFunding = makeSyntheticFundingOutPoint(buyer, "22");
     const negativeFunding = makeSyntheticFundingOutPoint(negativeBuyer, "33");
-    const feeFunding = makeSyntheticFundingOutPoint(
-      feeWallet,
-      "44",
-      1_000_000,
-    );
+    const feeFunding = makeSyntheticFundingOutPoint(feeWallet, "44", 1_000_000);
 
-    state.syntheticPrevouts.set(resolverKey(sellerFunding.TxId, sellerFunding.Vout), {
-      lockingScript: sellerFunding.LockingScript,
-      satoshis: sellerFunding.Satoshis,
-    });
-    state.syntheticPrevouts.set(resolverKey(buyerFunding.TxId, buyerFunding.Vout), {
-      lockingScript: buyerFunding.LockingScript,
-      satoshis: buyerFunding.Satoshis,
-    });
+    state.syntheticPrevouts.set(
+      resolverKey(sellerFunding.TxId, sellerFunding.Vout),
+      {
+        lockingScript: sellerFunding.LockingScript,
+        satoshis: sellerFunding.Satoshis,
+      },
+    );
+    state.syntheticPrevouts.set(
+      resolverKey(buyerFunding.TxId, buyerFunding.Vout),
+      {
+        lockingScript: buyerFunding.LockingScript,
+        satoshis: buyerFunding.Satoshis,
+      },
+    );
     state.syntheticPrevouts.set(
       resolverKey(negativeFunding.TxId, negativeFunding.Vout),
       {
@@ -199,9 +201,7 @@ describe("dstas swap remainder chain", () => {
     expect(buyerLockingScript).toBeDefined();
 
     const sellerActionData = buildSwapActionData({
-      requestedScriptHash: computeDstasRequestedScriptHash(
-        buyerLockingScript!,
-      ),
+      requestedScriptHash: computeDstasRequestedScriptHash(buyerLockingScript!),
       requestedPkh: seller.Address.Hash160,
       rateNumerator: 1,
       rateDenominator: 1,
@@ -259,8 +259,9 @@ describe("dstas swap remainder chain", () => {
       );
     }
 
-    const buyerSpendableOutPoints = buyerIssueTx.Outputs
-      .map((output, index) => ({ output, index }))
+    const buyerSpendableOutPoints = buyerIssueTx.Outputs.map(
+      (output, index) => ({ output, index }),
+    )
       .filter(({ output }) => output.ScriptType === ScriptType.dstas)
       .map(({ index }) => OutPoint.fromTransaction(buyerIssueTx, index));
 
