@@ -4,7 +4,7 @@
 - Lane: `backend`
 - Backend substream: `BE-Reliability`
 - Zone: `Z4 - Test & Conformance`
-- Status: `in_progress`
+- Status: `done`
 - Depends on: `-`
 
 ## Goal
@@ -51,3 +51,14 @@ npm test -- --runInBand tests/dstas-swap-remainder-chain.test.ts tests/dstas-swa
 ## Commit expectation
 
 - Commit message suggestion: `test(dstas): add swap remainder chain regression`
+
+## Evidence
+
+- Added `/Users/imighty/Code/dxs-stas-sdk/tests/dstas-swap-remainder-chain.test.ts`.
+- Proves three sequential partial swaps spend the same seller remainder lineage.
+- Preserves swap-marked remainder after each generation.
+- Includes a later-generation negative case with a mismatched counterparty leg.
+- Validation passed:
+  - `npm test -- --runInBand tests/dstas-swap-remainder-chain.test.ts tests/dstas-swap-flows.test.ts tests/dstas-swap-mode.test.ts`
+  - `npm run lint`
+  - `npm test -- --runInBand`

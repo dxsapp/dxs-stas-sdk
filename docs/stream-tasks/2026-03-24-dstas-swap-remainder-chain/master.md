@@ -2,7 +2,7 @@
 
 - Package: `2026-03-24-dstas-swap-remainder-chain`
 - Operator stream: `operator`
-- Status: `in_progress`
+- Status: `done`
 - Repository: `/Users/imighty/Code/dxs-stas-sdk`
 
 ## Goal
@@ -17,12 +17,12 @@ Add an explicit regression test for chained partial swap remainder spending:
 
 ## Streams
 
-| Stream                       | Lane    | Backend substream | Status      | Depends on                           | Model     | Reason                                      |
-| ---------------------------- | ------- | ----------------- | ----------- | ------------------------------------ | --------- | ------------------------------------------- |
-| operator                     | -       | -                 | in_progress | -                                    | reasoning | Own sequencing, monitoring, and closeout    |
-| delivery-backend-reliability | backend | BE-Reliability    | in_progress | -                                    | Codex     | Add focused regression suite and assertions |
-| delivery-backend-platform    | backend | BE-Platform       | blocked     | reliability escalation only          | Codex     | Only if the test exposes a real SDK seam    |
-| delivery-backend-contracts   | backend | BE-Contracts      | blocked     | reliability/platform escalation only | Codex     | Only if a protocol helper gap is exposed    |
+| Stream                       | Lane    | Backend substream | Status     | Depends on                           | Model     | Reason                                        |
+| ---------------------------- | ------- | ----------------- | ---------- | ------------------------------------ | --------- | --------------------------------------------- |
+| operator                     | -       | -                 | done       | -                                    | reasoning | Sequenced, validated, and closed the package  |
+| delivery-backend-reliability | backend | BE-Reliability    | done       | -                                    | Codex     | Added focused regression suite and assertions |
+| delivery-backend-platform    | backend | BE-Platform       | not_opened | reliability escalation only          | Codex     | No product seam was required                  |
+| delivery-backend-contracts   | backend | BE-Contracts      | not_opened | reliability/platform escalation only | Codex     | No protocol helper gap was exposed            |
 
 ## Scope
 
