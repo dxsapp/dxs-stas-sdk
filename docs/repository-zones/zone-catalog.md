@@ -136,5 +136,4 @@ Out of scope:
 ## Canonicality rules
 
 - `README.md`, `AGENTS.md`, `docs/AGENT_RUNBOOK.md`, `docs/DSTAS_SDK_SPEC.md`, `docs/DSTAS_SCRIPT_INVARIANTS.md`, and `docs/DSTAS_CONFORMANCE_MATRIX.md` are canonical guidance.
-- `docs/stream-tasks/**` is operational history and closeout evidence, not a protocol source of truth.
 - New product behavior should be documented in canonical docs, not only in stream-task packages.

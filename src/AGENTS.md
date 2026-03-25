@@ -19,4 +19,3 @@ Scoped guidance for `src`.
 - If a DSTAS change requires touching low-level core, keep behavior covered by script-level tests.
 - Use `DSTAS` and `actionData`; never use `stas30`, `Stas3`, version-tagged names, or `second field` terminology.
 - Use canonical `LockingScript` in new code.
-- Treat `docs/stream-tasks/**` as operational history only; do not derive protocol semantics from it.

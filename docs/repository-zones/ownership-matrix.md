@@ -11,4 +11,3 @@
 
 - This repository currently has a single named owner. Backup ownership is intentionally marked `unassigned` rather than inventing a second maintainer.
 - When a second maintainer exists, update this file and `.github/CODEOWNERS` together.
-- `docs/stream-tasks/**` belongs to Z4 and is operational, not normative.

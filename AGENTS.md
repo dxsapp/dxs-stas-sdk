@@ -20,8 +20,6 @@ This file is the root onboarding entrypoint for AI coding agents working on this
   Older, lower-level STAS workflow surface. Do not use for new DSTAS work.
 - `src/bsv.ts`, `src/bitcoin/**`, `src/buffer/**`, `src/security/**`, `src/transaction/**`
   Low-level core primitives shared by both protocol layers and exposed through the `bsv` namespace.
-- `docs/stream-tasks/**`
-  Operational history and closeout evidence only. Do not treat stream-task docs as protocol source of truth.
 
 ## Preferred implementation path
 

@@ -34,4 +34,3 @@ TypeScript SDK for building and validating Bitcoin SV transaction flows, includi
 
 ## Non-canonical docs
 
-- `docs/stream-tasks/**`: operational task packages and closeout history only; do not use as protocol source of truth.

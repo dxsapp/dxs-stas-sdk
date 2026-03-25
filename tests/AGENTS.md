@@ -19,4 +19,3 @@ Scoped guidance for `tests`.
 - Prefer adding deterministic fixtures over reading local files or environment-dependent data.
 - Do not store temporary debugging artifacts under `.temp` or depend on them from committed tests.
 - Keep negative tests next to the feature they protect.
-- Do not treat `docs/stream-tasks/**` as normative test requirements; they are operator history only.

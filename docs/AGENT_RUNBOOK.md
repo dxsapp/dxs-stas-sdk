@@ -2,8 +2,6 @@
 
 This runbook is the practical workflow for implementing or modifying DSTAS behavior in this SDK.
 
-Operational task packages under `docs/stream-tasks/` are not normative protocol docs. Use them only for execution history and closeout context.
-
 ## 1. Pick the right API level
 
 Use the highest-level API that satisfies the task:
