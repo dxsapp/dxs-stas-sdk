@@ -10,7 +10,7 @@ const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 const nodeBin = process.execPath;
 
 const packPackage = () => {
-  const packDir = mkdtempSync(join(tmpdir(), "dxs-stas-sdk-pack-"));
+  const packDir = mkdtempSync(join(tmpdir(), "dxs-bsv-token-sdk-pack-"));
   const staleDist = join(repoRoot, "dist", `stale-${randomUUID()}.txt`);
   mkdirSync(join(repoRoot, "dist"), { recursive: true });
   writeFileSync(staleDist, "stale");
@@ -41,11 +41,11 @@ const packPackage = () => {
 };
 
 const prepareConsumer = (tarballPath: string) => {
-  const consumerDir = mkdtempSync(join(tmpdir(), "dxs-stas-sdk-consumer-"));
+  const consumerDir = mkdtempSync(join(tmpdir(), "dxs-bsv-token-sdk-consumer-"));
   writeFileSync(
     join(consumerDir, "package.json"),
     JSON.stringify(
-      { name: "dxs-stas-sdk-consumer-smoke", private: true, version: "1.0.0" },
+      { name: "dxs-bsv-token-sdk-consumer-smoke", private: true, version: "1.0.0" },
       null,
       2,
     ),
@@ -106,10 +106,10 @@ describe("package smoke", () => {
 
       const cjsCheck = [
         'const assert = require("node:assert/strict");',
-        'const root = require("dxs-stas-sdk");',
-        'const bsv = require("dxs-stas-sdk/bsv");',
-        'const dstas = require("dxs-stas-sdk/dstas");',
-        'const stas = require("dxs-stas-sdk/stas");',
+        'const root = require("dxs-bsv-token-sdk");',
+        'const bsv = require("dxs-bsv-token-sdk/bsv");',
+        'const dstas = require("dxs-bsv-token-sdk/dstas");',
+        'const stas = require("dxs-bsv-token-sdk/stas");',
         'assert.equal(typeof root.BuildDstasIssueTxs, "undefined");',
         'assert.equal(typeof root.BuildTransferTx, "undefined");',
         'assert.equal(typeof root.PrivateKey, "undefined");',
@@ -138,10 +138,10 @@ describe("package smoke", () => {
 
       const importCheck = [
         'import assert from "node:assert/strict";',
-        'import * as root from "dxs-stas-sdk";',
-        'import * as bsv from "dxs-stas-sdk/bsv";',
-        'import * as dstas from "dxs-stas-sdk/dstas";',
-        'import * as stas from "dxs-stas-sdk/stas";',
+        'import * as root from "dxs-bsv-token-sdk";',
+        'import * as bsv from "dxs-bsv-token-sdk/bsv";',
+        'import * as dstas from "dxs-bsv-token-sdk/dstas";',
+        'import * as stas from "dxs-bsv-token-sdk/stas";',
         'assert.equal(typeof root.BuildDstasIssueTxs, "undefined");',
         'assert.equal(typeof root.BuildTransferTx, "undefined");',
         'assert.equal(typeof root.PrivateKey, "undefined");',

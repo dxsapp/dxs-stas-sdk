@@ -1,4 +1,4 @@
-# dxs-stas-sdk
+# dxs-bsv-token-sdk
 
 TypeScript SDK for building and validating Bitcoin SV transaction flows, including Divisible STAS (DSTAS) issue, transfer, split, merge, freeze/unfreeze, confiscation, swap, and redeem.
 
@@ -28,9 +28,9 @@ TypeScript SDK for building and validating Bitcoin SV transaction flows, includi
 
 ## Protocol subpaths
 
-- `dxs-stas-sdk/dstas`: canonical Divisible STAS flow API
-- `dxs-stas-sdk/stas`: older, lower-level STAS flow API
-- `dxs-stas-sdk/bsv`: low-level blockchain toolkit namespace
+- `dxs-bsv-token-sdk/dstas`: canonical Divisible STAS flow API
+- `dxs-bsv-token-sdk/stas`: older, lower-level STAS flow API
+- `dxs-bsv-token-sdk/bsv`: low-level blockchain toolkit namespace
 
 ## Non-canonical docs
 

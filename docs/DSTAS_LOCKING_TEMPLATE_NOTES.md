@@ -2,7 +2,7 @@
 
 This document summarizes the template behavior used by the SDK for Divisible STAS (DSTAS).
 
-For transaction-level flow invariants, see `/Users/imighty/Code/dxs-stas-sdk/docs/DSTAS_SCRIPT_INVARIANTS.md`.
+For transaction-level flow invariants, see `docs/DSTAS_SCRIPT_INVARIANTS.md`.
 
 ## Template Placeholders
 
@@ -65,17 +65,17 @@ The SDK enforces `serviceFields.length` to match enabled bits exactly.
 ## Example
 
 ```ts
-import { buildDstasLockingScript, fromHex } from "dxs-stas-sdk";
+import { dstas, bsv } from "dxs-bsv-token-sdk";
 
-const script = buildDstasLockingScript({
-  ownerPkh: fromHex("2f2ec98dfa6429a028536a6c9451f702daa3a333"),
-  redemptionPkh: fromHex("b4ab0fffa02223a8a40d9e7f7823e61b38625382"),
+const script = dstas.buildDstasLockingScript({
+  ownerPkh: bsv.fromHex("2f2ec98dfa6429a028536a6c9451f702daa3a333"),
+  redemptionPkh: bsv.fromHex("b4ab0fffa02223a8a40d9e7f7823e61b38625382"),
   actionData: null,
   frozen: false,
   flags: new Uint8Array([0x03]), // freeze + confiscation
   serviceFields: [
-    fromHex("00112233445566778899aabbccddeeff00112233"), // freeze authority
-    fromHex("8899aabbccddeeff00112233445566778899aabb"), // confiscation authority
+    bsv.fromHex("00112233445566778899aabbccddeeff00112233"), // freeze authority
+    bsv.fromHex("8899aabbccddeeff00112233445566778899aabb"), // confiscation authority
   ],
   optionalData: [],
 });

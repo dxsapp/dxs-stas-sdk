@@ -1,12 +1,12 @@
 {
-  "name": "dxs-stas-sdk",
+  "name": "dxs-bsv-token-sdk",
   "version": "3.0.3",
   "description": "TypeScript SDK for Bitcoin SV with first-class DSTAS flows, older STAS helpers, and low-level BSV primitives for transaction and script work.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dxsapp/dxs-stas-sdk"
+    "url": "https://github.com/dxsapp/dxs-bsv-token-sdk"
   },
   "scripts": {
     "prebuild": "node scripts/clean-dist.mjs",
@@ -94,7 +94,10 @@
     },
     "./package.json": "./package.json"
   },
-  "homepage": "https://github.com/dxsapp/dxs-stas-sdk",
+  "homepage": "https://github.com/dxsapp/dxs-bsv-token-sdk",
+  "bugs": {
+    "url": "https://github.com/dxsapp/dxs-bsv-token-sdk/issues"
+  },
   "keywords": [
     "bitcoin-sv",
     "dstas",

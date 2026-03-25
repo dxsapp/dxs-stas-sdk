@@ -1,6 +1,6 @@
 # Repository Zone Catalog
 
-This file is the canonical zone map for `dxs-stas-sdk`.
+This file is the canonical zone map for `dxs-bsv-token-sdk`.
 
 ## Zones
 

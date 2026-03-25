@@ -1,39 +1,39 @@
-# dxs-stas-sdk
+# dxs-bsv-token-sdk
 
 TypeScript SDK for building, reading, and validating Bitcoin SV transactions.
 
 The public surface is split into three entrypoints:
 
-- `dxs-stas-sdk/dstas`: canonical Divisible STAS flow API
-- `dxs-stas-sdk/stas`: older STAS workflow helpers
-- `dxs-stas-sdk/bsv`: low-level blockchain primitives, script tooling, and transaction utilities
+- `dxs-bsv-token-sdk/dstas`: canonical Divisible STAS flow API
+- `dxs-bsv-token-sdk/stas`: older STAS workflow helpers
+- `dxs-bsv-token-sdk/bsv`: low-level blockchain primitives, script tooling, and transaction utilities
 
 Root imports expose only the `dstas`, `stas`, and `bsv` namespaces.
 
 ## Install
 
 ```bash
-npm install dxs-stas-sdk
+npm install dxs-bsv-token-sdk
 ```
 
 ## Choose your entrypoint
 
 Use the narrowest surface that matches your task.
 
-- `dxs-stas-sdk/dstas`
+- `dxs-bsv-token-sdk/dstas`
   Use for protocol-facing DSTAS flows: issue, transfer, split, merge, freeze, unfreeze, confiscation, swap, redeem.
-- `dxs-stas-sdk/stas`
+- `dxs-bsv-token-sdk/stas`
   Use for the older STAS transaction workflow.
-- `dxs-stas-sdk/bsv`
+- `dxs-bsv-token-sdk/bsv`
   Use for low-level work: keys, addresses, scripts, transaction parsing, transaction building, and script evaluation.
-- `dxs-stas-sdk`
+- `dxs-bsv-token-sdk`
   Use only if you explicitly want namespace aggregation for `dstas`, `stas`, and `bsv`.
 
 ## Quickstart: DSTAS issue and transfer
 
 ```ts
-import { dstas } from "dxs-stas-sdk/dstas";
-import { bsv } from "dxs-stas-sdk/bsv";
+import { dstas } from "dxs-bsv-token-sdk/dstas";
+import { bsv } from "dxs-bsv-token-sdk/bsv";
 
 const {
   OutPoint,
@@ -95,7 +95,7 @@ Use these first.
 
 ### Single-flow builders
 
-`dxs-stas-sdk/dstas` exports `BuildDstas*` helpers for individual transactions:
+`dxs-bsv-token-sdk/dstas` exports `BuildDstas*` helpers for individual transactions:
 
 - `BuildDstasIssueTxs`
 - `BuildDstasTransferTx`
@@ -121,8 +121,8 @@ Typical use cases:
 - building flows where intermediate DSTAS UTXOs must be reshaped before delivery
 
 ```ts
-import { dstas } from "dxs-stas-sdk/dstas";
-import { bsv } from "dxs-stas-sdk/bsv";
+import { dstas } from "dxs-bsv-token-sdk/dstas";
+import { bsv } from "dxs-bsv-token-sdk/bsv";
 
 const { Address, LockingScriptReader, Transaction, Wallet, utf8ToBytes } = bsv;
 
@@ -219,7 +219,7 @@ Notes:
 
 ## Low-level BSV toolkit
 
-Use `dxs-stas-sdk/bsv` when you need direct blockchain primitives.
+Use `dxs-bsv-token-sdk/bsv` when you need direct blockchain primitives.
 
 Typical surface:
 
@@ -233,7 +233,7 @@ Typical surface:
 ### Example: build a simple P2PKH transaction
 
 ```ts
-import { bsv } from "dxs-stas-sdk/bsv";
+import { bsv } from "dxs-bsv-token-sdk/bsv";
 
 const {
   Address,
@@ -272,11 +272,11 @@ const txHex = TransactionBuilder.init()
 
 ## Older STAS workflow surface
 
-Use `dxs-stas-sdk/stas` only when you need the older STAS flow helpers.
+Use `dxs-bsv-token-sdk/stas` only when you need the older STAS flow helpers.
 
 ```ts
-import { stas } from "dxs-stas-sdk/stas";
-import { bsv } from "dxs-stas-sdk/bsv";
+import { stas } from "dxs-bsv-token-sdk/stas";
+import { bsv } from "dxs-bsv-token-sdk/bsv";
 
 const {
   Address,
@@ -342,7 +342,7 @@ Other checks remain opt-in because they are more compatibility-sensitive:
 - `strictMultisigKeys`
 
 ```ts
-import { bsv } from "dxs-stas-sdk/bsv";
+import { bsv } from "dxs-bsv-token-sdk/bsv";
 
 bsv.configureStrictMode({
   strictTxParse: true,
