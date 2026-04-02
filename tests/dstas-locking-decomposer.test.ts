@@ -40,8 +40,8 @@ describe("dstas locking script decomposer", () => {
       ...baseScript,
       ...push(params.redemption),
       ...push(params.flags),
-      ...((params.serviceFields ?? []).flatMap((value) => [...push(value)])),
-      ...((params.optionalData ?? []).flatMap((value) => [...push(value)])),
+      ...(params.serviceFields ?? []).flatMap((value) => [...push(value)]),
+      ...(params.optionalData ?? []).flatMap((value) => [...push(value)]),
     ]);
 
   test("decomposes owner, opcode action data, flags, service fields, and optional data", () => {
@@ -64,8 +64,14 @@ describe("dstas locking script decomposer", () => {
     expect(parts.flagsHex).toBe("03");
     expect(parts.freezeEnabled).toBe(true);
     expect(parts.confiscationEnabled).toBe(true);
-    expect(parts.serviceFieldHexes).toEqual([toHex(freezeAuthority), toHex(confiscationAuthority)]);
-    expect(parts.optionalDataHexes).toEqual([toHex(optionalA), toHex(optionalB)]);
+    expect(parts.serviceFieldHexes).toEqual([
+      toHex(freezeAuthority),
+      toHex(confiscationAuthority),
+    ]);
+    expect(parts.optionalDataHexes).toEqual([
+      toHex(optionalA),
+      toHex(optionalB),
+    ]);
     expect(parts.errors).toEqual([]);
   });
 
@@ -135,9 +141,7 @@ describe("dstas locking script decomposer", () => {
   });
 
   test("reports missing action data when the second chunk is absent", () => {
-    const parts = decomposeDstasLockingScript(
-      fromHex("14" + "11".repeat(20)),
-    );
+    const parts = decomposeDstasLockingScript(fromHex("14" + "11".repeat(20)));
 
     expect(parts.errors).toContain("action data was not found");
     expect(parts.baseMatched).toBe(false);
@@ -154,7 +158,9 @@ describe("dstas locking script decomposer", () => {
 
     const parts = decomposeDstasLockingScript(truncated);
 
-    expect(parts.errors).toContain("script is shorter than DSTAS template base");
+    expect(parts.errors).toContain(
+      "script is shorter than DSTAS template base",
+    );
     expect(parts.baseMatched).toBe(false);
   });
 
@@ -290,15 +296,14 @@ describe("dstas locking script decomposer", () => {
       serviceFields: [freezeAuthority, confiscationAuthority],
       optionalData: [optionalA, optionalB],
     });
-    const extended = new Uint8Array([
-      ...script,
-      OpCode.OP_1,
-      OpCode.OP_2,
-    ]);
+    const extended = new Uint8Array([...script, OpCode.OP_1, OpCode.OP_2]);
 
     const parts = decomposeDstasLockingScript(extended);
 
-    expect(parts.optionalDataHexes).toEqual([toHex(optionalA), toHex(optionalB)]);
+    expect(parts.optionalDataHexes).toEqual([
+      toHex(optionalA),
+      toHex(optionalB),
+    ]);
     expect(parts.trailingOpcodes).toEqual([OpCode.OP_1, OpCode.OP_2]);
   });
 

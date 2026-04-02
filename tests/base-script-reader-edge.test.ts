@@ -1,6 +1,9 @@
 import { OpCode } from "../src/bitcoin/op-codes";
 import { fromHex, toHex } from "../src/bytes";
-import { configureStrictMode, resetStrictMode } from "../src/security/strict-mode";
+import {
+  configureStrictMode,
+  resetStrictMode,
+} from "../src/security/strict-mode";
 import { BaseScriptReader } from "../src/script/read/base-script-reader";
 import { ScriptReadToken } from "../src/script/read/script-read-token";
 

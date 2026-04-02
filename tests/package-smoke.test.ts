@@ -41,11 +41,17 @@ const packPackage = () => {
 };
 
 const prepareConsumer = (tarballPath: string) => {
-  const consumerDir = mkdtempSync(join(tmpdir(), "dxs-bsv-token-sdk-consumer-"));
+  const consumerDir = mkdtempSync(
+    join(tmpdir(), "dxs-bsv-token-sdk-consumer-"),
+  );
   writeFileSync(
     join(consumerDir, "package.json"),
     JSON.stringify(
-      { name: "dxs-bsv-token-sdk-consumer-smoke", private: true, version: "1.0.0" },
+      {
+        name: "dxs-bsv-token-sdk-consumer-smoke",
+        private: true,
+        version: "1.0.0",
+      },
       null,
       2,
     ),

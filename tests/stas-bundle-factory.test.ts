@@ -442,7 +442,9 @@ describe("stas bundle factory", () => {
     expect(withNote.Outputs).toHaveLength(4);
     expect(withoutNote.Outputs[0].Satoshis).toBe(45);
     expect(withoutNote.Outputs[1].Satoshis).toBe(25);
-    expect(withoutNote.Outputs[1].Address?.Value).toBe(stasWallet.Address.Value);
+    expect(withoutNote.Outputs[1].Address?.Value).toBe(
+      stasWallet.Address.Value,
+    );
     expect(withNote.Outputs[2].Address?.Value).toBe(feeWallet.Address.Value);
   });
 });

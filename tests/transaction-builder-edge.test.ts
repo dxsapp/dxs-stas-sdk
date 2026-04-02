@@ -2,12 +2,17 @@ import { Address } from "../src/bitcoin/address";
 import { OutPoint } from "../src/bitcoin/out-point";
 import { PrivateKey } from "../src/bitcoin/private-key";
 import { ScriptType } from "../src/bitcoin/script-type";
-import { TransactionBuilder, TransactionBuilderError } from "../src/transaction/build/transaction-builder";
+import {
+  TransactionBuilder,
+  TransactionBuilderError,
+} from "../src/transaction/build/transaction-builder";
 import { fromHex } from "../src/bytes";
 import { P2pkhBuilder } from "../src/script/build/p2pkh-builder";
 import { P2stasBuilder } from "../src/script/build/p2stas-builder";
 
-const issuer = new PrivateKey(fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"));
+const issuer = new PrivateKey(
+  fromHex("b62fd57a07804f79291317261054eb9b19c9ccec49146c38b30a29d48636c368"),
+);
 const recipient = Address.fromBase58("1C2dVLqv1kjNn7pztpQ51bpXVEJfoWUNxe");
 
 const buildP2pkhOutPoint = (satoshis: number) =>
@@ -26,12 +31,12 @@ describe("transaction builder edge cases", () => {
       .addInput(buildP2pkhOutPoint(1000), issuer)
       .addP2PkhOutput(900, recipient);
 
-    expect(() =>
-      builder.addChangeOutputWithFee(issuer.Address, 1, 1),
-    ).toThrow(TransactionBuilderError);
-    expect(() =>
-      builder.addChangeOutputWithFee(issuer.Address, 1, 1),
-    ).toThrow("Insufficient satoshis to pay fee");
+    expect(() => builder.addChangeOutputWithFee(issuer.Address, 1, 1)).toThrow(
+      TransactionBuilderError,
+    );
+    expect(() => builder.addChangeOutputWithFee(issuer.Address, 1, 1)).toThrow(
+      "Insufficient satoshis to pay fee",
+    );
   });
 
   test("rebuilds stas output from previous locking script payload", () => {
