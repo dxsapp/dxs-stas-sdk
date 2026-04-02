@@ -19,12 +19,12 @@ It replaces ad hoc operator task logs with one canonical testing plan that can b
 Latest validated baseline:
 
 - full suite: `38/38` suites passed, `1` suite skipped intentionally
-- tests: `253/254` passed, `1` skipped
+- tests: `260/261` passed, `1` skipped
 - coverage:
-  - statements: `85.51%`
-  - branches: `73.87%`
-  - functions: `95.09%`
-  - lines: `87.60%`
+  - statements: `87.14%`
+  - branches: `74.90%`
+  - functions: `95.88%`
+  - lines: `89.30%`
 
 ## Validation Commands
 
@@ -45,7 +45,7 @@ For focused waves, run only the suites owned by that wave before full-suite vali
 | `W1` | Existing DSTAS conformance, lifecycle, multisig, swap, redeem, package surface     | `done` | Full DSTAS protocol and package surface already covered by canonical suites       |
 | `W2` | Low-level parser, builder, model, and helper edge coverage                         | `done` | New focused suites merged and baseline coverage raised                            |
 | `W3` | `dstas-swap-script.ts` and `dstas-locking-script-decomposer.ts` deep unit coverage | `done` | `dstas-swap-script.ts >= 80%`, `dstas-locking-script-decomposer.ts >= 75%`        |
-| `W4` | `stas-bundle-factory.ts` legacy maintenance coverage                               | `todo` | `stas-bundle-factory.ts >= 70%`                                                   |
+| `W4` | `stas-bundle-factory.ts` legacy maintenance coverage                               | `done` | `stas-bundle-factory.ts >= 70%`                                                   |
 | `W5` | Remaining hotspots after W3/W4                                                     | `todo` | Hotspots are either raised materially or explicitly accepted as low-priority debt |
 
 ## Wave Files
@@ -70,3 +70,4 @@ For focused waves, run only the suites owned by that wave before full-suite vali
 ## Implementation Commits
 
 - `W3`: `685984e` — `test: deepen W3 DSTAS helper coverage`
+- `W4`: `1d84711` — `test: harden W4 legacy bundle coverage`
